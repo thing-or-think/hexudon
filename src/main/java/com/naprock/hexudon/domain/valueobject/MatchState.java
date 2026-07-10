@@ -27,6 +27,11 @@ public class MatchState {
         this.currentTurn = 0;
     }
 
+    public MatchState(MatchStatus status) {
+        this.status = status;
+        this.currentTurn = 0;
+    }
+
     public void clearTurnActions() {
         this.currentTurnActions.clear();
     }

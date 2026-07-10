@@ -1,6 +1,6 @@
 package com.naprock.hexudon.config;
 
-import com.naprock.hexudon.loader.MatchConfigLoader;
+import com.naprock.hexudon.adapter.out.loader.FileMatchConfigLoader;
 import com.naprock.hexudon.manager.MatchManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,12 +9,12 @@ import org.springframework.context.annotation.Configuration;
 public class AppConfig {
 
     @Bean
-    public MatchConfigLoader matchConfigLoader() {
-        return new MatchConfigLoader();
+    public FileMatchConfigLoader matchConfigLoader() {
+        return new FileMatchConfigLoader();
     }
 
     @Bean
-    public MatchManager matchManager(MatchConfigLoader matchConfigLoader) {
+    public MatchManager matchManager(FileMatchConfigLoader matchConfigLoader) {
         return new MatchManager(matchConfigLoader);
     }
 }

@@ -6,7 +6,7 @@ import com.naprock.hexudon.domain.service.*;
 import com.naprock.hexudon.domain.valueobject.*;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.loader.MatchConfigLoader;
+import com.naprock.hexudon.adapter.out.loader.FileMatchConfigLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,12 +20,8 @@ public class MatchManager {
 
     private final MatchConfig matchConfig;
     private final MatchState matchState;
-    private final ActionValidatorEngine actionValidatorEngine = new ActionValidatorEngine();
-    private final MovementSimulator movementSimulator = new MovementSimulator();
-    private final FuelManager fuelManager = new FuelManager();
-    private final UdonCollectionEngine udonCollectionEngine = new UdonCollectionEngine();
 
-    public MatchManager(MatchConfigLoader configLoader) {
+    public MatchManager(FileMatchConfigLoader configLoader) {
         this.matchConfig = configLoader.loadConfig();
         this.matchState = new MatchState();
         this.matchState.setStatus(MatchStatus.WAITING);
@@ -79,7 +75,7 @@ public class MatchManager {
             );
         }
 
-        actionValidatorEngine.validate(
+        ActionValidatorEngine.validate(
                 agentPlans,
                 matchConfig
         );
@@ -94,7 +90,7 @@ public class MatchManager {
 
         return new TurnSimulationResult (
                 day,
-                movementSimulator.simulateTeamTurn(
+                MovementSimulator.simulateTeamTurn(
                         team,
                         matchState,
                         matchConfig

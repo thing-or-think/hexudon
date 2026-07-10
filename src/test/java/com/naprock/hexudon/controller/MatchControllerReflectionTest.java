@@ -1,58 +1,89 @@
 package com.naprock.hexudon.controller;
 
-import com.naprock.hexudon.manager.MatchManager;
+import com.naprock.hexudon.adapter.in.rest.MatchController;
+import com.naprock.hexudon.application.mapper.ActionMapper;
+import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
+import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
+import com.naprock.hexudon.application.port.in.StartMatchUseCase;
+import com.naprock.hexudon.application.port.in.SubmitActionsUseCase;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MatchControllerReflectionTest {
 
+
     @Test
-    void testMatchControllerStructure() throws Exception {
-        Class<?> clazz = Class.forName("com.naprock.hexudon.controller.MatchController");
+    void testMatchControllerStructure() {
 
-        // 1. MatchController có field kiểu MatchManager
-        Field matchManagerField = null;
-        for (Field field : clazz.getDeclaredFields()) {
-            if (field.getType().equals(MatchManager.class)) {
-                matchManagerField = field;
-                break;
-            }
-        }
-        assertNotNull(matchManagerField, "MatchController must have a field of type MatchManager");
+        Class<?> clazz = MatchController.class;
 
-        // 2. Field được @Autowired hoặc inject bằng constructor
-        boolean isAutowired = matchManagerField.isAnnotationPresent(Autowired.class);
-        boolean isInjectedByConstructor = false;
 
-        for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
-            for (Class<?> paramType : constructor.getParameterTypes()) {
-                if (paramType.equals(MatchManager.class)) {
-                    isInjectedByConstructor = true;
-                    break;
-                }
-            }
-        }
+        // Check constructor injection
+        Constructor<?> constructor =
+                Arrays.stream(clazz.getDeclaredConstructors())
+                        .findFirst()
+                        .orElse(null);
 
-        final boolean finalIsInjected = isAutowired || isInjectedByConstructor;
-        final boolean isRestController = clazz.isAnnotationPresent(RestController.class);
-        final boolean hasRequestMapping = clazz.isAnnotationPresent(RequestMapping.class);
+
+        assertNotNull(
+                constructor,
+                "MatchController must have a constructor"
+        );
+
+
+        List<Class<?>> parameterTypes =
+                Arrays.asList(constructor.getParameterTypes());
+
+
+        boolean hasRegisterTeamUseCase =
+                parameterTypes.contains(RegisterTeamUseCase.class);
+
+        boolean hasStartMatchUseCase =
+                parameterTypes.contains(StartMatchUseCase.class);
+
+        boolean hasSubmitActionsUseCase =
+                parameterTypes.contains(SubmitActionsUseCase.class);
+
+        boolean hasGetMatchStateUseCase =
+                parameterTypes.contains(GetMatchStateUseCase.class);
+
+        boolean hasActionMapper =
+                parameterTypes.contains(ActionMapper.class);
+
+
+
+        boolean isRestController =
+                clazz.isAnnotationPresent(RestController.class);
+
+
+        boolean hasRequestMapping =
+                clazz.isAnnotationPresent(RequestMapping.class);
+
+
 
         boolean hasCorrectPath = false;
+
         if (hasRequestMapping) {
-            RequestMapping requestMapping = clazz.getAnnotation(RequestMapping.class);
+
+            RequestMapping requestMapping =
+                    clazz.getAnnotation(RequestMapping.class);
+
+
             for (String value : requestMapping.value()) {
                 if ("/api/match".equals(value)) {
                     hasCorrectPath = true;
                     break;
                 }
             }
+
+
             if (!hasCorrectPath) {
                 for (String path : requestMapping.path()) {
                     if ("/api/match".equals(path)) {
@@ -62,13 +93,52 @@ class MatchControllerReflectionTest {
                 }
             }
         }
+
+
         final boolean finalHasCorrectPath = hasCorrectPath;
 
+
         assertAll(
-            () -> assertTrue(finalIsInjected, "MatchManager field must be @Autowired or injected by constructor"),
-            () -> assertTrue(isRestController, "MatchController must be annotated with @RestController"),
-            () -> assertTrue(hasRequestMapping, "MatchController must be annotated with @RequestMapping"),
-            () -> assertTrue(finalHasCorrectPath, "RequestMapping path/value must be '/api/match'")
+
+                () -> assertTrue(
+                        hasRegisterTeamUseCase,
+                        "MatchController must inject RegisterTeamUseCase"
+                ),
+
+                () -> assertTrue(
+                        hasStartMatchUseCase,
+                        "MatchController must inject StartMatchUseCase"
+                ),
+
+                () -> assertTrue(
+                        hasSubmitActionsUseCase,
+                        "MatchController must inject SubmitActionsUseCase"
+                ),
+
+                () -> assertTrue(
+                        hasGetMatchStateUseCase,
+                        "MatchController must inject GetMatchStateUseCase"
+                ),
+
+                () -> assertTrue(
+                        hasActionMapper,
+                        "MatchController must inject ActionMapper"
+                ),
+
+                () -> assertTrue(
+                        isRestController,
+                        "MatchController must be annotated with @RestController"
+                ),
+
+                () -> assertTrue(
+                        hasRequestMapping,
+                        "MatchController must have @RequestMapping"
+                ),
+
+                () -> assertTrue(
+                        finalHasCorrectPath,
+                        "RequestMapping path/value must be '/api/match'"
+                )
         );
     }
 }

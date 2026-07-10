@@ -1,5 +1,6 @@
 package com.naprock.hexudon.loader;
 
+import com.naprock.hexudon.adapter.out.loader.FileMatchConfigLoader;
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
 import com.naprock.hexudon.domain.valueobject.MatchConfig;
 import org.junit.jupiter.api.Test;
@@ -9,7 +10,7 @@ class MatchConfigLoaderTest {
 
     @Test
     void testLoadConfig() {
-        MatchConfigLoader loader = new MatchConfigLoader("match_config.txt");
+        FileMatchConfigLoader loader = new FileMatchConfigLoader("match_config.txt");
         MatchConfig config = loader.loadConfig();
 
         assertAll(
@@ -27,7 +28,7 @@ class MatchConfigLoaderTest {
 
     @Test
     void testLoadConfigDefaultConstructor() {
-        MatchConfigLoader loader = new MatchConfigLoader();
+        FileMatchConfigLoader loader = new FileMatchConfigLoader();
         MatchConfig config = loader.loadConfig();
         assertAll(
             () -> assertNotNull(config),
@@ -37,7 +38,7 @@ class MatchConfigLoaderTest {
 
     @Test
     void testLoadConfigFileNotFound() {
-        MatchConfigLoader loader = new MatchConfigLoader("non_existent_file.txt");
+        FileMatchConfigLoader loader = new FileMatchConfigLoader("non_existent_file.txt");
         ConfigLoadException ex = assertThrows(ConfigLoadException.class, loader::loadConfig,
                 "Loading a non-existent file should throw ConfigLoadException");
     }

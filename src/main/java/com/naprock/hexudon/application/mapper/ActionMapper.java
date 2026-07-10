@@ -1,8 +1,10 @@
 package com.naprock.hexudon.application.mapper;
 
 import com.naprock.hexudon.application.dto.*;
+import com.naprock.hexudon.domain.model.Team;
 import com.naprock.hexudon.domain.valueobject.Action;
 import com.naprock.hexudon.domain.valueobject.AgentExecutionResult;
+import com.naprock.hexudon.domain.valueobject.MatchState;
 import com.naprock.hexudon.domain.valueobject.TurnSimulationResult;
 
 import java.util.List;
@@ -15,7 +17,15 @@ public class ActionMapper {
     public ActionMapper() {
     }
 
-    public static Action toAction(ActionRequest request) {
+    public MatchStateResponse toMatchStateResponse(MatchState matchState) {
+        return new MatchStateResponse(matchState);
+    }
+
+    public TeamResponse toTeamResponse(Team team) {
+        return new TeamResponse(team);
+    }
+
+    public Action toAction(ActionRequest request) {
         Objects.requireNonNull(request, "request must not be null");
 
         return new Action(
@@ -27,7 +37,7 @@ public class ActionMapper {
         );
     }
 
-    public static Map<String, List<Action>> toAgentPlans(
+    public Map<String, List<Action>> toDomainActionPlanMap(
             DayActionRequest dayRequest
     ) {
         Objects.requireNonNull(dayRequest, "dayRequest must not be null");
@@ -43,7 +53,7 @@ public class ActionMapper {
                 ));
     }
 
-    public static ActionResponse toActionResponse(
+    public ActionResponse toActionResponse(
             Action action
     ) {
         Objects.requireNonNull(action, "action must not be null");
@@ -57,14 +67,14 @@ public class ActionMapper {
         );
     }
 
-    public static AgentActionPlanResponse toAgentActionPlanResponse(
+    public AgentActionPlanResponse toAgentActionPlanResponse(
             AgentExecutionResult executionResult
     ) {
         Objects.requireNonNull(executionResult, "executionResult must not be null");
 
         List<ActionResponse> actions = executionResult.actions()
                 .stream()
-                .map(ActionMapper::toActionResponse)
+                .map(this::toActionResponse)
                 .toList();
 
         return new AgentActionPlanResponse(
@@ -73,14 +83,14 @@ public class ActionMapper {
         );
     }
 
-    public static DayActionResponse toDayActionResponse(
+    public DayActionResponse toDayActionResponse(
             TurnSimulationResult simulationResult
     ) {
         Objects.requireNonNull(simulationResult, "simulationResult must not be null");
 
         List<AgentActionPlanResponse> plans = simulationResult.agentExecutionResults()
                 .stream()
-                .map(ActionMapper::toAgentActionPlanResponse)
+                .map(this::toAgentActionPlanResponse)
                 .toList();
 
         return new DayActionResponse(
