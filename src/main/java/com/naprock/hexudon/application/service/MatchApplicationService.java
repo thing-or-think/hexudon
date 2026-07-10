@@ -1,9 +1,6 @@
 package com.naprock.hexudon.application.service;
 
-import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
-import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
-import com.naprock.hexudon.application.port.in.StartMatchUseCase;
-import com.naprock.hexudon.application.port.in.SubmitActionsUseCase;
+import com.naprock.hexudon.application.port.in.*;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
@@ -12,8 +9,11 @@ import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.Agent;
 import com.naprock.hexudon.domain.model.Team;
 import com.naprock.hexudon.domain.service.ActionValidatorEngine;
+import com.naprock.hexudon.domain.service.HexGridUtils;
 import com.naprock.hexudon.domain.service.MovementSimulator;
 import com.naprock.hexudon.domain.valueobject.*;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,11 @@ public class MatchApplicationService implements
         RegisterTeamUseCase,
         StartMatchUseCase,
         SubmitActionsUseCase,
-        GetMatchStateUseCase {
+        GetMatchStateUseCase,
+        IncreaseSpamViolationUseCase,
+        CheckAndSimulateTurnUseCase,
+        ApplicationRunner
+{
 
     private final MatchStateStorePort stateStorePort;
     private final MatchConfigLoaderPort configLoaderPort;
@@ -107,9 +111,7 @@ public class MatchApplicationService implements
         return stateStorePort.loadState();
     }
 
-    public void nextDay() {
-        MatchConfig config = configLoaderPort.loadConfig();
-        MatchState state = stateStorePort.loadState();
+    private void nextDay(MatchState state, MatchConfig config) {
 
         if (state == null) {
             throw new ResourceNotFoundException(ErrorCode.MATCH_STATE_NOT_FOUND, "Match state not found");
@@ -138,6 +140,53 @@ public class MatchApplicationService implements
 
         state.setTurnStartTime(System.currentTimeMillis());
 
+    }
+
+    @Override
+    public void increaseSpamViolationCount(String teamName) {
+        MatchState state = stateStorePort.loadState();
+        MatchConfig config = configLoaderPort.loadConfig();
+        Team team = state.requireTeam(teamName);
+        team.ensureEligible();
+        team.incrementSpamViolation();
+        if (team.getSpamViolationCount() == config.getMaxSpamViolations()) {
+            team.setDisqualified(true);
+        }
+        stateStorePort.saveState(state);
+    }
+
+    @Override
+    public void checkAndSimulateTurn() {
+        MatchState state = stateStorePort.loadState();
+
+        if (state == null || state.getStatus() != MatchStatus.PLAYING) {
+            return;
+        }
+
+        MatchConfig config = configLoaderPort.loadConfig();
+
+        boolean allTeamsSubmitted = state.getTeams()
+                .stream()
+                .allMatch(Team::isSubmittedPlan);
+
+        long elapsedTime =
+                System.currentTimeMillis() - state.getTurnStartTime();
+
+        boolean timeout =
+                elapsedTime >= config.getTurnTimeLimitMs();
+
+        if (allTeamsSubmitted || timeout) {
+            nextDay(state, config);
+        }
+
+        stateStorePort.saveState(state);
+    }
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        MatchState state = stateStorePort.loadState();
+        MatchConfig config = configLoaderPort.loadConfig();
+        HexGridUtils.generateGrid(config.getMapWidth(), config.getMapHeight(), state);
         stateStorePort.saveState(state);
     }
 

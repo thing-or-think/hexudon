@@ -6,12 +6,14 @@ import com.naprock.hexudon.domain.valueobject.Action;
 import com.naprock.hexudon.domain.valueobject.AgentExecutionResult;
 import com.naprock.hexudon.domain.valueobject.MatchState;
 import com.naprock.hexudon.domain.valueobject.TurnSimulationResult;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Component
 public class ActionMapper {
 
     public ActionMapper() {

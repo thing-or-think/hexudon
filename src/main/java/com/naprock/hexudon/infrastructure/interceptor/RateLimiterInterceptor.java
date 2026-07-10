@@ -1,13 +1,7 @@
 package com.naprock.hexudon.infrastructure.interceptor;
 
-import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
+import com.naprock.hexudon.application.port.in.IncreaseSpamViolationUseCase;
 import com.naprock.hexudon.domain.exception.business.RateLimitExceededException;
-import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
-import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.manager.MatchManager;
-import com.naprock.hexudon.domain.valueobject.MatchConfig;
-import com.naprock.hexudon.domain.valueobject.MatchState;
-import com.naprock.hexudon.domain.model.Team;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -22,62 +16,30 @@ public class RateLimiterInterceptor implements HandlerInterceptor {
     private static final String TEAM_HEADER = "X-Team-Name";
 
     private static final long REQUEST_WINDOW_MS = 1000L;
+    private static final int MAX_REQUESTS_PER_SECOND = 5;
 
-    private final MatchManager matchManager;
     private final Map<String, List<Long>> requestLog;
+    private final IncreaseSpamViolationUseCase increaseSpamViolationCount;
 
-    public RateLimiterInterceptor(MatchManager matchManager) {
-        if (matchManager == null) {
-            throw new IllegalArgumentException(
-                    "MatchManager must not be null"
-            );
-        }
-
-        this.matchManager = matchManager;
+    public RateLimiterInterceptor(IncreaseSpamViolationUseCase increaseSpamViolationCount) {
         this.requestLog = new ConcurrentHashMap<>();
+        this.increaseSpamViolationCount = increaseSpamViolationCount;
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request,
-                             HttpServletResponse response,
-                             Object handler) throws Exception {
-        String uri = request.getRequestURI();
-
-        // Không phải API action thì bỏ qua
-        if (!ACTION_API.equals(uri)) {
+    public boolean preHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler
+    ) {
+        if (!ACTION_API.equals(request.getRequestURI())) {
             return true;
         }
-
         String teamName = request.getHeader(TEAM_HEADER);
 
         if (teamName == null || teamName.isBlank()) {
-            throw new GameRuleViolationException(
-                    ErrorCode.MISSING_REQUIRED_HEADER,
-                    "Missing X-Team-Name header"
-            );
+            return true;
         }
-
-        MatchState matchState = matchManager.getMatchState();
-
-        Team team = matchState.getTeams()
-                .stream()
-                .filter(t -> teamName.equals(t.getTeamName()))
-                .findFirst()
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                ErrorCode.TEAM_NOT_FOUND,
-                                "Team not found: " + teamName
-                        )
-                );
-
-        if (team.isDisqualified()) {
-            throw new GameRuleViolationException(
-                    ErrorCode.TEAM_DISABLED,
-                    "Team has been disqualified"
-            );
-        }
-
-        MatchConfig config = matchManager.getMatchConfig();
 
         long now = System.currentTimeMillis();
 
@@ -88,18 +50,13 @@ public class RateLimiterInterceptor implements HandlerInterceptor {
 
         synchronized (timestamps) {
 
-            cleanExpiredRequests(timestamps, now);
+            // Remove expired timestamps
+            timestamps.removeIf(time -> now - time >= REQUEST_WINDOW_MS);
 
-            if (timestamps.size() >= config.getMaxRequestsPerSecond()) {
+            if (timestamps.size() >= MAX_REQUESTS_PER_SECOND) {
 
-                team.incrementSpamViolation();
-
-                if (team.getSpamViolationCount()
-                        >= config.getMaxSpamViolations()) {
-
-                    team.setDisqualified(true);
-                }
-
+                // Increase spam violation count
+                increaseSpamViolationCount.increaseSpamViolationCount(teamName);
                 throw new RateLimitExceededException(
                         "Too many requests."
                 );
@@ -111,14 +68,4 @@ public class RateLimiterInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private void cleanExpiredRequests(
-            List<Long> timestamps,
-            long now
-    ) {
-
-        timestamps.removeIf(
-                timestamp ->
-                        now - timestamp >= REQUEST_WINDOW_MS
-        );
-    }
 }
