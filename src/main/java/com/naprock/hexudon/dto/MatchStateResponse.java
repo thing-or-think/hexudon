@@ -1,8 +1,8 @@
 package com.naprock.hexudon.dto;
 
-import com.naprock.hexudon.model.MatchState;
-import com.naprock.hexudon.model.MatchStatus;
-import com.naprock.hexudon.model.Spot;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.valueobject.MatchStatus;
+import com.naprock.hexudon.domain.valueobject.Spot;
 
 import java.util.List;
 import java.util.Map;

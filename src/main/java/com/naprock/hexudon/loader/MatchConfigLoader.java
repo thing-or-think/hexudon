@@ -1,7 +1,7 @@
 package com.naprock.hexudon.loader;
 
-import com.naprock.hexudon.exception.system.ConfigLoadException;
-import com.naprock.hexudon.model.MatchConfig;
+import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
+import com.naprock.hexudon.domain.valueobject.MatchConfig;
 import com.naprock.hexudon.util.FileUtils;
 
 import java.util.List;

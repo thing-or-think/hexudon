@@ -1,6 +1,6 @@
 package com.naprock.hexudon.dto;
 
-import com.naprock.hexudon.model.Team;
+import com.naprock.hexudon.domain.model.Team;
 
 import java.util.List;
 

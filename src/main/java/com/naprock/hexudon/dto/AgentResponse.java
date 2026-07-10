@@ -1,7 +1,7 @@
 package com.naprock.hexudon.dto;
 
-import com.naprock.hexudon.model.Agent;
-import com.naprock.hexudon.model.AgentType;
+import com.naprock.hexudon.domain.model.Agent;
+import com.naprock.hexudon.domain.valueobject.AgentType;
 
 public class AgentResponse {
 

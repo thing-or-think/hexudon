@@ -1,7 +1,7 @@
 package com.naprock.hexudon.dto;
 
-import com.naprock.hexudon.model.Action;
-import com.naprock.hexudon.model.ActionType;
+import com.naprock.hexudon.domain.valueobject.Action;
+import com.naprock.hexudon.domain.valueobject.ActionType;
 
 public record ActionResponse(
         int order,

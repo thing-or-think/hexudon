@@ -1,9 +1,9 @@
 package com.naprock.hexudon.engine;
 
-import com.naprock.hexudon.model.Cell;
-import com.naprock.hexudon.model.MatchState;
-import com.naprock.hexudon.model.Road;
-import com.naprock.hexudon.model.Spot;
+import com.naprock.hexudon.domain.valueobject.Cell;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.valueobject.Road;
+import com.naprock.hexudon.domain.valueobject.Spot;
 
 public class HexGridUtils {
 

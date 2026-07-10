@@ -1,5 +1,6 @@
 package com.naprock.hexudon.model;
 
+import com.naprock.hexudon.domain.valueobject.AgentType;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

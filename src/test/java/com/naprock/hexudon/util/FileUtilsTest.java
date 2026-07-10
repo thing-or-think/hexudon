@@ -1,6 +1,6 @@
 package com.naprock.hexudon.util;
 
-import com.naprock.hexudon.exception.system.ConfigLoadException;
+import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;

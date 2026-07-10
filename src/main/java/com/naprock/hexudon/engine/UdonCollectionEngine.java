@@ -1,6 +1,10 @@
 package com.naprock.hexudon.engine;
 
-import com.naprock.hexudon.model.*;
+import com.naprock.hexudon.domain.model.Agent;
+import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.valueobject.AgentType;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.valueobject.Spot;
 
 public class UdonCollectionEngine {
 

@@ -1,7 +1,7 @@
 package com.naprock.hexudon.loader;
 
-import com.naprock.hexudon.exception.system.ConfigLoadException;
-import com.naprock.hexudon.model.MatchConfig;
+import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
+import com.naprock.hexudon.domain.valueobject.MatchConfig;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,8 +18,8 @@ class MatchConfigLoaderTest {
             () -> assertEquals(15, config.getMapHeight()),
             () -> assertEquals(50, config.getMaxTurns()),
             () -> assertEquals(2, config.getMaxTeams()),
-            () -> assertEquals(3, config.getAgentsPerTeam()),
-            () -> assertEquals(2, config.getPatrolAgents()),
+            () -> assertEquals(2, config.getAgentsPerTeam()),
+            () -> assertEquals(1, config.getPatrolAgents()),
             () -> assertEquals(1, config.getRefuelAgents()),
             () -> assertEquals(100, config.getInitialFuel())
         );

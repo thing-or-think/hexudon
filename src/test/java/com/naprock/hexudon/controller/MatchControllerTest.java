@@ -1,7 +1,8 @@
 package com.naprock.hexudon.controller;
 
+import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.valueobject.*;
 import com.naprock.hexudon.manager.MatchManager;
-import com.naprock.hexudon.model.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

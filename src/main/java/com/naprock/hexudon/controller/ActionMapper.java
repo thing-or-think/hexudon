@@ -1,9 +1,9 @@
 package com.naprock.hexudon.controller;
 
 import com.naprock.hexudon.dto.*;
-import com.naprock.hexudon.model.Action;
-import com.naprock.hexudon.model.AgentExecutionResult;
-import com.naprock.hexudon.model.TurnSimulationResult;
+import com.naprock.hexudon.domain.valueobject.Action;
+import com.naprock.hexudon.domain.valueobject.AgentExecutionResult;
+import com.naprock.hexudon.domain.valueobject.TurnSimulationResult;
 
 import java.util.List;
 import java.util.Map;

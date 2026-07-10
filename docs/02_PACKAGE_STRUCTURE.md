@@ -1,119 +1,250 @@
-# Tài liệu Thiết kế Exception Handling - 02_PACKAGE_STRUCTURE
+# 02. CẤU TRÚC GÓI (PACKAGE STRUCTURE)
 
-## 1. Purpose (Mục đích)
-Tài liệu này định nghĩa cấu trúc gói (Package Structure) cho phân hệ Exception Handling của dự án **HEXUDON Server**. Thiết kế này nhằm đảm bảo tính phân tách trách nhiệm (Separation of Concerns), tuân thủ nguyên tắc Clean Architecture (nơi các exception nghiệp vụ không bị phụ thuộc vào Web Framework) và tối ưu hóa việc quản lý mã nguồn.
-
----
-
-## 2. Scope (Phạm vi)
-Áp dụng đối với toàn bộ các class ngoại lệ, các lớp xử lý lỗi tập trung, cấu trúc phản hồi lỗi, và các enum mã lỗi nằm trong gói cơ sở `com.naprock.hexudon.exception`.
-
----
-
-## 3. Design Goals (Mục tiêu thiết kế)
-*   **Decoupling (Khử liên kết)**: Các exception nghiệp vụ thuộc tầng Core/Domain phải tách biệt khỏi Spring Framework (như HTTP Status hay Controller annotations).
-*   **Cohesion (Tính đồng kết)**: Gom nhóm các lớp có cùng mục đích sử dụng (như các exception nghiệp vụ của game, các exception liên quan cấu hình hệ thống, bộ bắt lỗi tập trung).
-*   **Strict Dependency Rules (Quy tắc phụ thuộc nghiêm ngặt)**: Xác định rõ ràng chiều phụ thuộc giữa các package để tránh hiện tượng vòng lặp phụ thuộc (circular dependency).
+## Mục lục
+1. [Sơ đồ cây cấu trúc thư mục mục tiêu](#1-sơ-đồ-cây-cấu-trúc-thư-mục-mục-tiêu)
+2. [Chi tiết các Package thuộc Tầng Domain (Domain Layer)](#2-chi-tiết-các-package-thuộc-tầng-domain-domain-layer)
+3. [Chi tiết các Package thuộc Tầng Application (Application Layer)](#3-chi-tiết-các-package-thuộc-tầng-application-application-layer)
+4. [Chi tiết các Package thuộc Tầng Adapter (Adapter Layer)](#4-chi-tiết-các-package-thuộc-tầng-adapter-adapter-layer)
+5. [Chi tiết các Package thuộc Tầng Infrastructure (Infrastructure Layer)](#5-chi-tiết-các-package-thuộc-tầng-infrastructure-infrastructure-layer)
 
 ---
 
-## 4. Package Tree (Cơ cấu thư mục gói)
-Phân hệ Exception được tổ chức như sau:
+## 1. Sơ đồ cây cấu trúc thư mục mục tiêu
+
+Dưới đây là sơ đồ cây đầy đủ của dự án sau khi refactor:
 
 ```text
-com.naprock.hexudon.exception/
+src/main/java/com/naprock/hexudon/
 │
-├── base/
-│   ├── BusinessException.java
-│   └── SystemException.java
+├── domain/                                  # Tầng nghiệp vụ cốt lõi (Domain Core)
+│   ├── model/                               # Thực thể nghiệp vụ (Entities) có định danh
+│   │   ├── Agent.java
+│   │   └── Team.java
+│   ├── valueobject/                         # Đối tượng giá trị (Value Objects) bất biến
+│   │   ├── Cell.java
+│   │   ├── Road.java
+│   │   ├── Spot.java
+│   │   ├── Action.java
+│   │   ├── ActionType.java
+│   │   ├── AgentType.java
+│   │   ├── MatchStatus.java
+│   │   ├── TerrainType.java
+│   │   ├── MatchConfig.java
+│   │   ├── MatchState.java                 # Aggregate Root (lưu ý: chứa các Entities và Value Objects)
+│   │   ├── AgentExecutionResult.java
+│   │   └── TurnSimulationResult.java
+│   ├── event/                               # Sự kiện nghiệp vụ (Domain Events)
+│   ├── service/                             # Dịch vụ nghiệp vụ (Domain Services) chứa thuật toán
+│   │   ├── MovementSimulator.java
+│   │   ├── FuelManager.java
+│   │   ├── TrafficCalculator.java
+│   │   ├── ScoringEngine.java
+│   │   ├── UdonCollectionEngine.java
+│   │   ├── ActionValidatorEngine.java
+│   │   ├── MapValidator.java
+│   │   ├── HexGridUtils.java
+│   │   └── TerrainGenerator.java
+│   ├── repository/                          # Giao diện lưu trữ Aggregate Root (Repository Interfaces)
+│   │   └── MatchStateRepository.java
+│   └── exception/                           # Ngoại lệ nghiệp vụ thuần túy
+│       ├── BusinessException.java
+│       ├── GameRuleViolationException.java
+│       ├── MatchStateConflictException.java
+│       └── ResourceNotFoundException.java
 │
-├── business/
-│   ├── GameRuleViolationException.java
-│   ├── MatchStateConflictException.java
-│   ├── RateLimitExceededException.java
-│   └── ResourceNotFoundException.java
+├── application/                             # Tầng logic điều phối ứng dụng (Application Layer)
+│   ├── port/                                # Các Cổng giao tiếp của Application
+│   │   ├── in/                              # Inbound Ports (Use Cases định nghĩa dịch vụ vào)
+│   │   │   ├── RegisterTeamUseCase.java
+│   │   │   ├── StartMatchUseCase.java
+│   │   │   ├── SubmitActionsUseCase.java
+│   │   │   └── GetMatchStateUseCase.java
+│   │   └── out/                             # Outbound Ports (Giao diện dịch vụ ra bên ngoài)
+│   │       ├── MatchStateStorePort.java
+│   │       └── MatchConfigLoaderPort.java
+│   ├── service/                             # Application Services implement Inbound Ports
+│   │   └── MatchApplicationService.java
+│   ├── dto/                                 # Đối tượng DTO giao tiếp tầng Application
+│   │   ├── ActionRequest.java
+│   │   ├── ActionResponse.java
+│   │   ├── AgentActionPlanRequest.java
+│   │   ├── AgentActionPlanResponse.java
+│   │   ├── AgentResponse.java
+│   │   ├── CellResponse.java
+│   │   ├── DayActionRequest.java
+│   │   ├── DayActionResponse.java
+│   │   ├── MatchStateResponse.java
+│   │   ├── TeamActionRequest.java
+│   │   ├── TeamActionResponse.java
+│   │   ├── TeamRegisterRequest.java
+│   │   └── TeamResponse.java
+│   └── mapper/                              # Bộ chuyển đổi DTO sang Domain Models và ngược lại
+│       └── ActionMapper.java
 │
-├── system/
-│   └── ConfigLoadException.java
+├── adapter/                                 # Tầng kết nối công nghệ bên ngoài (Adapter Layer)
+│   ├── in/                                  # Adapters đầu vào (Inbound Adapters)
+│   │   └── rest/                            # HTTP REST Controllers
+│   │       └── MatchController.java
+│   └── out/                                 # Adapters đầu ra (Outbound Adapters)
+│       ├── persistence/                     # Quản lý lưu trữ thực tế (In-Memory hoặc DB)
+│       │   └── InMemoryMatchStateRepository.java
+│       ├── loader/                          # Đọc dữ liệu vật lý cấu hình
+│       │   └── FileMatchConfigLoader.java
+│       └── configuration/                   # Beans config để liên kết Port với Adapter
+│           └── AdapterBeanConfig.java
 │
-├── handler/
-│   └── GlobalExceptionHandler.java
+├── infrastructure/                          # Tầng hạ tầng kỹ thuật và cấu hình Spring Boot
+│   ├── configuration/                       # Cấu hình Spring (CORS, MVC, Web, Bean)
+│   │   ├── AppConfig.java
+│   │   └── WebConfig.java
+│   ├── interceptor/                         # Interceptors lọc request hạ tầng
+│   │   └── RateLimiterInterceptor.java
+│   ├── scheduler/                           # Bộ lập lịch scheduler của Spring
+│   │   └── SchedulerConfig.java
+│   └── util/                                # Lớp tiện ích hạ tầng vật lý
+│       └── FileUtils.java
 │
-├── response/
-│   ├── ErrorResponse.java
-│   └── ValidationErrorDetail.java
-│
-└── code/
-    └── ErrorCode.java
+└── HexudonApplication.java                  # File Spring Boot Bootstrapping
 ```
 
 ---
 
-## 5. Responsibilities of Sub-packages (Trách nhiệm của từng Package con)
+## 2. Chi tiết các Package thuộc Tầng Domain (Domain Layer)
 
-| Package | Trách nhiệm chính |
-| :--- | :--- |
-| `base` | Chứa các exception gốc (Base Class Exceptions) làm nền tảng cho toàn bộ hệ thống. |
-| `business` | Chứa các exception liên quan trực tiếp đến nghiệp vụ logic trò chơi và tương tác của người chơi. |
-| `system` | Chứa các exception liên quan đến hạ tầng kỹ thuật, đọc file cấu hình, kết nối mạng. |
-| `handler` | Chứa bộ xử lý trung tâm (Global Exception Handler) chịu trách nhiệm bắt ngoại lệ và định dạng response. |
-| `response` | Chứa cấu trúc DTO đại diện cho dữ liệu lỗi được trả ra cho Client. |
-| `code` | Chứa Enum định nghĩa tất cả mã lỗi nghiệp vụ của hệ thống. |
+Tầng Domain chứa toàn bộ tri thức nghiệp vụ cốt lõi, không chứa bất kỳ framework phụ thuộc nào ngoài Lombok.
 
----
+### 2.1. `domain.model`
+- **Vai trò:** Chứa các Entity (thực thể) có định danh và trạng thái thay đổi theo thời gian.
+- **Chứa class:** `Agent`, `Team`.
+- **Không được chứa:** Value Object, Domain Services, Use Cases, Controller, các thư viện database/Spring.
+- **Được phép phụ thuộc:** `domain.valueobject`, `domain.exception`.
+- **Không được phụ thuộc:** Toàn bộ các package ngoài `domain` (`application`, `adapter`, `infrastructure`).
 
-## 6. Dependency Rules (Quy tắc phụ thuộc)
-Để tuân thủ Clean Architecture, chiều phụ thuộc của các gói phải tuân theo quy tắc: **Tầng ngoài phụ thuộc vào tầng trong, không có chiều ngược lại.**
+### 2.2. `domain.valueobject`
+- **Vai trò:** Chứa các đối tượng bất biến biểu diễn giá trị, định nghĩa bằng các thuộc tính của nó. Đặc biệt, `MatchState` là Aggregate Root quản lý trạng thái, chứa các Entity và Value Object.
+- **Chứa class:** `Cell`, `Road`, `Spot`, `Action`, `ActionType`, `AgentType`, `MatchStatus`, `TerrainType`, `MatchConfig`, `MatchState`, `AgentExecutionResult`, `TurnSimulationResult`.
+- **Không được chứa:** Entity có định danh thay đổi độc lập, Domain Services, Interfaces Repository.
+- **Được phép phụ thuộc:** `domain.exception`.
+- **Không được phụ thuộc:** Bất kỳ package nào nằm ngoài `domain`.
 
-*   `base` không phụ thuộc vào bất kỳ package con nào khác của `exception`.
-*   `business` và `system` chỉ được phép kế thừa từ `base` và sử dụng `code`. Tuyệt đối không được import bất kỳ lớp nào từ `handler` hay `response`.
-*   `code` là độc lập, không import bất cứ package nào khác trong gói exception.
-*   `handler` là package ở lớp ngoài cùng (Web Layer). Nó được phép import tất cả các package khác (`base`, `business`, `system`, `response`, `code`) cùng các thư viện của Spring Framework.
+### 2.3. `domain.service`
+- **Vai trò:** Chứa các Domain Service thực thi các thuật toán trò chơi và luật chơi. Các class này không lưu trạng thái (Stateless).
+- **Chứa class:** `MovementSimulator`, `FuelManager`, `TrafficCalculator`, `ScoringEngine`, `UdonCollectionEngine`, `ActionValidatorEngine`, `MapValidator`, `HexGridUtils`, `TerrainGenerator`.
+- **Không được chứa:** Thực thể lưu trạng thái, annotation `@Service` hay `@Component` của Spring.
+- **Được phép phụ thuộc:** `domain.model`, `domain.valueobject`, `domain.exception`.
+- **Không được phụ thuộc:** `domain.repository` (để tránh rò rỉ cơ chế lưu trữ), `application`, `adapter`, `infrastructure`.
 
-```mermaid
-graph TD
-    handler[exception.handler] --> base[exception.base]
-    handler --> business[exception.business]
-    handler --> system[exception.system]
-    handler --> response[exception.response]
-    handler --> code[exception.code]
-    
-    business --> base
-    business --> code
-    
-    system --> base
-    system --> code
-    
-    response --> code
-```
+### 2.4. `domain.repository`
+- **Vai trò:** Định nghĩa các Interface lưu trữ và tìm kiếm Aggregate Root (`MatchState`).
+- **Chứa class:** `MatchStateRepository` (Interface).
+- **Không được chứa:** Class triển khai chi tiết (Implementation), annotation `@Repository` của Spring Boot.
+- **Được phép phụ thuộc:** `domain.valueobject` (`MatchState`), `domain.model`.
+- **Không được phụ thuộc:** Bất kỳ package nào nằm ngoài `domain`.
 
----
-
-## 7. Import & Visibility Rules (Quy tắc import và Tầm vực)
-*   **Visibility**:
-    *   Tất cả các exception cụ thể (`GameRuleViolationException`, `ConfigLoadException`, v.v.) phải để ở phạm vi `public` để các package khác như `engine`, `manager`, `loader` có thể ném được chúng.
-    *   Các class trong `response` (`ErrorResponse`, `ValidationErrorDetail`) phải để ở phạm vi `public` để Jackson Object Mapper có thể serialize thành JSON.
-*   **Import Restrictions**:
-    *   Các package `base`, `business`, `system` **không được phép** import các thư viện của Spring MVC (như `org.springframework.web.bind.annotation.*` hoặc `org.springframework.http.HttpStatus`).
-    *   Không viết logic xử lý HTTP bên trong các Business Exceptions.
+### 2.5. `domain.exception`
+- **Vai trò:** Định nghĩa các Business Exception của trò chơi.
+- **Chứa class:** `BusinessException`, `GameRuleViolationException`, `MatchStateConflictException`, `ResourceNotFoundException`.
+- **Không được chứa:** HTTP Exception, `@ResponseStatus`, Global exception handler.
+- **Được phép phụ thuộc:** Không phụ thuộc gì ngoài các thư viện chuẩn Java.
+- **Không được phụ thuộc:** Các package ngoài `domain`.
 
 ---
 
-## 8. Examples & Guideline (Hướng dẫn viết code mẫu)
-Khi một nhà phát triển tạo một ngoại lệ mới liên quan đến việc không tìm thấy tài nguyên (ví dụ: Match ID không tồn tại):
-1.  Tạo class `ResourceNotFoundException.java` nằm trong package `com.naprock.hexudon.exception.business`.
-2.  Lớp này kế thừa từ `BusinessException` (nằm trong `base`).
-3.  Khai báo thêm mã lỗi tương ứng `RESOURCE_NOT_FOUND` trong enum `ErrorCode` (nằm trong `code`).
-4.  Cập nhật phương thức xử lý thích hợp trong `GlobalExceptionHandler` (nằm trong `handler`).
+## 3. Chi tiết các Package thuộc Tầng Application (Application Layer)
+
+Tầng Application đóng vai trò điều phối luồng ứng dụng và các ca sử dụng.
+
+### 3.1. `application.port.in`
+- **Vai trò:** Định nghĩa các Inbound Port (Interface Use Cases) cung cấp giao tiếp đầu vào cho ứng dụng.
+- **Chứa class:** `RegisterTeamUseCase`, `StartMatchUseCase`, `SubmitActionsUseCase`, `GetMatchStateUseCase`.
+- **Không được chứa:** Implementations, DTO (DTO nên nằm ở `application.dto`).
+- **Được phép phụ thuộc:** `application.dto`, `domain.valueobject`, `domain.model`.
+- **Không được phụ thuộc:** Tầng `adapter`, `infrastructure`.
+
+### 3.2. `application.port.out`
+- **Vai trò:** Định nghĩa các Outbound Port (Interface) kết nối hạ tầng.
+- **Chứa class:** `MatchStateStorePort`, `MatchConfigLoaderPort`.
+- **Không được chứa:** Implementations, Spring Boot Configurations.
+- **Được phép phụ thuộc:** `domain.valueobject` (`MatchState`, `MatchConfig`), `domain.model`.
+- **Không được phụ thuộc:** Tầng `adapter`, `infrastructure`.
+
+### 3.3. `application.service`
+- **Vai trò:** Triển khai các Inbound Ports, điều phối việc gọi Repository, Domain Services và cập nhật Aggregate Root.
+- **Chứa class:** `MatchApplicationService`.
+- **Không được chứa:** REST Controller, logic nạp config từ file, annotation `@Service` (nếu cấu hình Java Bean tập trung ở Adapter).
+- **Được phép phụ thuộc:** `application.port.in`, `application.port.out`, `application.dto`, `application.mapper`, `domain.*`.
+- **Không được phụ thuộc:** `adapter.*`, `infrastructure.*`.
+
+### 3.4. `application.dto` & `application.mapper`
+- **Vai trò:** Chứa các đối tượng Record truyền nhận dữ liệu REST API và các mapper chuyển đổi dữ liệu.
+- **Chứa class:** `ActionRequest`, `ActionResponse`, `ActionMapper`, v.v.
+- **Không được chứa:** Nghiệp vụ game, logic Controller.
+- **Được phép phụ thuộc:** `domain.model`, `domain.valueobject`.
+- **Không được phụ thuộc:** Tầng `adapter`, `infrastructure`.
 
 ---
 
-## 9. Common Mistakes (Sai lầm thường gặp)
-*   Đặt trực tiếp tất cả các class ngoại lệ vào chung một thư mục `com.naprock.hexudon.exception` mà không phân chia thư mục con. Điều này khiến package bị phình to khi số lượng ngoại lệ tăng lên.
-*   Để các class thuộc `business` import `ErrorResponse` hoặc `HttpStatus`. Lỗi này phá vỡ tính độc lập của tầng nghiệp vụ.
-*   Import chéo vòng (ví dụ: một class trong `base` import ngược lại class trong `business`).
+## 4. Chi tiết các Package thuộc Tầng Adapter (Adapter Layer)
+
+Tầng Adapter kết nối hệ thống với các công nghệ bên ngoài (Spring Boot MVC, File System).
+
+### 4.1. `adapter.in.rest`
+- **Vai trò:** Tiếp nhận HTTP requests, điều hướng vào Inbound Ports của Application.
+- **Chứa class:** `MatchController`.
+- **Không được chứa:** Logic nghiệp vụ game, thuật toán mô phỏng di chuyển.
+- **Được phép phụ thuộc:** `application.port.in`, `application.dto`, `application.mapper`.
+- **Không được phụ thuộc:** `application.service` (phải giao tiếp qua Port), `adapter.out.*`, `domain.service`.
+
+### 4.2. `adapter.out.persistence`
+- **Vai trò:** Triển khai lưu trữ in-memory hoặc database cho `MatchStateStorePort` và `MatchStateRepository`.
+- **Chứa class:** `InMemoryMatchStateRepository` (triển khai đồng thời `MatchStateStorePort` và `MatchStateRepository`).
+- **Không được chứa:** Business logic.
+- **Được phép phụ thuộc:** `application.port.out`, `domain.repository`, `domain.valueobject` (`MatchState`).
+- **Không được phụ thuộc:** `adapter.in.*`, `application.service`.
+
+### 4.3. `adapter.out.loader`
+- **Vai trò:** Triển khai `MatchConfigLoaderPort` để đọc file từ ổ đĩa vật lý.
+- **Chứa class:** `FileMatchConfigLoader`.
+- **Không được chứa:** Triển khai database.
+- **Được phép phụ thuộc:** `application.port.out`, `domain.valueobject` (`MatchConfig`), `infrastructure.util` (`FileUtils`).
+- **Không được phụ thuộc:** Tầng domain model trực tiếp ngoài `MatchConfig`.
+
+### 4.4. `adapter.out.configuration`
+- **Vai trò:** Định nghĩa các Spring Configuration để đăng ký các bean của application service và adapter trong Application Context.
+- **Chứa class:** `AdapterBeanConfig`.
+- **Không được chứa:** Config Web MVC, CORS.
+- **Được phép phụ thuộc:** `application.service`, `adapter.out.persistence`, `adapter.out.loader`.
+- **Không được phụ thuộc:** `adapter.in.rest` trực tiếp.
 
 ---
 
-## 10. Future Extension (Mở rộng tương lai)
-Nếu hệ thống tích hợp thêm cơ chế cơ sở dữ liệu (Database Layer), một package con mới tên là `com.naprock.hexudon.exception.database` hoặc `com.naprock.hexudon.exception.data` sẽ được tạo ra, kế thừa từ `SystemException` để gom nhóm các lỗi kết nối, lỗi ràng buộc khóa ngoại của DB độc lập với các lỗi logic game.
+## 5. Chi tiết các Package thuộc Tầng Infrastructure (Infrastructure Layer)
+
+Tầng Infrastructure chứa cấu hình kỹ thuật của Spring Boot Framework, lập lịch, interceptor và các thư viện tiện ích dùng chung.
+
+### 5.1. `infrastructure.configuration`
+- **Vai trò:** Chứa cấu hình Web, CORS, Spring Scheduler.
+- **Chứa class:** `AppConfig`, `WebConfig`.
+- **Không được chứa:** Config khởi tạo Application Service Bean.
+- **Được phép phụ thuộc:** `infrastructure.interceptor` (`RateLimiterInterceptor`).
+- **Không được phụ thuộc:** Lớp Domain Core hay Use Case nghiệp vụ trực tiếp.
+
+### 5.2. `infrastructure.interceptor`
+- **Vai trò:** Chặn request để thực thi các tác vụ kỹ thuật như giới hạn tần suất (Rate Limiting).
+- **Chứa class:** `RateLimiterInterceptor`.
+- **Không được chứa:** Logic nghiệp vụ game.
+- **Được phép phụ thuộc:** Các thư viện Spring Web Servlet, Java Standard Libraries.
+- **Không được phụ thuộc:** `domain.*`, `application.service`.
+
+### 5.3. `infrastructure.scheduler`
+- **Vai trò:** Tự động điều phối chuyển ngày (`nextDay`) thông qua lập lịch thời gian thực.
+- **Chứa class:** `SchedulerConfig`.
+- **Không được chứa:** Thuật toán tính toán game.
+- **Được phép phụ thuộc:** `application.port.in` (`StartMatchUseCase`, `SubmitActionsUseCase` hoặc interface quản lý lượt).
+- **Không được phụ thuộc:** Lớp Domain Core directly hoặc details adapter persistence.
+
+### 5.4. `infrastructure.util`
+- **Vai trò:** Các tiện ích hệ thống dùng chung.
+- **Chứa class:** `FileUtils`.
+- **Được phép phụ thuộc:** Chỉ phụ thuộc vào Java Core Libraries.
+- **Không được phụ thuộc:** Bất kỳ package nào của ứng dụng.

@@ -1,7 +1,10 @@
 package com.naprock.hexudon.config;
 
+import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.valueobject.MatchStatus;
 import com.naprock.hexudon.manager.MatchManager;
-import com.naprock.hexudon.model.*;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;

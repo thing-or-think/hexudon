@@ -1,10 +1,12 @@
 package com.naprock.hexudon.manager;
 
+import com.naprock.hexudon.domain.model.Agent;
+import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.valueobject.*;
 import com.naprock.hexudon.engine.*;
-import com.naprock.hexudon.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
+import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.loader.MatchConfigLoader;
-import com.naprock.hexudon.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

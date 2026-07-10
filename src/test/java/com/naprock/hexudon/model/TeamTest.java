@@ -1,5 +1,8 @@
 package com.naprock.hexudon.model;
 
+import com.naprock.hexudon.domain.model.Agent;
+import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.valueobject.AgentType;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.ArrayList;

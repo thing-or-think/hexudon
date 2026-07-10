@@ -1,8 +1,9 @@
 package com.naprock.hexudon.engine;
 
-import com.naprock.hexudon.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.exception.code.ErrorCode;
-import com.naprock.hexudon.model.*;
+import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
+import com.naprock.hexudon.domain.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.valueobject.Action;
+import com.naprock.hexudon.domain.valueobject.MatchConfig;
 
 import java.util.ArrayList;
 import java.util.Comparator;

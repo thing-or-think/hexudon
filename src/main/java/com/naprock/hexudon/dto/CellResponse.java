@@ -1,7 +1,7 @@
 package com.naprock.hexudon.dto;
 
-import com.naprock.hexudon.model.Cell;
-import com.naprock.hexudon.model.TerrainType;
+import com.naprock.hexudon.domain.valueobject.Cell;
+import com.naprock.hexudon.domain.valueobject.TerrainType;
 
 public record CellResponse(
         int x,

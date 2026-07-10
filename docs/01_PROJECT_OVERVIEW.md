@@ -1,139 +1,210 @@
-# Tài liệu Thiết kế Exception Handling - 01_PROJECT_OVERVIEW
+# 01. TỔNG QUAN DỰ ÁN (PROJECT OVERVIEW)
 
-## 1. Purpose (Mục đích)
-Tài liệu này cung cấp cái nhìn tổng quan về kiến trúc xử lý ngoại lệ (Exception Handling) và quản lý lỗi (Error Management) trong dự án **HEXUDON Server**. Mục tiêu chính là thiết lập một cơ chế nhất quán, an toàn, dễ bảo trì và mở rộng để bắt các lỗi phát sinh trong hệ thống, chuyển đổi chúng thành các phản hồi HTTP chuẩn (HTTP Error Responses) nhằm hỗ trợ các Client (Bots, Web, Mobile) xử lý lỗi một cách rõ ràng và hiệu quả.
-
----
-
-## 2. Scope (Phạm vi áp dụng)
-Hệ thống xử lý ngoại lệ áp dụng cho toàn bộ các layer và module trong **HEXUDON Server**:
-*   **REST API Layer (Controller & Interceptors)**: Bắt các lỗi định dạng request, lỗi ràng buộc dữ liệu (Validation), lỗi giới hạn tần suất (Rate Limiting).
-*   **Business Orchestration Layer (Manager)**: Bắt các lỗi về trạng thái trận đấu (Match Lifecycle), lỗi điều phối luồng đi của game.
-*   **Domain & Physics Engine Layer (Engine)**: Bắt các lỗi về luật chơi, mô phỏng di chuyển (Movement), năng lượng (Fuel), tính toán giao thông (Traffic) và điểm số (Scoring).
-*   **Data Loader Layer (Loader)**: Bắt các lỗi trong quá trình khởi tạo cấu hình bản đồ và trận đấu từ file cấu hình.
-*   **System Infrastructure Layer (Config, Utils)**: Các lỗi kết nối cơ sở dữ liệu (nếu có), lỗi phân tích cú pháp JSON, và các lỗi hệ thống không xác định khác.
+## Mục lục
+1. [Mục tiêu dự án](#1-mục-tiêu-dự-án)
+2. [Nguyên tắc refactor](#2-nguyên-tắc-refactor)
+3. [Tổng quan Domain-Driven Design (DDD)](#3-tổng-quan-domain-driven-design-ddd)
+4. [Tổng quan Hexagonal Architecture (Ports & Adapters)](#4-tổng-quan-hexagonal-architecture-ports--adapters)
+5. [Sơ đồ dòng phụ thuộc (Dependency Flow Diagram)](#5-sơ-đồ-dòng-phụ-thuộc-dependency-flow-diagram)
+6. [Danh sách và mô tả chức năng của toàn bộ package](#6-danh-sách-và-mô-tả-chức-năng-của-toàn-bộ-package)
+7. [Luồng xử lý yêu cầu (Request Processing Flow)](#7-luồng-xử-lý-yêu-cầu-request-processing-flow)
 
 ---
 
-## 3. Responsibilities (Trách nhiệm của Module Exception)
-*   **Phân loại lỗi rõ ràng**: Tách biệt hoàn toàn lỗi do nghiệp vụ (Business Errors - do Client vi phạm luật chơi hoặc gửi yêu cầu sai) và lỗi do hệ thống (System Errors - lỗi server, lỗi IO, NullPointer, cơ sở dữ liệu).
-*   **Chuẩn hóa dữ liệu lỗi trả về**: Định dạng mọi lỗi về một cấu trúc JSON duy nhất (`ErrorResponse`) để Client dễ dàng bóc tách thông tin.
-*   **Ánh xạ mã trạng thái HTTP thích hợp**: Đảm bảo lỗi nghiệp vụ trả đúng mã `4xx`, lỗi hệ thống trả mã `5xx`.
-*   **Bảo mật thông tin hệ thống**: Ngăn chặn rò rỉ stacktrace, tên package, cấu trúc bảng dữ liệu hoặc các thông báo lỗi nhạy cảm ra ngoài môi trường Production.
-*   **Ghi nhận nhật ký (Logging) tập trung**: Log đầy đủ các thông tin cần thiết phục vụ debug tại server mà không làm rác file log hoặc gây suy giảm hiệu năng do in stacktrace bừa bãi.
+## 1. Mục tiêu dự án
+
+### Mục đích project
+Hexudon Game Server là hệ thống điều phối các trận đấu mô phỏng theo lượt (Turn-based Simulation) trên lưới bản đồ lục giác. Các đội chơi lập trình client gửi kế hoạch hành động cho các Agents (Patrol Agent để đi thu thập bánh Udon, Refuel Agent để tiếp nhiên liệu). 
+
+### Kiến trúc hiện tại
+Dự án hiện tại được tổ chức theo các package phẳng, thiếu sự phân tách rõ ràng giữa nghiệp vụ cốt lõi (Domain Core) và hạ tầng (Spring Boot, Filesystem, HTTP REST). 
+- **Cấu trúc hiện tại:** `config`, `controller`, `manager`, `engine`, `model`, `dto`, `loader`, `exception`, `interceptor`, `util`.
+- **Hạn chế:** Các class điều phối (`MatchManager`) phụ thuộc trực tiếp vào các adapter kỹ thuật (`MatchConfigLoader`), gây khó khăn khi thay đổi nguồn dữ liệu hoặc tích hợp Database (Persistence). Sự phân tách giữa nghiệp vụ thuần túy và ứng dụng (Application Service) chưa rõ ràng.
+
+### Kiến trúc mục tiêu
+Chuyển đổi toàn diện hệ thống sang mô hình kiến trúc **Domain-Driven Design (DDD)** kết hợp **Hexagonal Architecture (Ports & Adapters)**.
+- Phân biệt rõ ràng giữa logic nghiệp vụ cốt lõi (Domain), logic điều phối ứng dụng (Application), giao tiếp cổng ngoài (Adapters) và cấu hình kỹ thuật (Infrastructure).
+- Cô lập Domain Core hoàn toàn khỏi các framework bên ngoài (bao gồm cả Spring Framework và các thư viện Serialization).
+- Chuẩn bị sẵn sàng cấu trúc để dễ dàng tích hợp các hệ quản trị cơ sở dữ liệu (RDBMS/NoSQL) thay cho việc lưu trữ in-memory hiện tại.
+
+### Phạm vi refactor
+- **Đối tượng thay đổi:** Vị trí tệp tin (package structure), cấu trúc imports, cách khai báo phụ thuộc (Dependency Injection thông qua Constructor), cách phân chia vai trò class (từ `MatchManager` phân tách thành Use Cases, Application Services, Ports và Repository).
+- **Tuyệt đối KHÔNG thay đổi:**
+  - Thuật toán di chuyển, tính nhiên liệu, tính điểm hay luật chơi.
+  - Cấu trúc dữ liệu REST API (giữ nguyên JSON request/response).
+  - Hành vi lưu trữ dữ liệu (tạm thời vẫn duy trì lưu trữ in-memory nhưng cấu trúc thông qua Repository Interface).
+  - Không thêm mới bất kỳ tính năng nghiệp vụ nào.
 
 ---
 
-## 4. Design Goals (Mục tiêu thiết kế)
-*   **Uniformity (Tính thống nhất)**: Toàn bộ hệ thống chỉ sử dụng một Global Exception Handler duy nhất để xử lý lỗi REST API.
-*   **Extensibility (Tính mở rộng)**: Việc thêm một lỗi nghiệp vụ mới chỉ cần định nghĩa một Exception con và thêm mã ErrorCode mới mà không làm ảnh hưởng đến code xử lý chung.
-*   **Clean Architecture Compliance (Tuân thủ Clean Architecture)**: Lớp Core Logic/Engine không bị phụ thuộc vào các thư viện Web hay HTTP Status của Spring MVC. Nó chỉ ném ra các Business Exceptions thuần Java.
-*   **REST Compliance (Tuân thủ chuẩn REST)**: Sử dụng chính xác HTTP Status Codes (400, 403, 404, 429, 500) kết hợp với Custom Error Code trong Response Body.
+## 2. Nguyên tắc refactor
+
+Trong suốt quá trình tái cấu trúc, toàn bộ đội ngũ lập trình viên phải tuân thủ nghiêm ngặt các nguyên tắc sau:
+
+| Nguyên tắc | Mô tả chi tiết | Kiểm soát bằng |
+| :--- | :--- | :--- |
+| **Bảo toàn logic nghiệp vụ 100%** | Không thay đổi thuật toán của `MovementSimulator`, `FuelManager`, `TrafficCalculator` và `ScoringEngine`. | Hệ thống Unit Test hiện tại phải Pass 100% |
+| **Không đổi API REST** | Các Endpoint HTTP (`/api/match/...`), HTTP Method (GET, POST), và cấu trúc JSON Request/Response DTO phải giữ nguyên. | Integration Test / Controller Test |
+| **Không đổi cấu hình trận đấu** | Giữ nguyên định dạng và quy tắc đọc của file `match_config.txt`. | Config Loader Test |
+| **Nguyên tắc phụ thuộc một chiều** | Lớp Domain không được phụ thuộc vào bất kỳ lớp nào bên ngoài nó (Application, Adapter, Infrastructure). | ArchUnit Test (`ArchitectureTest.java`) |
+| **Không sử dụng Spring Bean trong Domain** | Không dùng các annotation của Spring (`@Service`, `@Component`, `@Autowired`) trong Domain Model, Value Object và Domain Service. | Rà soát thủ công & ArchUnit |
+| **Refactor từng bước nhỏ (Iterative)** | Chia nhỏ quá trình refactor thành các Phase độc lập. Mỗi Phase có thể compile, chạy test và commit/rollback độc lập. | Quy trình Git Commit & CI/CD |
 
 ---
 
-## 5. Dependencies (Các thành phần phụ thuộc)
-Hệ thống xử lý lỗi phụ thuộc vào các thư viện và module sau:
-*   **Java Development Kit (JDK) 21**: Sử dụng các tính năng hiện đại như Records, Pattern Matching.
-*   **Spring Boot Web Starter (3.x)**: Sử dụng các annotation `@RestControllerAdvice`, `@ExceptionHandler` để bắt lỗi tập trung.
-*   **Spring Boot Validation Starter**: Sử dụng Hibernate Validator để bắt các ràng buộc dữ liệu đầu vào (`@NotNull`, `@Min`, `@NotBlank`).
-*   **SLF4J & Logback**: Thư viện logging mặc định của Spring Boot phục vụ ghi vết lỗi.
+## 3. Tổng quan Domain-Driven Design (DDD)
+
+Kiến trúc mới chia nhỏ thế giới trò chơi Hexudon thành các khái niệm DDD rõ ràng:
+
+- **Domain (Nghiệp vụ):** Toàn bộ luật chơi, trạng thái bản đồ lục giác, năng lượng của điệp viên, cách thức thu thập Udon và mô phỏng trận đấu.
+- **Entity (Thực thể):** Đối tượng có định danh duy nhất (Identity) và vòng đời thay đổi.
+  - *Ví dụ:* `Agent` (định danh bằng Agent ID), `Team` (định danh bằng Team Name), `Spot` (tọa độ vị trí).
+- **Aggregate & Aggregate Root (Cụm thực thể và Gốc cụm):** 
+  - `MatchState` là **Aggregate Root**. Toàn bộ các thực thể khác như `Team`, `Agent`, `Spot` đều thuộc quản lý của cụm này. Mọi thay đổi trạng thái bên trong cụm phải thông qua Aggregate Root (`MatchState`).
+- **Value Object (Đối tượng giá trị):** Đối tượng không có định danh độc lập, thuộc tính định nghĩa giá trị của nó, có tính bất biến (Immutable).
+  - *Ví dụ:* `Cell` (Tọa độ X, Y và TerrainType), `Road` (Kết nối giữa 2 Cell), `Action` (Hành động đơn lẻ của Agent), `Submission` (Kế hoạch nộp cho lượt chơi), `MatchConfig` (Cấu hình luật chơi).
+- **Domain Service (Dịch vụ nghiệp vụ):** Các logic chứa thuật toán phức tạp liên quan đến nhiều Entity/Value Object mà không thuộc về riêng lẻ một đối tượng nào.
+  - *Ví dụ:* `MovementSimulator` (Mô phỏng bước đi), `FuelManager` (Quản lý nạp nhiên liệu), `TrafficCalculator` (Tính mật độ giao thông), `ScoringEngine` (Tính điểm), `MapValidator` (Kiểm tra liên thông bản đồ).
+- **Repository (Kho lưu trữ - Interface):** Cổng giao tiếp nghiệp vụ để lưu trữ và truy xuất Aggregate Root.
+  - *Ví dụ:* `MatchStateRepository` cung cấp các phương thức lưu trữ/lấy ra trạng thái trận đấu hiện tại.
+- **Application Service (Dịch vụ ứng dụng):** Lớp điều phối (Orchestrator), nhận yêu cầu từ Use Case, tương tác với Repository để lấy Aggregate Root, ủy quyền xử lý cho Aggregate hoặc Domain Service, và lưu lại trạng thái mới.
 
 ---
 
-## 6. Related Modules & Relationship (Mối quan hệ với các tài liệu khác)
-*   Liên quan đến **[ARCHITECTURE.md](file:///d:/Documents/GitHub/hexudon/docs/ARCHITECTURE.md)** (nếu có): Định rõ kiến trúc phân lớp, nơi mà các exception được ném từ Domain layer và bắt ở Controller/Web layer.
-*   Liên quan đến **[API_REFERENCE.md](file:///d:/Documents/GitHub/hexudon/docs/API_REFERENCE.md)**: Định nghĩa cấu trúc lỗi mà client nhận được khi gọi các API `/register`, `/start`, `/actions`.
-*   Mối quan hệ với các tài liệu Exception Handling khác:
-    *   **[02_PACKAGE_STRUCTURE.md](file:///d:/Documents/GitHub/hexudon/docs/02_PACKAGE_STRUCTURE.md)**: Xác định vị trí lưu trữ các file class exception.
-    *   **[05_EXCEPTION_HIERARCHY.md](file:///d:/Documents/GitHub/hexudon/docs/05_EXCEPTION_HIERARCHY.md)**: Xác định sơ đồ kế thừa các lớp lỗi.
-    *   **[06_ERROR_CODE_DESIGN.md](file:///d:/Documents/GitHub/hexudon/docs/06_ERROR_CODE_DESIGN.md)**: Bảng mã lỗi chi tiết.
-    *   **[07_ERROR_RESPONSE_DESIGN.md](file:///d:/Documents/GitHub/hexudon/docs/07_ERROR_RESPONSE_DESIGN.md)**: Thiết kế chi tiết cấu trúc JSON trả về.
+## 4. Tổng quan Hexagonal Architecture (Ports & Adapters)
+
+Kiến trúc Hexagonal cô lập lõi nghiệp vụ (Domain + Application) khỏi tác động của công nghệ bên ngoài thông qua các Ports (Cổng giao tiếp) và Adapters (Bộ chuyển đổi):
+
+- **Inbound Port (Cổng vào):** Các Interface định nghĩa các ca sử dụng (Use Cases) mà hệ thống cung cấp cho thế giới bên ngoài gọi vào.
+  - *Ví dụ:* `RegisterTeamUseCase`, `StartMatchUseCase`, `SubmitActionsUseCase`, `GetMatchStateUseCase`.
+- **Inbound Adapter (Bộ chuyển đổi vào):** Các tác nhân bên ngoài hoặc framework kích hoạt hệ thống thông qua Inbound Port.
+  - *Ví dụ:* `MatchController` nhận HTTP Request REST, chuyển đổi dữ liệu DTO thành cấu trúc nghiệp vụ và gọi Use Case tương ứng.
+- **Outbound Port (Cổng ra):** Các Interface định nghĩa các dịch vụ kỹ thuật mà ứng dụng cần từ môi trường bên ngoài để hoàn thành nghiệp vụ.
+  - *Ví dụ:* `MatchStateStorePort` (lưu trữ trạng thái), `MatchConfigLoaderPort` (đọc file cấu hình).
+- **Outbound Adapter (Bộ chuyển đổi ra):** Triển khai (Implementation) cụ thể các Outbound Port sử dụng công nghệ hay thư viện hạ tầng.
+  - *Ví dụ:* `InMemoryMatchStateRepository` (lưu trạng thái trong RAM), `FileMatchConfigLoader` (đọc config từ file text).
+- **Dependency Rule (Quy tắc phụ thuộc):** Chiều phụ thuộc luôn hướng từ ngoài vào trong. Lớp bên ngoài biết lớp bên trong, lớp bên trong tuyệt đối không biết gì về lớp bên ngoài.
+- **Dependency Inversion (Đảo ngược phụ thuộc):** Lớp Application định nghĩa các Outbound Port (Interface). Lớp Adapter (nằm ngoài) sẽ implement các Port này. Nhờ đó, Application Service không phụ thuộc vào hạ tầng kỹ thuật cụ thể.
 
 ---
 
-## 7. Terminology (Thuật ngữ)
-*   **Global Exception Handler**: Bộ xử lý ngoại lệ tập trung, tự động bắt tất cả các Exception được ném từ bất kỳ Controller nào trong hệ thống.
-*   **Business Exception (Ngoại lệ nghiệp vụ)**: Lỗi xảy ra do vi phạm quy tắc logic hoặc luật chơi của hệ thống (ví dụ: Agent di chuyển vào ô Hồ Nước, Agent hết nhiên liệu).
-*   **System Exception (Ngoại lệ hệ thống)**: Lỗi phát sinh từ hạ tầng vật lý hoặc lỗi lập trình không mong muốn (ví dụ: mất kết nối Database, NullPointerException).
-*   **Error Code**: Một chuỗi ký tự duy nhất (như `MATCH_ALREADY_STARTED`) giúp Client xác định chính xác nguyên nhân lỗi mà không phụ thuộc vào thông báo bằng ngôn ngữ tự nhiên.
+## 5. Sơ đồ dòng phụ thuộc (Dependency Flow Diagram)
 
----
+Dưới đây là sơ đồ ASCII thể hiện dòng phụ thuộc giữa các tầng kiến trúc. Hướng mũi tên `-->` thể hiện chiều phụ thuộc (`A --> B` nghĩa là A import/biết B).
 
-## 8. Design Principles (Nguyên tắc thiết kế)
-1.  **Fail-Fast (Thất bại sớm)**: Kiểm tra tính hợp lệ của dữ liệu đầu vào ngay tại Controller bằng Bean Validation. Nếu lỗi, từ chối xử lý ngay lập tức để tiết kiệm tài nguyên hệ thống.
-2.  **Clean Separation (Tách biệt sạch sẽ)**: Engine và Model không được import các class liên quan đến HTTP (như `HttpStatus`, `ResponseEntity`). Chúng chỉ được ném các Business Exception kế thừa từ `RuntimeException`. Việc ánh xạ sang HTTP Status thuộc trách nhiệm của lớp Global Exception Handler.
-3.  **Encapsulation (Đóng gói)**: Giấu kín các lỗi chi tiết của hệ thống (như SQL Syntax, stacktrace) trong log nội bộ và chỉ trả về mã lỗi chung `INTERNAL_SERVER_ERROR` cho người dùng cuối.
-
----
-
-## 9. Architecture Overview & Sơ đồ tổng quan
-Khi một request được gửi tới hệ thống, chu kỳ xử lý lỗi diễn ra như sau:
-
-```mermaid
-graph TD
-    Client[Client / Bot] -->|1. Gửi HTTP Request| Interceptor[RateLimiter Interceptor]
-    Interceptor -->|2. Check Rate Limit - Lỗi ném RateLimitExceededException| GEH[Global Exception Handler]
-    Interceptor -->|3. Hợp lệ| Controller[MatchController]
-    Controller -->|4. Validate DTO - Lỗi ném MethodArgumentNotValidException| GEH
-    Controller -->|5. Gọi xử lý| Manager[MatchManager]
-    Manager -->|6. Điều phối luồng game - Lỗi ném BusinessException| GEH
-    Manager -->|7. Tính toán vật lý / luật chơi| Engine[Physics / Scoring Engine]
-    Engine -->|8. Vi phạm luật chơi - Ném GameRuleViolationException| GEH
-    
-    GEH -->|9. Phân tích loại Exception & Ánh xạ HTTP Status + ErrorCode| LogSystem[Logging System SLF4J]
-    GEH -->|10. Trả về JSON ErrorResponse| Client
+```text
+               +-----------------------------------------------------------+
+               |                       ADAPTER LAYER                       |
+               |                                                           |
+               |  +--------------------+           +--------------------+  |
+               |  |     INBOUND        |           |     OUTBOUND       |  |
+               |  |  MatchController   |           | InMemoryMatchRepo  |  |
+               |  +---------+----------+           +---------+----------+  |
+               +------------|--------------------------------|-------------+
+                            | (implements)                   | (implements)
+                            v                                v
+               +------------|--------------------------------|-------------+
+               |            |            APPLICATION LAYER   |             |
+               |            v                                |             |
+               |  +--------------------+                     |             |
+               |  |    INBOUND PORT    |                     v             |
+               |  |  (RegisterTeamUC)  |           +--------------------+  |
+               |  +---------+----------+           |   OUTBOUND PORT    |  |
+               |            ^                      | (MatchStateStoreP) |  |
+               |            | (implements)         +---------+----------+  |
+               |  +---------+----------+                     ^             |
+               |  |    APPLICATION     |                     |             |
+               |  |      SERVICE       +---------------------+ (calls)     |
+               |  | (MatchAppService)  |                                   |
+               |  +---------+----------+                                   |
+               +------------|----------------------------------------------+
+                            | (calls & orchestrates)
+                            v
+               +-----------------------------------------------------------+
+               |                        DOMAIN LAYER                       |
+               |                                                           |
+               |  +--------------------+           +--------------------+  |
+               |  |   DOMAIN SERVICE   |---------->|   AGGREGATE ROOT   |  |
+               |  | (MovementSimulator)|           |    (MatchState)    |  |
+               |  +---------+----------+           +---------+----------+  |
+               |            |                                |             |
+               |            v                                v             |
+               |  +--------------------+           +--------------------+  |
+               |  |    VALUE OBJECT    |<----------|    DOMAIN ENTITY   |  |
+               |  |   (Cell / Action)  |           |   (Agent / Team)   |  |
+               |  +--------------------+           +--------------------+  |
+               +-----------------------------------------------------------+
 ```
 
 ---
 
-## 10. Core Workflow (Quy trình xử lý lỗi chuẩn)
-1.  **Giai đoạn Phát sinh (Detection)**: Một lớp nghiệp vụ phát hiện trạng thái không hợp lệ. Ví dụ: `MovementSimulator` kiểm tra thấy Agent `A1` muốn di chuyển vào cell loại `POND`. Nó lập tức khởi tạo và ném `GameRuleViolationException("INVALID_TARGET_TERRAIN", "Cannot move agent onto pond cell.")`.
-2.  **Giai đoạn Lan truyền (Bubbling)**: Exception truyền ngược từ Engine -> Manager -> Controller. Do không có block `try-catch` cục bộ nào bắt nó, Spring MVC chuyển quyền kiểm soát tới bộ xử lý ngoại lệ tập trung.
-3.  **Giai đoạn Đón bắt (Handling)**: `GlobalExceptionHandler` bắt được `GameRuleViolationException`. Nó:
-    *   Trích xuất mã lỗi `INVALID_TARGET_TERRAIN`.
-    *   Tạo đối tượng `ErrorResponse` chứa mã lỗi, thông báo lỗi nghiệp vụ và thời gian hiện tại.
-    *   Ghi một dòng log ở level `WARN` (không ghi stacktrace vì đây là lỗi nghiệp vụ bình thường).
-4.  **Giai đoạn Phản hồi (Responding)**: Trả về client response với HTTP Status `400 Bad Request` và JSON body chứa thông tin chi tiết lỗi nghiệp vụ.
+## 6. Danh sách và mô tả chức năng của toàn bộ package
+
+Sau khi refactor, cấu trúc thư mục dự án sẽ nằm dưới package gốc `com.naprock.hexudon` và được phân bổ như sau:
+
+| Tầng (Layer) | Gói (Package) | Vai trò & Chức năng |
+| :--- | :--- | :--- |
+| **Domain** | `domain.model` | Chứa các thực thể chính của game có định danh như `Agent`, `Team`. |
+| | `domain.valueobject` | Chứa các đối tượng bất biến biểu diễn giá trị: `Cell`, `Road`, `Spot`, `Action`, `Submission`, `MatchConfig`, `MatchStatus`, `TerrainType`, `AgentType`. |
+| | `domain.event` | Chứa các sự kiện phát sinh trong domain (phục vụ mở rộng, hiện tại chưa sử dụng). |
+| | `domain.service` | Chứa các engine tính toán nghiệp vụ thuần túy: `MovementSimulator`, `FuelManager`, `TrafficCalculator`, `ScoringEngine`, `UdonCollectionEngine`, `MapValidator`, `HexGridUtils`, `TerrainGenerator`. |
+| | `domain.repository` | Chứa các Interface định nghĩa lưu trữ Aggregate Root (ví dụ: `MatchStateRepository`). |
+| | `domain.exception` | Chứa các ngoại lệ nghiệp vụ cốt lõi: `BusinessException`, `GameRuleViolationException`, `MatchStateConflictException`, `ResourceNotFoundException`. |
+| **Application** | `application.usecase` | Định nghĩa các ca sử dụng (Inbound Ports) dưới dạng Interface độc lập. |
+| | `application.port.in` | Gói chứa các port đầu vào (nơi khai báo các Interface UseCase chi tiết). |
+| | `application.port.out` | Định nghĩa các cổng kết nối hạ tầng đầu ra: `MatchStateStorePort`, `MatchConfigLoaderPort`. |
+| | `application.dto` | Chứa các Record DTO trao đổi dữ liệu phục vụ riêng cho các ca sử dụng. |
+| | `application.mapper` | Chứa bộ ánh xạ dữ liệu giữa DTO và Domain Objects (`ActionMapper`). |
+| | `application.service` | Triển khai các Inbound Ports, điều phối luồng xử lý bằng cách kết hợp Domain và Outbound Ports. |
+| **Adapter** | `adapter.in.rest` | Chứa các REST Controller (`MatchController`) tiếp nhận HTTP request. |
+| | `adapter.out.persistence` | Triển khai `MatchStateStorePort` bằng cách quản lý bộ nhớ tạm (In-memory) hoặc Database sau này. |
+| | `adapter.out.loader` | Triển khai `MatchConfigLoaderPort` để đọc và phân tích cấu hình từ hệ thống file. |
+| | `adapter.out.configuration` | Cấu hình Beans kết nối giữa Ports và Adapters trong ngữ cảnh Spring Boot. |
+| **Infrastructure** | `infrastructure.configuration` | Cấu hình kỹ thuật của hệ thống: CORS, Scheduler (chuyển ngày tự động), Web MVC. |
+| | `infrastructure.interceptor` | Các bộ lọc hạ tầng kỹ thuật: `RateLimiterInterceptor`. |
+| | `infrastructure.scheduler` | Bộ định thời Scheduler chạy ngầm để tự động hóa việc chuyển ngày (`nextDay`). |
+| | `infrastructure.util` | Các tiện ích hệ thống như `FileUtils` hỗ trợ đọc ghi tệp vật lý. |
 
 ---
 
-## 11. Example (Ví dụ thực tế)
-### Kịch bản: Client cố đăng ký một đội chơi mới khi trận đấu đã bắt đầu.
-1.  `MatchManager` nhận request đăng ký đội "TeamBeta".
-2.  `MatchManager` kiểm tra thấy trạng thái trận đấu hiện tại là `PLAYING` thay vì `WAITING`.
-3.  `MatchManager` ném lỗi:
-    ```java
-    throw new GameRuleViolationException("MATCH_ALREADY_STARTED", "Cannot register a new team while the match is in PLAYING state.");
-    ```
-4.  `GlobalExceptionHandler` bắt được lỗi, log thông tin và trả về client:
-    *   **HTTP Status**: `400 Bad Request`
-    *   **Response Body**:
-        ```json
-        {
-          "errorCode": "MATCH_ALREADY_STARTED",
-          "message": "Cannot register a new team while the match is in PLAYING state.",
-          "timestamp": 1720516800000
-        }
-        ```
+## 7. Luồng xử lý yêu cầu (Request Processing Flow)
 
----
+Dưới đây là luồng xử lý chi tiết đi qua các lớp kiến trúc mới khi nhận một request từ Client gửi kế hoạch hành động (`POST /api/match/actions`):
 
-## 12. Best Practices (Thực hành tốt nhất)
-*   Luôn kế thừa các ngoại lệ tự định nghĩa từ `RuntimeException` (Unchecked Exception).
-*   Không bao giờ nuốt ngoại lệ (empty catch block) mà không log hoặc xử lý lại.
-*   Đặt tên Exception kết thúc bằng hậu tố `Exception` (ví dụ: `ConfigLoadException`).
-*   Nhất quán trong cách đặt tên mã lỗi ErrorCode (sử dụng SNAKE_CASE, chữ hoa, ví dụ: `RATE_LIMIT_EXCEEDED`).
+```text
+[Client]
+   |
+   | (1) POST /api/match/actions (JSON)
+   v
+[MatchController] (Inbound REST Adapter)
+   |
+   | (2) Tiếp nhận Request & Validation cơ bản (Spring @Valid)
+   | (3) Chuyển đổi HTTP Headers (X-Team-Name) và JSON sang Application DTO
+   v
+[SubmitActionsUseCase] (Inbound Port Interface)
+   |
+   | (4) Gọi hàm triển khai trong Application Service
+   v
+[MatchApplicationService] (Application Service)
+   |
+   | (5) Gọi Outbound Port: MatchStateStorePort.loadState() để lấy MatchState hiện tại
+   | (6) Nhận về đối tượng MatchState (Aggregate Root) từ In-Memory Store
+   | (7) Gọi ActionMapper để ánh xạ DTO thành Domain Value Objects (List<Action>)
+   | (8) Ủy quyền kiểm tra hợp lệ cho Domain Service: ActionValidatorEngine.validate()
+   | (9) Gọi Domain Service: MovementSimulator.simulateTeamTurn() thực hiện di chuyển,
+   |     tiếp nhiên liệu (FuelManager), thu thập udon (UdonCollectionEngine).
+   | (10) Cập nhật trạng thái mới trực tiếp trên Aggregate Root (MatchState)
+   | (11) Gọi Outbound Port: MatchStateStorePort.saveState(matchState) để lưu lại trạng thái
+   | (12) Ánh xạ kết quả mô phỏng (TurnSimulationResult) thành DTO phản hồi
+   v
+[MatchController]
+   |
+   | (13) Trả về HTTP Response (200 OK) kèm JSON kết quả
+   v
+[Client]
+```
 
----
-
-## 13. Common Mistakes (Sai lầm thường gặp)
-*   **Log and Throw**: Vừa ghi log lỗi chi tiết tại Engine rồi lại ném tiếp Exception lên Controller để Global Exception Handler ghi log thêm lần nữa. Điều này làm log file phình to và trùng lặp thông tin.
-*   **Exposing System Internals**: Trả về trực tiếp thông báo lỗi SQL của JDBC cho client. Điều này để lộ tên cột, tên bảng và thông tin cấu trúc cơ sở dữ liệu cho kẻ tấn công tận dụng khai thác.
-*   **Http Status 200 with Error Response**: Luôn trả về HTTP 200 OK và chứa trạng thái thành công/thất bại bên trong JSON body. Cách thiết kế này vi phạm nghiêm trọng tiêu chuẩn REST API.
-
----
-
-## 14. Future Extension (Khả năng mở rộng trong tương lai)
-*   **Hỗ trợ đa ngôn ngữ (Localization - i18n)**: Sử dụng Spring `MessageSource` để chuyển dịch thông điệp `message` trong `ErrorResponse` dựa trên Header `Accept-Language` gửi lên từ Client.
-*   **Hỗ trợ WebSockets**: Thiết kế lớp xử lý lỗi riêng cho các kết nối thời gian thực khi dự án chuyển dịch từ REST API sang giao tiếp qua WebSocket Protocol, ánh xạ các exception thành các frame WebSocket Error dạng JSON gửi về Client.
+### Các quy tắc luồng dữ liệu cần ghi nhớ:
+- Luồng dữ liệu đi vào hệ thống qua các **Inbound Adapters** rồi chuyển ngay thành **Application DTO**.
+- Không được truyền trực tiếp đối tượng Domain Model ra ngoài API để tránh rò rỉ cấu trúc nghiệp vụ trong tương lai và giữ độc lập phiên bản API.
+- Tầng **Domain Core** hoạt động hoàn toàn đồng bộ (Synchronous) và không có bất kỳ nhận thức nào về cơ chế lưu trữ (Database), giao diện (HTTP/REST) hay cơ chế lập lịch (Scheduler). Mọi điều phối đều do **Application Service** chịu trách nhiệm.

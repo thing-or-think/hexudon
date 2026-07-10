@@ -1,8 +1,8 @@
 package com.naprock.hexudon.engine;
 
-import com.naprock.hexudon.model.Cell;
-import com.naprock.hexudon.model.MatchState;
-import com.naprock.hexudon.model.TerrainType;
+import com.naprock.hexudon.domain.valueobject.Cell;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.valueobject.TerrainType;
 
 import java.util.*;
 

@@ -1,13 +1,13 @@
 package com.naprock.hexudon.interceptor;
 
-import com.naprock.hexudon.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.exception.business.RateLimitExceededException;
-import com.naprock.hexudon.exception.business.ResourceNotFoundException;
-import com.naprock.hexudon.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
+import com.naprock.hexudon.domain.exception.business.RateLimitExceededException;
+import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
+import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.manager.MatchManager;
-import com.naprock.hexudon.model.MatchConfig;
-import com.naprock.hexudon.model.MatchState;
-import com.naprock.hexudon.model.Team;
+import com.naprock.hexudon.domain.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.model.Team;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;

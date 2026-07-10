@@ -1,6 +1,6 @@
 package com.naprock.hexudon.util;
 
-import com.naprock.hexudon.exception.system.ConfigLoadException;
+import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
