@@ -1,4 +1,4 @@
-package com.naprock.hexudon.dto;
+package com.naprock.hexudon.application.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

@@ -1,5 +1,6 @@
 package com.naprock.hexudon.dto;
 
+import com.naprock.hexudon.application.dto.*;
 import com.naprock.hexudon.domain.model.Agent;
 import com.naprock.hexudon.domain.model.Team;
 import com.naprock.hexudon.domain.valueobject.*;
@@ -14,23 +15,23 @@ class DtoStructureTest {
     @Test
     void testDtoExistenceAndStructure() throws Exception {
         // TeamRegisterRequest
-        Class<?> requestClass = Class.forName("com.naprock.hexudon.dto.TeamRegisterRequest");
+        Class<?> requestClass = Class.forName("com.naprock.hexudon.application.dto.TeamRegisterRequest");
         Field teamNameField = requestClass.getDeclaredField("teamName");
 
         // MatchStateResponse
-        Class<?> matchStateResponseClass = Class.forName("com.naprock.hexudon.dto.MatchStateResponse");
+        Class<?> matchStateResponseClass = Class.forName("com.naprock.hexudon.application.dto.MatchStateResponse");
         Field statusField = matchStateResponseClass.getDeclaredField("status");
         Field currentTurnField = matchStateResponseClass.getDeclaredField("currentTurn");
         Field teamsField = matchStateResponseClass.getDeclaredField("teams");
         Field cellsField = matchStateResponseClass.getDeclaredField("cells");
 
         // TeamResponse
-        Class<?> teamResponseClass = Class.forName("com.naprock.hexudon.dto.TeamResponse");
+        Class<?> teamResponseClass = Class.forName("com.naprock.hexudon.application.dto.TeamResponse");
         Field teamResponseNameField = teamResponseClass.getDeclaredField("teamName");
         Field agentsField = teamResponseClass.getDeclaredField("agents");
 
         // AgentResponse
-        Class<?> agentResponseClass = Class.forName("com.naprock.hexudon.dto.AgentResponse");
+        Class<?> agentResponseClass = Class.forName("com.naprock.hexudon.application.dto.AgentResponse");
         Field idField = agentResponseClass.getDeclaredField("id");
         Field typeField = agentResponseClass.getDeclaredField("type");
         Field posXField = agentResponseClass.getDeclaredField("posX");
@@ -39,7 +40,7 @@ class DtoStructureTest {
         Field remainingStepsField = agentResponseClass.getDeclaredField("remainingSteps");
 
         // CellResponse
-        Class<?> cellResponseClass = Class.forName("com.naprock.hexudon.dto.CellResponse");
+        Class<?> cellResponseClass = Class.forName("com.naprock.hexudon.application.dto.CellResponse");
         Field cellXField = cellResponseClass.getDeclaredField("x");
         Field cellYField = cellResponseClass.getDeclaredField("y");
         Field terrainTypeField = cellResponseClass.getDeclaredField("terrainType");

@@ -1,4 +1,4 @@
-package com.naprock.hexudon.dto;
+package com.naprock.hexudon.application.dto;
 
 import java.util.List;
 

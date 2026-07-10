@@ -1,6 +1,7 @@
 package com.naprock.hexudon.controller;
 
-import com.naprock.hexudon.dto.*;
+import com.naprock.hexudon.application.dto.*;
+import com.naprock.hexudon.application.mapper.ActionMapper;
 import com.naprock.hexudon.manager.MatchManager;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
