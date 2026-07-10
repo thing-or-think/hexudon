@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEXUDON Client Dashboard</title>
+  
+  <!-- Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="index.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Header Banner -->
+  <header class="app-header">
+    <div class="header-logo">
+      <div class="logo-circle">🍜</div>
+      <div class="logo-text">
+        <h1>HEXUDON</h1>
+        <span class="subtext">Tactical Game Client</span>
+      </div>
+    </div>
+    
+    <div class="server-config-bar">
+      <div class="input-group">
+        <label for="server-url">Server:</label>
+        <input type="text" id="server-url" value="http://localhost:8080" placeholder="http://localhost:8080">
+      </div>
+      <div class="input-group">
+        <label for="team-name">Team:</label>
+        <input type="text" id="team-name" value="TeamAlpha" placeholder="TeamAlpha">
+      </div>
+      <button id="btn-save-config" class="btn btn-secondary">Apply</button>
+      <button id="btn-register" class="btn btn-primary">Register</button>
+      <button id="btn-start" class="btn btn-accent">Start Game</button>
+      <button id="btn-refresh" class="btn btn-secondary" title="Fetch current state">Sync ⟳</button>
+      
+      <!-- Connection Status indicator -->
+      <div class="status-indicator-group">
+        <div id="connection-status-dot" class="status-dot disconnected"></div>
+        <span id="connection-status-text" class="status-text">Disconnected</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Layout -->
+  <main class="app-layout">
+    
+    <!-- Left column: Match Status, Scoreboard, and Agents List -->
+    <section class="layout-left-sidebar">
+      <!-- Match Status Panel -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h2>Match Status</h2>
+        </div>
+        <div class="card-body" id="match-status-panel">
+          <div class="empty-state">Loading state...</div>
+        </div>
+      </div>
+
+      <!-- Scoreboard Panel -->
+      <div class="dashboard-card flex-grow-1">
+        <div class="card-header">
+          <h2>Scoreboard</h2>
+        </div>
+        <div class="card-body scrollable" id="scoreboard-panel">
+          <div class="empty-state">No score data</div>
+        </div>
+      </div>
+
+      <!-- Agent Dashboard List -->
+      <div class="dashboard-card flex-grow-2">
+        <div class="card-header">
+          <h2>Agent Dashboard</h2>
+        </div>
+        <div class="card-body scrollable" id="agent-dashboard">
+          <div class="empty-state">Register to view agents</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center column: Hexagonal Grid Map Renderer -->
+    <section class="layout-map-area">
+      <div class="map-container">
+        <!-- SVG Canvas -->
+        <svg id="hex-map-svg" width="100%" height="100%">
+          <!-- Inner group is scaled/translated during zoom/pan -->
+          <g id="hex-map-g"></g>
+        </svg>
+
+        <!-- Tooltip -->
+        <div id="map-tooltip" class="map-tooltip" style="display: none;"></div>
+
+        <!-- Float Map Controls -->
+        <div class="map-control-overlay">
+          <button id="map-btn-zoom-in" class="btn-circle" title="Zoom In">+</button>
+          <button id="map-btn-zoom-out" class="btn-circle" title="Zoom Out">−</button>
+          <button id="map-btn-fit" class="btn-circle" title="Fit Map">⛶</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right column: Action Editor, Network logs and Console logs -->
+    <section class="layout-right-sidebar">
+      <!-- Action Queue Editor -->
+      <div class="dashboard-card flex-grow-2">
+        <div class="card-header header-with-btn">
+          <h2>Action Editor</h2>
+          <button id="btn-submit-actions" class="btn btn-sm btn-accent" style="margin-left:auto;">Submit Plans</button>
+        </div>
+        <div class="card-body scrollable" id="action-editor">
+          <div class="empty-state">Select an agent</div>
+        </div>
+      </div>
+
+      <!-- Network panel -->
+      <div class="dashboard-card flex-grow-1">
+        <div class="card-header">
+          <h2>Network Monitor</h2>
+        </div>
+        <div class="card-body scrollable" id="network-panel">
+          <div class="empty-state">No requests made</div>
+        </div>
+      </div>
+
+      <!-- Console logs panel -->
+      <div class="dashboard-card flex-grow-1">
+        <div class="card-header">
+          <h2>Event Logs</h2>
+        </div>
+        <div class="card-body" id="logs-panel">
+          <div class="empty-state">Console logs...</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modular Javascript Entry point -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

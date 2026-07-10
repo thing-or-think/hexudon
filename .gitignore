@@ -1,0 +1,105 @@
+# Dependencies
+node_modules/
+/jspm_packages/
+/web_modules/
+
+# Build output
+target/
+build/
+out/
+bin/
+/dist/
+
+# Environment variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+*.local
+# Exclude standard properties and yml files from being ignored by generic rules
+!/src/main/resources/*.properties
+!/src/main/resources/*.yml
+!/src/main/resources/*.yaml
+!/src/test/resources/*.properties
+!/src/test/resources/*.yml
+!/src/test/resources/*.yaml
+# Ignore local Spring Boot configuration profiles containing credentials
+application-local.properties
+application-local.yml
+application-local.yaml
+application-dev.properties
+application-dev.yml
+application-dev.yaml
+# Keystores and Certificates
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+*.der
+
+# Logs
+*.log
+logs/
+log/
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# IDE/editor
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+# Eclipse
+.metadata/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+# VS Code
+.vscode/
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Test coverage
+.exec
+.jacoco
+/jacoco.exec
+/jacoco-resources/
+/coveralls.json
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Framework specific files (Spring Boot / Java)
+*.hprof
+.spring-boot-devtools-key
+
+# Maven Wrapper
+!.mvn/wrapper/maven-wrapper.jar
+!mvnw
+!mvnw.cmd
