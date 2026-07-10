@@ -1,4 +1,4 @@
-package com.naprock.hexudon.engine;
+package com.naprock.hexudon.domain.service;
 
 import com.naprock.hexudon.domain.model.Agent;
 import com.naprock.hexudon.domain.model.Team;

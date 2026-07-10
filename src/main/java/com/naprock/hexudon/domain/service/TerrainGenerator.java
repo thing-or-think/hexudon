@@ -1,4 +1,4 @@
-package com.naprock.hexudon.engine;
+package com.naprock.hexudon.domain.service;
 
 import com.naprock.hexudon.domain.valueobject.Cell;
 import com.naprock.hexudon.domain.valueobject.MatchState;

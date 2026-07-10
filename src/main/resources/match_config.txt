@@ -7,8 +7,8 @@ maxTurns=50
 maxTeams=2
 
 # Cấu hình đội chơi và Agent
-agentsPerTeam=1
-patrolAgents=0
+agentsPerTeam=2
+patrolAgents=1
 refuelAgents=1
 
 # Nhiên liệu khởi đầu khi đăng ký Agent
