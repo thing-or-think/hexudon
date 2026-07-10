@@ -1,4 +1,4 @@
-package com.naprock.hexudon.config;
+package com.naprock.hexudon.infrastructure.configuration;
 
 import com.naprock.hexudon.adapter.out.loader.FileMatchConfigLoader;
 import com.naprock.hexudon.manager.MatchManager;

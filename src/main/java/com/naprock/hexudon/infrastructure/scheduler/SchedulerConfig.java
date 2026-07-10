@@ -1,4 +1,4 @@
-package com.naprock.hexudon.config;
+package com.naprock.hexudon.infrastructure.scheduler;
 
 import com.naprock.hexudon.domain.model.Team;
 import com.naprock.hexudon.domain.valueobject.MatchConfig;

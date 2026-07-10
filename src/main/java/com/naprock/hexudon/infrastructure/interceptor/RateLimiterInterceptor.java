@@ -1,4 +1,4 @@
-package com.naprock.hexudon.interceptor;
+package com.naprock.hexudon.infrastructure.interceptor;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.business.RateLimitExceededException;

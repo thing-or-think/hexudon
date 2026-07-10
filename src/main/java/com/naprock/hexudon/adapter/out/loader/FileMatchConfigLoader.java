@@ -3,7 +3,7 @@ package com.naprock.hexudon.adapter.out.loader;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
 import com.naprock.hexudon.domain.valueobject.MatchConfig;
-import com.naprock.hexudon.util.FileUtils;
+import com.naprock.hexudon.infrastructure.util.FileUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

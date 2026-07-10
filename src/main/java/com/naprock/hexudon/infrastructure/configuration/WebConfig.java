@@ -1,14 +1,18 @@
-package com.naprock.hexudon.config;
+package com.naprock.hexudon.infrastructure.configuration;
 
-import com.naprock.hexudon.interceptor.RateLimiterInterceptor;
+import com.naprock.hexudon.infrastructure.interceptor.RateLimiterInterceptor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.Assert;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Objects;
 
+/**
+ * Web MVC configuration.
+ *
+ * <p>Responsible for configuring CORS and registering web interceptors.</p>
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
@@ -21,18 +25,24 @@ public class WebConfig implements WebMvcConfigurer {
         );
     }
 
+    /**
+     * Register application interceptors.
+     *
+     * @param registry interceptor registry provided by Spring MVC
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        Assert.notNull(registry, "InterceptorRegistry must not be null");
-
         registry.addInterceptor(rateLimiterInterceptor)
-                .addPathPatterns("/api/match/action");
+                .addPathPatterns("/api/match/actions");
     }
 
+    /**
+     * Configure CORS policy.
+     *
+     * @param registry CORS registry provided by Spring MVC
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        Assert.notNull(registry, "CorsRegistry must not be null");
-
         registry.addMapping("/**")
                 .allowedOrigins("*")
                 .allowedMethods(

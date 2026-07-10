@@ -1,6 +1,7 @@
 package com.naprock.hexudon.config;
 
-import com.naprock.hexudon.interceptor.RateLimiterInterceptor;
+import com.naprock.hexudon.infrastructure.configuration.WebConfig;
+import com.naprock.hexudon.infrastructure.interceptor.RateLimiterInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -14,7 +15,7 @@ class WebConfigTest {
 
     @Test
     void testWebConfigStructure() throws Exception {
-        Class<?> clazz = Class.forName("com.naprock.hexudon.config.WebConfig");
+        Class<?> clazz = Class.forName("com.naprock.hexudon.infrastructure.configuration.WebConfig");
 
         boolean isAssignableFrom = WebMvcConfigurer.class.isAssignableFrom(clazz);
 
@@ -66,6 +67,6 @@ class WebConfigTest {
                 "Calling addInterceptors should not throw any exceptions");
 
         org.mockito.Mockito.verify(registry).addInterceptor(interceptor);
-        org.mockito.Mockito.verify(registration).addPathPatterns("/api/match/action");
+        org.mockito.Mockito.verify(registration).addPathPatterns("/api/match/actions");
     }
 }

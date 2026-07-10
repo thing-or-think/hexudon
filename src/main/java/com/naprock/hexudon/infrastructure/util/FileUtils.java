@@ -1,4 +1,4 @@
-package com.naprock.hexudon.util;
+package com.naprock.hexudon.infrastructure.util;
 
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
 
