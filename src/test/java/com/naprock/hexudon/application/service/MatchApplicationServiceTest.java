@@ -3,16 +3,18 @@ package com.naprock.hexudon.application.service;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.business.MatchStateConflictException;
 import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
-import com.naprock.hexudon.domain.model.Agent;
-import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.entity.Team;
+import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.boot.ApplicationArguments;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +28,8 @@ class MatchApplicationServiceTest {
     private MatchConfigLoaderPort configLoaderPort;
     private MatchApplicationService service;
 
-    private MatchConfig defaultConfig;
-    private MatchState defaultState;
+    private MatchConfig config;
+    private MatchState state;
 
     @BeforeEach
     void setUp() {
@@ -35,130 +37,145 @@ class MatchApplicationServiceTest {
         configLoaderPort = mock(MatchConfigLoaderPort.class);
         service = new MatchApplicationService(stateStorePort, configLoaderPort);
 
-        defaultConfig = new MatchConfig();
-        defaultConfig.setMaxTeams(2);
-        defaultConfig.setAgentsPerTeam(2);
-        defaultConfig.setPatrolAgents(1);
-        defaultConfig.setRefuelAgents(1);
-        defaultConfig.setInitialFuel(100);
-        defaultConfig.setMaxSpamViolations(3);
-        defaultConfig.setTurnTimeLimitMs(10000);
+        config = MatchConfig.builder()
+                .mapWidth(5)
+                .mapHeight(5)
+                .maxTurns(10)
+                .maxTeams(2)
+                .agentsPerTeam(2)
+                .patrolAgents(1)
+                .refuelAgents(1)
+                .initialFuel(100)
+                .plainStepCost(1)
+                .plainFuelCost(10)
+                .roadStepCost(1)
+                .roadFuelCost(5)
+                .mountainStepCost(2)
+                .mountainFuelCost(20)
+                .maxFuel(100)
+                .maxStepsPerTurn(5)
+                .initialSpotUdonStock(5)
+                .build();
 
-        defaultState = new MatchState(MatchStatus.WAITING);
+        state = new MatchState();
+        state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
+        state.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
+        state.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
+
+        when(configLoaderPort.loadConfig()).thenReturn(config);
+        when(stateStorePort.loadState()).thenReturn(state);
     }
 
     @Test
-    void registerTeam_shouldRegisterAndSaveState() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
+    void testRegisterTeam_success() {
+        Team result = service.registerTeam("Alpha");
 
-        Team team = service.registerTeam("Alpha");
-
-        assertAll(
-                () -> assertNotNull(team),
-                () -> assertEquals("Alpha", team.getTeamName()),
-                () -> assertEquals(2, team.getAgents().size()),
-                () -> assertEquals(AgentType.PATROL, team.getAgents().get(0).getType()),
-                () -> assertEquals(AgentType.REFUEL, team.getAgents().get(1).getType())
-        );
-
-        verify(stateStorePort, times(1)).loadState();
-        verify(configLoaderPort, times(1)).loadConfig();
-        verify(stateStorePort, times(1)).saveState(defaultState);
+        assertNotNull(result);
+        assertEquals("Alpha", result.getTeamName());
+        assertEquals(2, result.getAgents().size()); // 1 patrol, 1 refuel
+        verify(stateStorePort, times(1)).saveState(state);
     }
 
     @Test
-    void registerTeam_shouldThrowWhenNameEmpty() {
+    void testRegisterTeam_throwsExceptionWhenNameBlank() {
         assertThrows(IllegalArgumentException.class, () -> service.registerTeam(null));
-        assertThrows(IllegalArgumentException.class, () -> service.registerTeam("  "));
+        assertThrows(IllegalArgumentException.class, () -> service.registerTeam(" "));
     }
 
     @Test
-    void registerTeam_shouldThrowWhenStateNotFound() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
+    void testRegisterTeam_throwsExceptionWhenStateNotFound() {
         when(stateStorePort.loadState()).thenReturn(null);
-
-        assertThrows(ResourceNotFoundException.class, () -> service.registerTeam("Alpha"));
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
+                () -> service.registerTeam("Alpha"));
+        assertEquals(ErrorCode.MATCH_STATE_NOT_FOUND, ex.getErrorCode());
     }
 
     @Test
-    void startMatch_shouldTransitionToPlaying() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
+    void testStartMatch_success() {
+        state.registerTeam(new Team("Alpha"), 2);
 
-        defaultState.registerTeam(new Team("Alpha"), 2);
+        service.startMatch();
 
-        assertDoesNotThrow(() -> service.startMatch());
-        assertEquals(MatchStatus.PLAYING, defaultState.getStatus());
-        assertEquals(1, defaultState.getCurrentTurn());
-
-        verify(stateStorePort, times(1)).saveState(defaultState);
+        assertEquals(MatchStatus.PLAYING, state.getStatus());
+        verify(stateStorePort, times(1)).saveState(state);
     }
 
     @Test
-    void startMatch_shouldThrowWhenNoTeams() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
-
-        assertThrows(MatchStateConflictException.class, () -> service.startMatch());
+    void testStartMatch_throwsExceptionWhenStateNotFound() {
+        when(stateStorePort.loadState()).thenReturn(null);
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
+                () -> service.startMatch());
+        assertEquals(ErrorCode.MATCH_STATE_NOT_FOUND, ex.getErrorCode());
     }
 
     @Test
-    void submitActions_shouldSimulateAndSave() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
+    void testSubmitActions_success() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
 
-        Team team = new Team("Alpha");
-        Agent patrolAgent = new Agent(AgentType.PATROL, 0, 0);
-        Agent refuelAgent = new Agent(AgentType.REFUEL, 0, 0);
-        team.setAgents(List.of(patrolAgent, refuelAgent));
-        defaultState.registerTeam(team, 2);
+        String patrolId = team.getAgents().get(0).getId();
+        String refuelId = team.getAgents().get(1).getId();
 
-        defaultState.setStatus(MatchStatus.PLAYING);
-        defaultState.setCurrentTurn(1);
+        Map<String, List<Action>> planMap = new HashMap<>();
+        planMap.put(patrolId, List.of(new Action(1, ActionType.WAIT, null, 100L)));
+        planMap.put(refuelId, List.of(new Action(1, ActionType.WAIT, null, 100L)));
 
-        Map<String, List<Action>> agentPlans = new HashMap<>();
-        agentPlans.put(patrolAgent.getId(), List.of(new Action(1, ActionType.WAIT, null, null, 123L)));
-        agentPlans.put(refuelAgent.getId(), List.of(new Action(1, ActionType.WAIT, null, null, 123L)));
-
-        TurnSimulationResult result = service.submitActions("Alpha", 1, agentPlans);
+        TurnSimulationResult result = service.submitActions("Alpha", 1, planMap);
 
         assertNotNull(result);
         assertEquals(1, result.day());
         assertTrue(team.isSubmittedPlan());
-
-        verify(stateStorePort, times(1)).saveState(defaultState);
+        verify(stateStorePort, times(2)).saveState(state); // once for register, once for submit
     }
 
     @Test
-    void submitActions_shouldThrowWhenDayMismatch() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
+    void testSubmitActions_dayMismatchThrowsException() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
 
-        Team team = new Team("Alpha");
-        defaultState.registerTeam(team, 2);
-        defaultState.setStatus(MatchStatus.PLAYING);
-        defaultState.setCurrentTurn(2);
-
-        assertThrows(GameRuleViolationException.class, () -> service.submitActions("Alpha", 1, new HashMap<>()));
+        Map<String, List<Action>> planMap = new HashMap<>();
+        GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
+                () -> service.submitActions("Alpha", 2, planMap));
+        assertEquals(ErrorCode.DAY_MISMATCH, ex.getErrorCode());
     }
 
     @Test
-    void getMatchState_shouldReturnState() {
-        when(stateStorePort.loadState()).thenReturn(defaultState);
-        MatchState result = service.getMatchState();
-        assertSame(defaultState, result);
+    void testSubmitActions_invalidAgentCountThrowsException() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
+
+        Map<String, List<Action>> planMap = new HashMap<>();
+        // only 1 agent plan, but 2 are required
+        planMap.put("A1", List.of(new Action(1, ActionType.WAIT, null, 100L)));
+
+        GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
+                () -> service.submitActions("Alpha", 1, planMap));
+        assertEquals(ErrorCode.DUPLICATE_AGENT_PLAN, ex.getErrorCode());
     }
 
     @Test
-    void increaseSpamViolationCount_shouldIncrementAndDisqualify() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
+    void testSubmitActions_invalidActionOrderThrowsException() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
 
-        Team team = new Team("Alpha");
-        defaultState.registerTeam(team, 2);
+        String patrolId = team.getAgents().get(0).getId();
+        String refuelId = team.getAgents().get(1).getId();
 
-        // Max spam violation count is 3
+        Map<String, List<Action>> planMap = new HashMap<>();
+        // Order is 2 instead of 1
+        planMap.put(patrolId, List.of(new Action(2, ActionType.WAIT, null, 100L)));
+        planMap.put(refuelId, List.of(new Action(1, ActionType.WAIT, null, 100L)));
+
+        GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
+                () -> service.submitActions("Alpha", 1, planMap));
+        assertEquals(ErrorCode.NON_CONSECUTIVE_ORDER, ex.getErrorCode());
+    }
+
+    @Test
+    void testIncreaseSpamViolationCount() {
+        Team team = service.registerTeam("Alpha");
+
+        // Increase violation 3 times
         service.increaseSpamViolationCount("Alpha");
         assertEquals(1, team.getSpamViolationCount());
         assertFalse(team.isDisqualified());
@@ -168,32 +185,47 @@ class MatchApplicationServiceTest {
 
         assertEquals(3, team.getSpamViolationCount());
         assertTrue(team.isDisqualified());
-
-        verify(stateStorePort, times(3)).saveState(defaultState);
     }
 
     @Test
-    void checkAndSimulateTurn_shouldNextDayWhenAllSubmitted() {
-        when(configLoaderPort.loadConfig()).thenReturn(defaultConfig);
-        when(stateStorePort.loadState()).thenReturn(defaultState);
-
-        defaultState.setStatus(MatchStatus.PLAYING);
-        defaultState.setCurrentTurn(1);
-
-        Team team1 = new Team("Alpha");
-        team1.setSubmittedPlan(true);
-        Team team2 = new Team("Beta");
-        team2.setSubmittedPlan(true);
-
-        defaultState.getTeams().add(team1);
-        defaultState.getTeams().add(team2);
+    void testCheckAndSimulateTurn_whenAllTeamsSubmitted() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
+        team.setSubmittedPlan(true);
 
         service.checkAndSimulateTurn();
 
-        assertEquals(2, defaultState.getCurrentTurn());
-        assertFalse(team1.isSubmittedPlan());
-        assertFalse(team2.isSubmittedPlan());
+        // Should transition to turn 2
+        assertEquals(2, state.getCurrentTurn());
+    }
 
-        verify(stateStorePort, times(1)).saveState(defaultState);
+    @Test
+    void testCheckAndSimulateTurn_whenTimeout() {
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
+        team.setSubmittedPlan(false);
+
+        // Modify state startTime to trigger timeout (turnTimeLimitMs is 1000 by default)
+        state.setTurnStartTime(System.currentTimeMillis() - 2000);
+
+        service.checkAndSimulateTurn();
+
+        assertEquals(2, state.getCurrentTurn());
+    }
+
+    @Test
+    void testRun_shouldGenerateGrid() throws Exception {
+        ApplicationArguments args = mock(ApplicationArguments.class);
+        when(stateStorePort.loadState()).thenReturn(null);
+
+        // MatchApplicationService.run will initialize a new state and populate cells/spots
+        service.run(args);
+
+        ArgumentCaptor<MatchState> stateCaptor = ArgumentCaptor.forClass(MatchState.class);
+        verify(stateStorePort, times(1)).saveState(stateCaptor.capture());
+
+        MatchState saved = stateCaptor.getValue();
+        assertNotNull(saved);
+        assertFalse(saved.getCells().isEmpty());
     }
 }

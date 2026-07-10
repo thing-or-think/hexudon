@@ -2,7 +2,7 @@ package com.naprock.hexudon.adapter.out.loader;
 
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
-import com.naprock.hexudon.domain.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
 import com.naprock.hexudon.infrastructure.util.FileUtils;
 import org.springframework.stereotype.Component;
 
@@ -50,29 +50,13 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
         try {
             List<String> lines = FileUtils.readLinesFromResource(configFilePath);
 
-            MatchConfig config = new MatchConfig();
+            MatchConfig.Builder builder = MatchConfig.builder();
 
             for (String line : lines) {
-                if (line == null || line.isBlank()) {
-                    continue;
-                }
-
-                if (line.trim().startsWith("#")) {
-                    continue;
-                }
-
-                String[] parts = line.split("=", 2);
-
-                if (parts.length != 2) {
-                    continue;
-                }
-
-                String key = parts[0].trim();
-                String value = parts[1].trim();
-                applyConfig(config, key, value);
+                parseLine(builder, line);
             }
 
-            return config;
+            return builder.build();
 
         } catch (Exception e) {
             throw new ConfigLoadException(
@@ -82,84 +66,96 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
         }
     }
 
+    private void parseLine(
+            MatchConfig.Builder builder,
+            String line
+    ) {
+        if (line == null || line.isBlank()) {
+            return;
+        }
+
+        String trimmed = line.trim();
+
+        if (trimmed.startsWith("#")) {
+            return;
+        }
+
+        String[] parts = trimmed.split("=", 2);
+
+        if (parts.length != 2) {
+            return;
+        }
+
+        String key = parts[0].trim();
+        String value = parts[1].trim();
+
+        applyConfig(builder, key, value);
+    }
+
+
     private void applyConfig(
-            MatchConfig config,
+            MatchConfig.Builder builder,
             String key,
             String value
     ) {
+        int number = Integer.parseInt(value);
+
         switch (key) {
 
-            case "mapWidth":
-                config.setMapWidth(Integer.parseInt(value));
-                break;
+            case "mapWidth" ->
+                    builder.mapWidth(number);
 
-            case "mapHeight":
-                config.setMapHeight(Integer.parseInt(value));
-                break;
+            case "mapHeight" ->
+                    builder.mapHeight(number);
 
-            case "maxTurns":
-                config.setMaxTurns(Integer.parseInt(value));
-                break;
+            case "maxTurns" ->
+                    builder.maxTurns(number);
 
-            case "maxTeams":
-                config.setMaxTeams(Integer.parseInt(value));
-                break;
+            case "maxTeams" ->
+                    builder.maxTeams(number);
 
-            case "agentsPerTeam":
-                config.setAgentsPerTeam(Integer.parseInt(value));
-                break;
+            case "agentsPerTeam" ->
+                    builder.agentsPerTeam(number);
 
-            case "patrolAgents":
-                config.setPatrolAgents(Integer.parseInt(value));
-                break;
+            case "patrolAgents" ->
+                    builder.patrolAgents(number);
 
-            case "refuelAgents":
-                config.setRefuelAgents(Integer.parseInt(value));
-                break;
+            case "refuelAgents" ->
+                    builder.refuelAgents(number);
 
-            case "initialFuel":
-                config.setInitialFuel(Integer.parseInt(value));
-                break;
+            case "initialFuel" ->
+                    builder.initialFuel(number);
 
-            case "plainStepCost":
-                config.setPlainStepCost(Integer.parseInt(value));
-                break;
+            case "plainStepCost" ->
+                    builder.plainStepCost(number);
 
-            case "mountainStepCost":
-                config.setMountainStepCost(Integer.parseInt(value));
-                break;
+            case "mountainStepCost" ->
+                    builder.mountainStepCost(number);
 
-            case "roadStepCost":
-                config.setRoadStepCost(Integer.parseInt(value));
-                break;
+            case "roadStepCost" ->
+                    builder.roadStepCost(number);
 
-            case "plainFuelCost":
-                config.setPlainFuelCost(Integer.parseInt(value));
-                break;
+            case "plainFuelCost" ->
+                    builder.plainFuelCost(number);
 
-            case "mountainFuelCost":
-                config.setMountainFuelCost(Integer.parseInt(value));
-                break;
+            case "mountainFuelCost" ->
+                    builder.mountainFuelCost(number);
 
-            case "roadFuelCost":
-                config.setRoadFuelCost(Integer.parseInt(value));
-                break;
+            case "roadFuelCost" ->
+                    builder.roadFuelCost(number);
 
-            case "maxFuel":
-                config.setMaxFuel(Integer.parseInt(value));
-                break;
+            case "maxFuel" ->
+                    builder.maxFuel(number);
 
-            case "maxStepsPerTurn":
-                config.setMaxStepsPerTurn(Integer.parseInt(value));
-                break;
+            case "maxStepsPerTurn" ->
+                    builder.maxStepsPerTurn(number);
 
-            case "initialSpotUdonStock":
-                config.setInitialSpotUdonStock(Integer.parseInt(value));
-                break;
+            case "initialSpotUdonStock" ->
+                    builder.initialSpotUdonStock(number);
 
-            default:
-                // Ignore unknown configuration properties
-                break;
+            default -> {
+                // ignore unknown properties
+            }
         }
     }
 }

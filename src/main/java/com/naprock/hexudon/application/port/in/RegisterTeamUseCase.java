@@ -1,6 +1,6 @@
 package com.naprock.hexudon.application.port.in;
 
-import com.naprock.hexudon.domain.model.Team;
+import com.naprock.hexudon.domain.model.entity.Team;
 
 /**
  * Inbound port for registering a new team.

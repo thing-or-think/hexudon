@@ -1,19 +1,9 @@
 package com.naprock.hexudon.application.dto;
 
-import com.naprock.hexudon.domain.valueobject.Cell;
 import com.naprock.hexudon.domain.valueobject.TerrainType;
 
 public record CellResponse(
-        int x,
-        int y,
+        CoordinateResponse coordinate,
         TerrainType terrainType
 ) {
-
-    public CellResponse(Cell cell) {
-        this(
-                cell.getX(),
-                cell.getY(),
-                cell.getTerrainType()
-        );
-    }
 }

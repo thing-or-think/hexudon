@@ -1,7 +1,6 @@
 package com.naprock.hexudon.adapter.in.rest;
 
-import com.naprock.hexudon.adapter.in.rest.MatchController;
-import com.naprock.hexudon.application.mapper.ActionMapper;
+import com.naprock.hexudon.application.mapper.MatchMapper;
 import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
 import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
 import com.naprock.hexudon.application.port.in.StartMatchUseCase;
@@ -48,7 +47,7 @@ class MatchControllerReflectionTest {
                 parameterTypes.contains(GetMatchStateUseCase.class);
 
         boolean hasActionMapper =
-                parameterTypes.contains(ActionMapper.class);
+                parameterTypes.contains(MatchMapper.class);
 
         boolean isRestController =
                 clazz.isAnnotationPresent(RestController.class);

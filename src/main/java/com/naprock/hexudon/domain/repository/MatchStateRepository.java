@@ -1,7 +1,7 @@
 package com.naprock.hexudon.domain.repository;
 
 
-import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
 
 /**
  * Repository port for persisting and loading the current match state.

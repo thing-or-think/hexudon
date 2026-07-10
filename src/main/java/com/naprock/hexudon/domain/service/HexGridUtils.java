@@ -1,11 +1,21 @@
 package com.naprock.hexudon.domain.service;
 
-import com.naprock.hexudon.domain.valueobject.Cell;
-import com.naprock.hexudon.domain.valueobject.MatchState;
-import com.naprock.hexudon.domain.valueobject.Road;
-import com.naprock.hexudon.domain.valueobject.Spot;
+import com.naprock.hexudon.domain.model.valueobject.Cell;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.valueobject.Coordinate;
+import com.naprock.hexudon.domain.model.entity.Spot;
+import com.naprock.hexudon.domain.valueobject.TerrainType;
+
+import java.util.Random;
 
 public class HexGridUtils {
+
+    private static final Random RANDOM = new Random();
+
+    private static final int PLAIN_RATE = 65;
+    private static final int MOUNTAIN_RATE = 20;
+    private static final int ROAD_RATE = 5;
+    private static final int POND_RATE = 10;
 
     public static void generateGrid(int width, int height, MatchState matchState) {
 
@@ -13,13 +23,8 @@ public class HexGridUtils {
             return;
         }
 
-        matchState.getCells().clear();
-        matchState.getRoads().clear();
-        matchState.getSpots().clear();
-
         createCells(width, height, matchState);
-        createRoads(matchState);
-        TerrainGenerator.generateTerrain(matchState);
+
         createDefaultSpots(width, height, matchState);
     }
 
@@ -58,33 +63,21 @@ public class HexGridUtils {
 
     }
 
-    private static void createCells(int width, int height, MatchState matchState) {
+    private static void createCells(
+            int width,
+            int height,
+            MatchState matchState) {
+
         for (int y = 0; y < height; y++) {
+
             for (int x = 0; x < width; x++) {
-                matchState.addCell(new Cell(x, y));
-            }
-        }
 
-    }
-
-    private static void createRoads(MatchState matchState) {
-        for (Cell cell : matchState.getCells()) {
-            int[][] directions = getDirections(cell.getY());
-
-            for (int[] direction : directions) {
-                int nx = cell.getX() + direction[0];
-                int ny = cell.getY() + direction[1];
-
-                Cell neighbor = matchState.getCell(nx, ny);
-
-                if (neighbor == null) {
-                    continue;
-                }
-
-                if (shouldCreateRoad(cell, neighbor)) {
-                    Road road = new Road(cell, neighbor);
-                    matchState.getRoads().add(road);
-                }
+                matchState.addCell(
+                        new Cell(
+                                new Coordinate(x, y),
+                                generateTerrainType()
+                        )
+                );
             }
         }
     }
@@ -96,44 +89,37 @@ public class HexGridUtils {
         int centerX = width / 2;
         int centerY = height / 2;
 
-        Cell center = matchState.getCell(centerX, centerY);
+        Cell center = matchState.getCell(new Coordinate(centerX, centerY));
 
         if (center == null) {
             return;
         }
 
-        Spot spot = new Spot(center, "FUEL_STATION");
+        Spot spot = new Spot(center.getCoordinate(), "FUEL_STATION");
 
-        matchState.getSpots().add(spot);
+        matchState.addSpot(spot);
     }
 
-    private static int[][] getDirections(int row) {
+    private static TerrainType generateTerrainType() {
 
-        if (row % 2 == 1) {
-            return new int[][]{
-                    {1, 0},
-                    {0, 1},
-                    {-1, 1},
-                    {-1, 0},
-                    {-1, -1},
-                    {0, -1}
-            };
+        int value = RANDOM.nextInt(100);
+
+        if (value < PLAIN_RATE) {
+            return TerrainType.PLAIN;
         }
 
-        return new int[][]{
-                {1, 0},
-                {1, 1},
-                {0, 1},
-                {-1, 0},
-                {0, -1},
-                {1, -1}
-        };
-    }
+        value -= PLAIN_RATE;
 
-    private static boolean shouldCreateRoad(Cell a, Cell b) {
+        if (value < MOUNTAIN_RATE) {
+            return TerrainType.MOUNTAIN;
+        }
 
-        return a.getX() < b.getX()
-                || (a.getX() == b.getX()
-                && a.getY() < b.getY());
+        value -= MOUNTAIN_RATE;
+
+        if (value < ROAD_RATE) {
+            return TerrainType.ROAD;
+        }
+
+        return TerrainType.POND;
     }
 }

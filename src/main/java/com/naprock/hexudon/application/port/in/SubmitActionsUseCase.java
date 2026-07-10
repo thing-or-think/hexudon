@@ -1,6 +1,6 @@
 package com.naprock.hexudon.application.port.in;
 
-import com.naprock.hexudon.domain.valueobject.Action;
+import com.naprock.hexudon.domain.model.valueobject.Action;
 import com.naprock.hexudon.domain.valueobject.TurnSimulationResult;
 
 import java.util.List;

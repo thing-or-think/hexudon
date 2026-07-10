@@ -138,6 +138,10 @@ public enum ErrorCode {
             "CELL_OUT_OF_BOUNDS",
             "Cell coordinates are out of bounds."
     ),
+    DUPLICATE_RESOURCE(
+            "DUPLICATE_RESOURCE",
+            "Resource already exists."
+    ),
 
     // =========================
     // System

@@ -1,6 +1,6 @@
 package com.naprock.hexudon.application.port.out;
 
-import com.naprock.hexudon.domain.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
 
 /**
  * Outbound port for loading match configuration.

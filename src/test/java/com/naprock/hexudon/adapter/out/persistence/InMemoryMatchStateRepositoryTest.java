@@ -1,6 +1,6 @@
 package com.naprock.hexudon.adapter.out.persistence;
 
-import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.valueobject.MatchStatus;
 import org.junit.jupiter.api.Test;
 
@@ -9,16 +9,19 @@ import static org.junit.jupiter.api.Assertions.*;
 class InMemoryMatchStateRepositoryTest {
 
     @Test
-    void testRepositoryLoadAndSave() {
+    void testLoadAndSaveState() {
         InMemoryMatchStateRepository repository = new InMemoryMatchStateRepository();
 
-        assertNotNull(repository.loadState());
-        assertEquals(MatchStatus.WAITING, repository.loadState().getStatus());
+        MatchState initial = repository.loadState();
+        assertNotNull(initial);
+        assertEquals(MatchStatus.WAITING, initial.getStatus());
 
-        MatchState newState = new MatchState(MatchStatus.PLAYING);
+        MatchState newState = new MatchState();
+        newState.setStatus(MatchStatus.PLAYING);
+
         repository.saveState(newState);
-
-        assertSame(newState, repository.loadState());
-        assertEquals(MatchStatus.PLAYING, repository.loadState().getStatus());
+        MatchState loaded = repository.loadState();
+        assertEquals(MatchStatus.PLAYING, loaded.getStatus());
+        assertEquals(newState, loaded);
     }
 }

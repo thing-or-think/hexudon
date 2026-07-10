@@ -2,8 +2,7 @@ package com.naprock.hexudon.adapter.out.persistence;
 
 import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.repository.MatchStateRepository;
-import com.naprock.hexudon.domain.valueobject.MatchState;
-import com.naprock.hexudon.domain.valueobject.MatchStatus;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -26,7 +25,7 @@ public class InMemoryMatchStateRepository implements
      * Creates a repository with an initial WAITING match state.
      */
     public InMemoryMatchStateRepository() {
-        this.state = new MatchState(MatchStatus.WAITING);
+        this.state = new MatchState();
     }
 
     /**

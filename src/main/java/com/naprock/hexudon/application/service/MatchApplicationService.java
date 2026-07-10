@@ -6,19 +6,20 @@ import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.Agent;
-import com.naprock.hexudon.domain.model.Team;
-import com.naprock.hexudon.domain.service.ActionValidatorEngine;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.entity.*;
+import com.naprock.hexudon.domain.model.valueobject.Action;
+import com.naprock.hexudon.domain.model.valueobject.Coordinate;
+import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
 import com.naprock.hexudon.domain.service.HexGridUtils;
-import com.naprock.hexudon.domain.service.MovementSimulator;
 import com.naprock.hexudon.domain.valueobject.*;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 public class MatchApplicationService implements
         RegisterTeamUseCase,
@@ -35,29 +36,46 @@ public class MatchApplicationService implements
 
     public MatchApplicationService(
             MatchStateStorePort stateStorePort,
-            MatchConfigLoaderPort configLoaderPort
-    ) {
-        this.stateStorePort = Objects.requireNonNull(stateStorePort);
-        this.configLoaderPort = Objects.requireNonNull(configLoaderPort);
+            MatchConfigLoaderPort configLoaderPort) {
+        this.stateStorePort = Objects.requireNonNull(
+                stateStorePort,
+                "stateStorePort must not be null"
+        );
+        this.configLoaderPort = Objects.requireNonNull(
+                configLoaderPort,
+                "configLoaderPort must not be null"
+        );
     }
 
     @Override
     public Team registerTeam(String teamName) {
-        if (teamName == null || teamName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Team name cannot be empty");
+        if (teamName == null || teamName.isBlank()) {
+            throw new IllegalArgumentException("teamName must not be null or empty");
         }
 
         MatchState state = stateStorePort.loadState();
         MatchConfig config = configLoaderPort.loadConfig();
 
         if (state == null) {
-            throw new ResourceNotFoundException(ErrorCode.MATCH_STATE_NOT_FOUND, "Match state not found");
+            throw new ResourceNotFoundException(
+                    ErrorCode.MATCH_STATE_NOT_FOUND,
+                    "Match state not found"
+            );
         }
-
         Team team = new Team(teamName);
-        team.setAgents(createAgents(config));
-        state.registerTeam(team, config.getMaxTeams());
+
+        List<Agent> agents = new ArrayList<>();
+        for (int i = 0; i < config.patrolAgents(); i++) {
+            agents.add(new PatrolAgent(new Coordinate(0, 0)));
+        }
+        for (int i = 0; i < config.refuelAgents(); i++) {
+            agents.add(new RefuelAgent(new Coordinate(0, 0)));
+        }
+        team.setAgents(agents);
+
+        state.registerTeam(team, config.maxTeams());
         stateStorePort.saveState(state);
+
         return team;
     }
 
@@ -65,30 +83,44 @@ public class MatchApplicationService implements
     public void startMatch() {
         MatchConfig config = configLoaderPort.loadConfig();
         MatchState state = stateStorePort.loadState();
+
         if (state == null) {
             throw new ResourceNotFoundException(ErrorCode.MATCH_STATE_NOT_FOUND, "Match state not found");
         }
+
         state.start(config);
         stateStorePort.saveState(state);
     }
 
     @Override
-    public TurnSimulationResult submitActions(String teamName, int day, Map<String, List<Action>> agentPlans) {
+    public synchronized TurnSimulationResult submitActions(
+            String teamName,
+            int day,
+            Map<String, List<Action>> agentPlans) {
+
         MatchState state = stateStorePort.loadState();
         MatchConfig config = configLoaderPort.loadConfig();
+
         if (state == null) {
-            throw new ResourceNotFoundException(ErrorCode.MATCH_STATE_NOT_FOUND, "Match state not found");
+            throw new ResourceNotFoundException(
+                    ErrorCode.MATCH_STATE_NOT_FOUND,
+                    "Match state not found"
+            );
         }
+
         state.ensurePlaying();
+
         Team team = state.getTeam(teamName);
         team.ensureEligible();
+
         if (day != state.getCurrentTurn()) {
             throw new GameRuleViolationException(
                     ErrorCode.DAY_MISMATCH,
                     "Submitted day does not match current turn"
             );
         }
-        ActionValidatorEngine.validate(
+
+        validatePlanStructure(
                 agentPlans,
                 config
         );
@@ -100,10 +132,12 @@ public class MatchApplicationService implements
 
             agent.setActions(actions);
         });
-        var simulationResult = MovementSimulator.simulateTeamTurn(team, state, config);
+        List<AgentExecutionResult> results = state.simulateTurn(config);
+
         team.setSubmittedPlan(true);
         stateStorePort.saveState(state);
-        return new TurnSimulationResult(day, simulationResult);
+
+        return new TurnSimulationResult(day, results);
     }
 
     @Override
@@ -111,54 +145,27 @@ public class MatchApplicationService implements
         return stateStorePort.loadState();
     }
 
-    private void nextDay(MatchState state, MatchConfig config) {
-
-        if (state == null) {
-            throw new ResourceNotFoundException(ErrorCode.MATCH_STATE_NOT_FOUND, "Match state not found");
-        }
-
-        int nextTurn = state.getCurrentTurn() + 1;
-        state.setCurrentTurn(nextTurn);
-
-        if (nextTurn > config.getMaxTurns()) {
-            state.setStatus(MatchStatus.FINISHED);
-        }
-
-        for (Team team : state.getTeams()) {
-            team.setSubmittedPlan(false);
-            for (Agent agent : team.getAgents()) {
-                agent.setRemainingSteps(config.getMaxStepsPerTurn());
-                agent.setFuel(config.getInitialFuel());
-                agent.clearVisitedSpotsToday();
-                agent.clearAction();
-            }
-        }
-
-        for (Spot spot : state.getSpots()) {
-            spot.resetUdonStocks(config.getInitialSpotUdonStock());
-        }
-
-        state.setTurnStartTime(System.currentTimeMillis());
-
-    }
-
     @Override
     public void increaseSpamViolationCount(String teamName) {
+
         MatchState state = stateStorePort.loadState();
         MatchConfig config = configLoaderPort.loadConfig();
+
         Team team = state.requireTeam(teamName);
         team.ensureEligible();
         team.incrementSpamViolation();
-        if (team.getSpamViolationCount() == config.getMaxSpamViolations()) {
+
+        if (team.getSpamViolationCount() >= config.maxSpamViolations()) {
             team.setDisqualified(true);
         }
+
         stateStorePort.saveState(state);
     }
 
     @Override
     public void checkAndSimulateTurn() {
-        MatchState state = stateStorePort.loadState();
 
+        MatchState state = stateStorePort.loadState();
         if (state == null || state.getStatus() != MatchStatus.PLAYING) {
             return;
         }
@@ -169,33 +176,51 @@ public class MatchApplicationService implements
                 .stream()
                 .allMatch(Team::isSubmittedPlan);
 
-        long elapsedTime =
-                System.currentTimeMillis() - state.getTurnStartTime();
-
-        boolean timeout =
-                elapsedTime >= config.getTurnTimeLimitMs();
+        long elapsed = System.currentTimeMillis() - state.getTurnStartTime();
+        boolean timeout = elapsed >= config.turnTimeLimitMs();
 
         if (allTeamsSubmitted || timeout) {
-            nextDay(state, config);
+            state.nextDay(config);
+            stateStorePort.saveState(state);
         }
-
-        stateStorePort.saveState(state);
     }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
         MatchState state = stateStorePort.loadState();
+        if (state == null) {
+            state = new MatchState();
+        }
+
         MatchConfig config = configLoaderPort.loadConfig();
-        HexGridUtils.generateGrid(config.getMapWidth(), config.getMapHeight(), state);
+
+        HexGridUtils.generateGrid(config.mapWidth(), config.mapHeight(), state);
+
         stateStorePort.saveState(state);
     }
 
-    private List<Agent> createAgents(MatchConfig config) {
-        return Stream.concat(
-                Stream.generate(() -> new Agent(AgentType.PATROL, 0, 0))
-                        .limit(config.getPatrolAgents()),
-                Stream.generate(() -> new Agent(AgentType.REFUEL, 0, 0))
-                        .limit(config.getRefuelAgents())
-        ).toList();
+    private void validatePlanStructure(Map<String, List<Action>> agentPlans, MatchConfig config) {
+        if (agentPlans == null || agentPlans.size() != config.agentsPerTeam()) {
+            throw new GameRuleViolationException(
+                    ErrorCode.DUPLICATE_AGENT_PLAN,
+                    "AGENT_COUNT_MISMATCH"
+            );
+        }
+
+        for (List<Action> actions : agentPlans.values()) {
+            if (actions == null) {
+                throw new GameRuleViolationException(
+                        ErrorCode.NON_CONSECUTIVE_ORDER,
+                        "INVALID_ACTION_ORDER"
+                );
+            }
+            for (int i = 0; i < actions.size(); i++) {
+                if (actions.get(i).getOrder() != i + 1) {
+                    throw new GameRuleViolationException(ErrorCode.NON_CONSECUTIVE_ORDER,
+                            "INVALID_ACTION_ORDER"
+                    );
+                }
+            }
+        }
     }
 }

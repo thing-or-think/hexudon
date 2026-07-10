@@ -1,7 +1,7 @@
 package com.naprock.hexudon.application.port.in;
 
 
-import com.naprock.hexudon.domain.valueobject.MatchState;
+import com.naprock.hexudon.domain.model.aggregate.MatchState;
 
 /**
  * Inbound port for retrieving the current match state.
