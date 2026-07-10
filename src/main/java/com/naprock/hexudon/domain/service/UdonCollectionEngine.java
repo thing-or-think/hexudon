@@ -8,7 +8,7 @@ import com.naprock.hexudon.domain.valueobject.Spot;
 
 public class UdonCollectionEngine {
 
-    public void collectUdon(
+    public static void collectUdon(
             Team team,
             Agent agent,
             MatchState matchState
@@ -36,7 +36,7 @@ public class UdonCollectionEngine {
         agent.addVisitedSpotToday(spot);
     }
 
-    public Spot findSpotAt(int x, int y, MatchState matchState) {
+    public static Spot findSpotAt(int x, int y, MatchState matchState) {
         for (Spot spot : matchState.getSpots()) {
             if (spot.getCell().getX()
                     == x && spot.getCell().getY() == y) {

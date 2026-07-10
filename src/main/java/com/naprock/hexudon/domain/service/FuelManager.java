@@ -8,7 +8,7 @@ import java.util.List;
 
 public class FuelManager {
 
-    public void autoRefuel(
+    public static void autoRefuel(
             int step,
             Team team,
             MatchConfig matchConfig
@@ -42,7 +42,7 @@ public class FuelManager {
         }
     }
 
-    public void consumeFuel(
+    public static void consumeFuel(
             MatchState matchState,
             MatchConfig matchConfig
     ) {
@@ -66,7 +66,7 @@ public class FuelManager {
         }
     }
 
-    public void autoRefuel(
+    public static void autoRefuel(
             MatchState matchState,
             MatchConfig matchConfig
     ) {
@@ -103,7 +103,7 @@ public class FuelManager {
         }
     }
 
-    private int calculateFuelCost(
+    private static int calculateFuelCost(
             Cell cell,
             MatchConfig config
     ) {

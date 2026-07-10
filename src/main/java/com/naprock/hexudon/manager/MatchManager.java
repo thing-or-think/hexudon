@@ -97,9 +97,7 @@ public class MatchManager {
                 movementSimulator.simulateTeamTurn(
                         team,
                         matchState,
-                        matchConfig,
-                        fuelManager,
-                        udonCollectionEngine
+                        matchConfig
                 )
         );
     }

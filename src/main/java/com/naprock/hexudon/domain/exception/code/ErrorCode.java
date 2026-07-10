@@ -68,6 +68,14 @@ public enum ErrorCode {
     ),
 
     // =========================
+    // Match State
+    // =========================
+    MATCH_STATE_NOT_FOUND(
+            "MATCH_STATE_NOT_FOUND",
+            "Match state not found."
+    ),
+
+    // =========================
     // Action Format
     // =========================
     DAY_MISMATCH(

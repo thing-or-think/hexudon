@@ -15,7 +15,7 @@ public class ActionValidatorEngine {
     public ActionValidatorEngine() {
     }
 
-    public void validate(
+    public static void validate(
             Map<String, List<Action>> agentActions,
             MatchConfig matchConfig
     ) {
@@ -24,7 +24,7 @@ public class ActionValidatorEngine {
         validateActionOrder(agentActions);
     }
 
-    public void validateDuplicateAgent(
+    public static void validateDuplicateAgent(
             Map<String, List<Action>> agentActions
     ) {
         if (agentActions == null) {
@@ -43,7 +43,7 @@ public class ActionValidatorEngine {
         }
     }
 
-    public void validateAgentCount(
+    public static void validateAgentCount(
             Map<String, List<Action>> agentActions,
             MatchConfig matchConfig
     ) {
@@ -70,7 +70,7 @@ public class ActionValidatorEngine {
         }
     }
 
-    public void validateActionOrder(
+    public static void validateActionOrder(
             Map<String, List<Action>> agentActions
     ) {
         if (agentActions == null) {
@@ -94,7 +94,7 @@ public class ActionValidatorEngine {
         }
     }
 
-    private void validateAgentActionSequence(
+    private static void validateAgentActionSequence(
             String agentId,
             List<Action> actions
     ) {

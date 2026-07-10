@@ -13,12 +13,10 @@ import java.util.Map;
 
 public class MovementSimulator {
 
-    public List<AgentExecutionResult> simulateTeamTurn (
+    public static List<AgentExecutionResult> simulateTeamTurn (
             Team team,
             MatchState matchState,
-            MatchConfig matchConfig,
-            FuelManager fuelManager,
-            UdonCollectionEngine udonCollectionEngine
+            MatchConfig matchConfig
     ) {
 
         Map<String, List<Action>> executedActions = new HashMap<>();
@@ -29,7 +27,7 @@ public class MovementSimulator {
 
         for (int step = matchConfig.getMaxStepsPerTurn(); step > 0; step--) {
 
-            fuelManager.autoRefuel(step, team, matchConfig);
+            FuelManager.autoRefuel(step, team, matchConfig);
 
             for (Agent agent : team.getAgents()) {
 
@@ -40,7 +38,7 @@ public class MovementSimulator {
                         matchConfig
                 );
 
-                udonCollectionEngine.collectUdon(
+                UdonCollectionEngine.collectUdon(
                         team,
                         agent,
                         matchState
@@ -65,7 +63,7 @@ public class MovementSimulator {
                 .toList();
     }
 
-    private Action simulateStep(
+    private static Action simulateStep(
             int step,
             Agent agent,
             MatchState matchState,
@@ -95,7 +93,7 @@ public class MovementSimulator {
         return action;
     }
 
-    private Action getNextAction(
+    private static Action getNextAction(
             Agent agent,
             int step
     ) {
@@ -112,7 +110,7 @@ public class MovementSimulator {
         return agent.getActions().getFirst();
     }
 
-    private void executeMove(
+    private static void executeMove(
             Agent agent,
             Action action,
             MatchState matchState,
@@ -168,7 +166,7 @@ public class MovementSimulator {
 
 
 
-    private int calculateStepCost(Cell cell, MatchConfig config) {
+    private static int calculateStepCost(Cell cell, MatchConfig config) {
 
         if (cell == null || config == null) {
             return Integer.MAX_VALUE;
@@ -181,7 +179,7 @@ public class MovementSimulator {
         };
     }
 
-    private int calculateFuelCost(
+    private static int calculateFuelCost(
             Cell cell,
             MatchConfig config
     ) {

@@ -84,6 +84,39 @@ public class MatchState {
                 .orElse(null);
     }
 
+    public void start(MatchConfig config) {
+        if (status == MatchStatus.PLAYING) {
+            throw new MatchStateConflictException(
+                    ErrorCode.MATCH_ALREADY_STARTED,
+                    "Match already started"
+            );
+        }
+
+        if (status != MatchStatus.WAITING) {
+            throw new MatchStateConflictException(
+                    ErrorCode.MATCH_NOT_WAITING,
+                    "Match cannot start"
+            );
+        }
+
+        if (teams.isEmpty()) {
+            throw new MatchStateConflictException(
+                    ErrorCode.MATCH_NOT_READY,
+                    "No team registered"
+            );
+        }
+
+
+        this.status = MatchStatus.PLAYING;
+        this.currentTurn = 1;
+        this.turnStartTime = System.currentTimeMillis();
+
+
+        initializeTeams(config.getMaxFuel(), config.getMaxStepsPerTurn());
+
+        initializeSpots(config.getInitialSpotUdonStock());
+    }
+
     public void start(
             int maxFuel,
             int maxSteps,
