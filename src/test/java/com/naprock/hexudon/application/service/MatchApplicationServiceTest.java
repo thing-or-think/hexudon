@@ -193,6 +193,10 @@ class MatchApplicationServiceTest {
         state.start(config);
         team.setSubmittedPlan(true);
 
+        state.setTurnStartTime(
+                System.currentTimeMillis() - config.turnTimeLimitMs() - 10
+        );
+
         service.checkAndSimulateTurn();
 
         // Should transition to turn 2
@@ -227,5 +231,29 @@ class MatchApplicationServiceTest {
         MatchState saved = stateCaptor.getValue();
         assertNotNull(saved);
         assertFalse(saved.getCells().isEmpty());
+    }
+
+    @Test
+    void testSubmitActions_doesNotTriggerTrafficServiceBecauseNotIntegrated() {
+        // Assert/Assumption explanation:
+        // As of the current codebase phase, MatchApplicationService does not inject or collaborate with 
+        // CalculateTrafficUseCase or InitializeTrafficUseCase. Thus, submitting actions does not invoke traffic logic.
+        // We verify that the game flow behaves correctly without any dependency on traffic service.
+        Team team = service.registerTeam("Alpha");
+        state.start(config);
+
+        String patrolId = team.getAgents().get(0).getId();
+        String refuelId = team.getAgents().get(1).getId();
+
+        Map<String, List<Action>> planMap = new HashMap<>();
+        planMap.put(patrolId, List.of(new Action(1, ActionType.WAIT, null, 100L)));
+        planMap.put(refuelId, List.of(new Action(1, ActionType.WAIT, null, 100L)));
+
+        TurnSimulationResult result = service.submitActions("Alpha", 1, planMap);
+
+        assertNotNull(result);
+        assertEquals(1, result.day());
+        assertTrue(team.isSubmittedPlan());
+        verify(stateStorePort, times(2)).saveState(state);
     }
 }

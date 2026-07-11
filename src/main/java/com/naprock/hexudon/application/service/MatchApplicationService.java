@@ -172,14 +172,10 @@ public class MatchApplicationService implements
 
         MatchConfig config = configLoaderPort.loadConfig();
 
-        boolean allTeamsSubmitted = state.getTeams()
-                .stream()
-                .allMatch(Team::isSubmittedPlan);
-
         long elapsed = System.currentTimeMillis() - state.getTurnStartTime();
         boolean timeout = elapsed >= config.turnTimeLimitMs();
 
-        if (allTeamsSubmitted || timeout) {
+        if (timeout) {
             state.nextDay(config);
             stateStorePort.saveState(state);
         }

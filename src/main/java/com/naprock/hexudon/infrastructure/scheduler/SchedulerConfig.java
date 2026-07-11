@@ -19,7 +19,7 @@ public class SchedulerConfig {
         this.checkAndSimulateTurnUseCase = checkAndSimulateTurnUseCase;
     }
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 1000)
     public void checkAndSimulateTurn() {
         try {
             checkAndSimulateTurnUseCase.checkAndSimulateTurn();
