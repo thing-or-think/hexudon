@@ -15,6 +15,7 @@ import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
 import com.naprock.hexudon.domain.valueobject.MatchStatus;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MatchState {
 
@@ -44,11 +45,11 @@ public class MatchState {
         this.turnStartTime = other.turnStartTime;
         this.teams = other.teams.stream()
                 .map(Team::new)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
         this.cells = other.cells;
         this.spots = other.spots.stream()
                 .map(Spot::new)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
         this.cellIndex = other.cellIndex;
     }
 
