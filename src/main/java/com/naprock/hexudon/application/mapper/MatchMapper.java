@@ -137,7 +137,10 @@ public class MatchMapper {
 
             Coordinate coordinate;
             if (request.actionType() == ActionType.MOVE) {
-                coordinate = new Coordinate(request.targetX(), request.targetY());
+                coordinate = new Coordinate(
+                        request.coordinate().x(),
+                        request.coordinate().y())
+                ;
             } else {
                 coordinate = null;
             }

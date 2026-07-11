@@ -24,7 +24,7 @@ public class MatchState {
 
     private List<Team> teams;
     private final List<Cell> cells;
-    private final List<Spot> spots;
+    private List<Spot> spots;
     private final Map<Coordinate, Cell> cellIndex;
 
     public MatchState() {
@@ -35,6 +35,21 @@ public class MatchState {
         this.cells = new ArrayList<>();
         this.spots = new ArrayList<>();
         this.cellIndex = new LinkedHashMap<>();
+    }
+
+    public MatchState(MatchState other) {
+        validateNotNull(other, "matchState");
+        this.status = other.status;
+        this.currentTurn = other.currentTurn;
+        this.turnStartTime = other.turnStartTime;
+        this.teams = other.teams.stream()
+                .map(Team::new)
+                .toList();
+        this.cells = other.cells;
+        this.spots = other.spots.stream()
+                .map(Spot::new)
+                .toList();
+        this.cellIndex = other.cellIndex;
     }
 
     public MatchStatus getStatus() {
@@ -78,6 +93,10 @@ public class MatchState {
 
     public List<Spot> getSpots() {
         return Collections.unmodifiableList(spots);
+    }
+
+    public void setSpots(List<Spot> spots) {
+        this.spots = spots;
     }
 
     public void registerTeam(Team team, int maxTeams) {
@@ -187,55 +206,61 @@ public class MatchState {
         }
     }
 
-    public List<AgentExecutionResult> simulateTurn(MatchConfig config) {
-        if (config == null) {
-            throw new GameRuleViolationException(ErrorCode.VALIDATION_ERROR, "config must not be null");
-        }
+    public List<AgentExecutionResult> simulateTurn(
+            Team team,
+            MatchConfig config
+    ) {
+        validateNotNull(config, "config");
+        validateNotNull(team, "team");
 
         Map<String, List<Action>> executedActions = new LinkedHashMap<>();
-        for (Team team : teams) {
-            for (Agent agent : team.getAgents()) {
-                executedActions.put(agent.getId(), new ArrayList<>());
-            }
+
+        for (Agent agent : team.getAgents()) {
+            executedActions.put(agent.getId(), new ArrayList<>());
         }
 
         for (int step = config.maxStepsPerTurn(); step >= 1; step--) {
-
-            for (Team team : teams) {
-                team.autoRefuel(step, config);
-            }
-
-            for (Team team : teams) {
-                for (Agent agent : team.getAgents()) {
-                    if (agent.getRemainingSteps() != step) {
-                        continue;
-                    }
-
-                    Action action;
-                    if (!agent.getActions().isEmpty()) {
-                        List<Action> agentActions = new ArrayList<>(agent.getActions());
-                        action = agentActions.remove(0);
-                        agent.setActions(agentActions);
-                    } else {
-                        action = new Action(step, ActionType.WAIT, null, System.currentTimeMillis());
-                    }
-
-                    MoveResult result = agent.executeAction(action, this, config);
-
-                    // Bước 3: Thu hoạch Udon tự động.
-                    if (agent instanceof PatrolAgent) {
-                        ((PatrolAgent) agent).collectUdon(this, team);
-                    }
-
-                    executedActions.get(agent.getId()).add(action);
+            team.autoRefuel(step, config);
+            for (Agent agent : team.getAgents()) {
+                if (agent.getRemainingSteps() != step) {
+                    continue;
                 }
+                Action action;
+                if (!agent.getActions().isEmpty()) {
+                    List<Action> agentActions = new ArrayList<>(agent.getActions());
+                    action = agentActions.remove(0);
+                    agent.setActions(agentActions);
+                } else {
+                    action = new Action(
+                            step,
+                            ActionType.WAIT,
+                            null,
+                            System.currentTimeMillis()
+                    );
+                }
+                agent.executeAction(action, this, config);
+
+                if (agent instanceof PatrolAgent patrolAgent) {
+                    patrolAgent.collectUdon(this, team);
+                }
+
+                executedActions
+                        .get(agent.getId())
+                        .add(action);
             }
         }
 
         List<AgentExecutionResult> results = new ArrayList<>();
+
         for (Map.Entry<String, List<Action>> entry : executedActions.entrySet()) {
-            results.add(new AgentExecutionResult(entry.getKey(), entry.getValue()));
+            results.add(
+                    new AgentExecutionResult(
+                            entry.getKey(),
+                            entry.getValue()
+                    )
+            );
         }
+
         return results;
     }
 
@@ -264,6 +289,17 @@ public class MatchState {
         }
 
         turnStartTime = System.currentTimeMillis();
+    }
+
+    private void validateNotNull(Object value,
+                                 String fieldName) {
+
+        if (Objects.isNull(value)) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    fieldName + " must not be null."
+            );
+        }
     }
 
     @Override

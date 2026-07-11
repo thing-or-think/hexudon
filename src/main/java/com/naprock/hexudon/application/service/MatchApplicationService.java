@@ -132,7 +132,7 @@ public class MatchApplicationService implements
 
             agent.setActions(actions);
         });
-        List<AgentExecutionResult> results = state.simulateTurn(config);
+        List<AgentExecutionResult> results = state.simulateTurn(team, config);
 
         team.setSubmittedPlan(true);
         stateStorePort.saveState(state);
@@ -186,7 +186,7 @@ public class MatchApplicationService implements
     }
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public void run(ApplicationArguments args) {
         MatchState state = stateStorePort.loadState();
         if (state == null) {
             state = new MatchState();

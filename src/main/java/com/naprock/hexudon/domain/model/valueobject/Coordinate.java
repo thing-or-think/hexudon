@@ -29,6 +29,13 @@ public final class Coordinate {
         this.y = y;
     }
 
+    public Coordinate(Coordinate other) {
+        validateOther(other);
+
+        this.x = other.getX();
+        this.y = other.getY();
+    }
+
     public int getX() {
         return x;
     }

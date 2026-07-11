@@ -18,6 +18,8 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
 
     private static final String DEFAULT_CONFIG_PATH = "match_config.txt";
 
+    private MatchConfig cachedConfig;
+
     /**
      * Configuration file path.
      */
@@ -47,6 +49,16 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
      */
     @Override
     public MatchConfig loadConfig() {
+
+        if (cachedConfig == null) {
+            cachedConfig = loadFromFile();
+        }
+
+        return cachedConfig;
+
+    }
+
+    private MatchConfig loadFromFile() {
         try {
             List<String> lines = FileUtils.readLinesFromResource(configFilePath);
 

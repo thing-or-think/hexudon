@@ -19,6 +19,10 @@ public class PatrolAgent extends Agent {
         super(coordinate);
     }
 
+    public PatrolAgent(PatrolAgent other) {
+        super(other);
+    }
+
     public List<Coordinate> getVisitedSpotsToday() {
         return Collections.unmodifiableList(visitedSpotsToday);
     }
@@ -30,6 +34,11 @@ public class PatrolAgent extends Agent {
     public boolean hasVisitedSpotToday(Coordinate spotCoord) {
         validateNotNull(spotCoord, "spotCoord");
         return visitedSpotsToday.contains(spotCoord);
+    }
+
+    @Override
+    public Agent deepCopy() {
+        return new PatrolAgent(this);
     }
 
     @Override

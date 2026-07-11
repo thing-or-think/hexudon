@@ -12,9 +12,6 @@ public record ActionRequest(
         @NotNull(message = "Action type must not be null")
         ActionType actionType,
 
-        Integer targetX,
-
-        Integer targetY
-
+        CoordinateRequest coordinate
 ) {
 }

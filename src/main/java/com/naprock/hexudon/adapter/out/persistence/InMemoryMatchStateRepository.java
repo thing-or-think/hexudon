@@ -35,16 +35,16 @@ public class InMemoryMatchStateRepository implements
      */
     @Override
     public MatchState loadState() {
-        return state;
+        return new MatchState(state);
     }
 
     /**
      * Saves the current match state.
      *
-     * @param state new match state
+     * @param other new match state
      */
     @Override
-    public void saveState(MatchState state) {
-        this.state = state;
+    public void saveState(MatchState other) {
+        this.state = new MatchState(other);
     }
 }

@@ -187,7 +187,7 @@ class MatchStateTest {
         // Refuel agent waits
         refuel.setActions(List.of(new Action(1, ActionType.WAIT, null, 123L)));
 
-        List<AgentExecutionResult> results = state.simulateTurn(config);
+        List<AgentExecutionResult> results = state.simulateTurn(team, config);
 
         assertNotNull(results);
         assertEquals(2, results.size());

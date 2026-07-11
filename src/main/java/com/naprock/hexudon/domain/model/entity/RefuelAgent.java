@@ -14,6 +14,15 @@ public class RefuelAgent extends Agent{
         super(coordinate);
     }
 
+    public RefuelAgent(RefuelAgent other) {
+        super(other);
+    }
+
+    @Override
+    public Agent deepCopy() {
+        return new RefuelAgent(this);
+    }
+
     @Override
     public MoveResult executeAction(
             Action action,

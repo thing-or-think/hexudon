@@ -27,6 +27,18 @@ public class Team {
         this.teamName = teamName;
     }
 
+    public Team(Team other) {
+        this.teamName = other.getTeamName();
+        this.agents = other.getAgents().stream()
+                .map(Agent::deepCopy)
+                .toList();
+
+        this.disqualified = other.isDisqualified();
+        this.spamViolationCount = other.getSpamViolationCount();
+        this.collectedUdon = other.getCollectedUdon();
+        this.submittedPlan = other.isSubmittedPlan();
+    }
+
     public Team(String teamName, List<Agent> agents) {
         validateNotNull(teamName, "teamName");
         validateNotNull(agents, "agents");

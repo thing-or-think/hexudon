@@ -124,14 +124,14 @@ class MatchMapperTest {
 
     @Test
     void testToAction() {
-        ActionRequest requestMove = new ActionRequest(1, ActionType.MOVE, 2, 3);
+        ActionRequest requestMove = new ActionRequest(1, ActionType.MOVE, new CoordinateRequest(2, 3));
         Action actionMove = mapper.toAction(requestMove);
         assertNotNull(actionMove);
         assertEquals(1, actionMove.getOrder());
         assertEquals(ActionType.MOVE, actionMove.getActionType());
         assertEquals(new Coordinate(2, 3), actionMove.getTargetCoordinate());
 
-        ActionRequest requestWait = new ActionRequest(2, ActionType.WAIT, null, null);
+        ActionRequest requestWait = new ActionRequest(2, ActionType.WAIT, null);
         Action actionWait = mapper.toAction(requestWait);
         assertNotNull(actionWait);
         assertEquals(2, actionWait.getOrder());
@@ -143,7 +143,7 @@ class MatchMapperTest {
 
     @Test
     void testToDomainActionPlanMap() {
-        ActionRequest actionRequest = new ActionRequest(1, ActionType.MOVE, 1, 1);
+        ActionRequest actionRequest = new ActionRequest(1, ActionType.MOVE, new CoordinateRequest(1, 1));
         AgentActionPlanRequest planRequest = new AgentActionPlanRequest("A1", List.of(actionRequest));
         DayActionRequest dayRequest = new DayActionRequest(1, List.of(planRequest));
 
@@ -151,7 +151,7 @@ class MatchMapperTest {
         assertNotNull(result);
         assertTrue(result.containsKey("A1"));
         assertEquals(1, result.get("A1").size());
-        assertEquals(ActionType.MOVE, result.get("A1").get(0).getActionType());
+        assertEquals(ActionType.MOVE, result.get("A1").getFirst().getActionType());
     }
 
     @Test
@@ -177,7 +177,7 @@ class MatchMapperTest {
         assertNotNull(response);
         assertEquals(1, response.day());
         assertEquals(1, response.agentPlans().size());
-        assertEquals("A1", response.agentPlans().get(0).agentId());
-        assertEquals(1, response.agentPlans().get(0).actions().size());
+        assertEquals("A1", response.agentPlans().getFirst().agentId());
+        assertEquals(1, response.agentPlans().getFirst().actions().size());
     }
 }

@@ -19,15 +19,10 @@ import java.util.Objects;
 public abstract class Agent {
 
     private static int nextId = 1;
-
     private final String id;
-
     protected Coordinate coordinate;
-
     protected int fuel;
-
     protected int remainingSteps;
-
     private List<Action> actions;
 
     protected Agent(
@@ -39,6 +34,17 @@ public abstract class Agent {
         this.coordinate = coordinate;
         this.fuel = 0;
         this.remainingSteps = 0;
+        this.actions = new ArrayList<>();
+    }
+
+    public Agent(Agent other) {
+        validateNotNull(other, "other");
+
+        this.id = other.id;
+        this.coordinate = new Coordinate(other.coordinate);
+        this.fuel = other.fuel;
+        this.remainingSteps = other.remainingSteps;
+
         this.actions = new ArrayList<>();
     }
 
@@ -174,6 +180,8 @@ public abstract class Agent {
             MatchState state,
             MatchConfig config
     );
+
+    public abstract Agent deepCopy();
 
     private void validateNotNull(Object value,
                                  String fieldName) {

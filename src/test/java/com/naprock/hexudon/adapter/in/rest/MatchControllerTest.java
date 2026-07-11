@@ -96,7 +96,7 @@ class MatchControllerTest {
 
     @Test
     void submitActions_shouldReturnSimulationResult() throws Exception {
-        ActionRequest actionRequest = new ActionRequest(1, ActionType.WAIT, null, null);
+        ActionRequest actionRequest = new ActionRequest(1, ActionType.WAIT, null);
         AgentActionPlanRequest planRequest = new AgentActionPlanRequest("A1", List.of(actionRequest));
         DayActionRequest request = new DayActionRequest(1, List.of(planRequest));
 
@@ -117,7 +117,7 @@ class MatchControllerTest {
 
     @Test
     void submitActions_whenHeaderMissing_shouldReturnBadRequest() throws Exception {
-        ActionRequest actionRequest = new ActionRequest(1, ActionType.WAIT, null, null);
+        ActionRequest actionRequest = new ActionRequest(1, ActionType.WAIT, null);
         AgentActionPlanRequest planRequest = new AgentActionPlanRequest("A1", List.of(actionRequest));
         DayActionRequest request = new DayActionRequest(1, List.of(planRequest));
 

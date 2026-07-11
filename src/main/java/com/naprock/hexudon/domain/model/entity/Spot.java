@@ -24,6 +24,14 @@ public class Spot {
         this.teamUdonStocks = new HashMap<>();
     }
 
+    public Spot(Spot other) {
+        validateNotNull(other, "Spot");
+
+        this.coordinate = new Coordinate(other.coordinate);
+        this.spotType = other.spotType;
+        this.teamUdonStocks = new HashMap<>(other.teamUdonStocks);
+    }
+
     public Coordinate getCoordinate() {
         return coordinate;
     }
