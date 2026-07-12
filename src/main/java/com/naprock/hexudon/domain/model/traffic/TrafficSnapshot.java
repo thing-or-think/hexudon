@@ -4,7 +4,11 @@ import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 public class TrafficSnapshot {
 
@@ -12,8 +16,8 @@ public class TrafficSnapshot {
     private final Map<Coordinate, TrafficFlow> flows;
 
     public TrafficSnapshot() {
-        turn = 1;
-        flows = new HashMap<>();
+        this.turn = 1;
+        this.flows = Collections.emptyMap();
     }
 
     public TrafficSnapshot(
@@ -21,8 +25,8 @@ public class TrafficSnapshot {
             Map<Coordinate, TrafficFlow> flows
     ) {
         validate(turn, flows);
-        this.turn = turn;
 
+        this.turn = turn;
 
         Map<Coordinate, TrafficFlow> copied = new HashMap<>();
 
@@ -48,8 +52,10 @@ public class TrafficSnapshot {
         this.flows = Collections.unmodifiableMap(copied);
     }
 
-    private static void validate(int turn,
-                                 Map<Coordinate, TrafficFlow> flows) {
+    private static void validate(
+            int turn,
+            Map<Coordinate, TrafficFlow> flows
+    ) {
 
         if (turn < 0) {
             throw new GameRuleViolationException(

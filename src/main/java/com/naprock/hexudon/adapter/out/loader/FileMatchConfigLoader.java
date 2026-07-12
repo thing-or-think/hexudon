@@ -120,8 +120,17 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
             case "mapHeight" ->
                     builder.mapHeight(number);
 
+            case "initialFuel" ->
+                    builder.initialFuel(number);
+
+            case "maxFuel" ->
+                    builder.maxFuel(number);
+
             case "maxTurns" ->
                     builder.maxTurns(number);
+
+            case "maxStepsPerTurn" ->
+                    builder.maxStepsPerTurn(number);
 
             case "maxTeams" ->
                     builder.maxTeams(number);
@@ -135,32 +144,38 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
             case "refuelAgents" ->
                     builder.refuelAgents(number);
 
-            case "initialFuel" ->
-                    builder.initialFuel(number);
+            case "turnTimeLimitMs" ->
+                    builder.turnTimeLimitMs(number);
 
-            case "plainStepCost" ->
-                    builder.plainStepCost(number);
+            case "maxRequestsPerSecond" ->
+                    builder.maxRequestsPerSecond(number);
 
-            case "mountainStepCost" ->
-                    builder.mountainStepCost(number);
-
-            case "roadStepCost" ->
-                    builder.roadStepCost(number);
-
-            case "plainFuelCost" ->
-                    builder.plainFuelCost(number);
-
-            case "mountainFuelCost" ->
-                    builder.mountainFuelCost(number);
+            case "maxSpamViolations" ->
+                    builder.maxSpamViolations(number);
 
             case "roadFuelCost" ->
                     builder.roadFuelCost(number);
 
-            case "maxFuel" ->
-                    builder.maxFuel(number);
+            case "roadNormalStepCost" ->
+                    builder.roadNormalStepCost(number);
 
-            case "maxStepsPerTurn" ->
-                    builder.maxStepsPerTurn(number);
+            case "roadBusyStepCost" ->
+                    builder.roadBusyStepCost(number);
+
+            case "roadCongestedStepCost" ->
+                    builder.roadCongestedStepCost(number);
+
+            case "plainFuelCost" ->
+                    builder.plainFuelCost(number);
+
+            case "plainStepCost" ->
+                    builder.plainStepCost(number);
+
+            case "mountainFuelCost" ->
+                    builder.mountainFuelCost(number);
+
+            case "mountainStepCost" ->
+                    builder.mountainStepCost(number);
 
             case "initialSpotUdonStock" ->
                     builder.initialSpotUdonStock(number);

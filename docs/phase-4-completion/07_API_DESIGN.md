@@ -1,142 +1,164 @@
-# THIẾT KẾ RESTFUL API (API DESIGN) - GIAI ĐOẠN 4
+# THIẾT KẾ HỆ THỐNG REST API CHO ĐẤU TRƯỜNG
 
-Tài liệu này đặc tả chi tiết kiến trúc giao diện lập trình ứng dụng RESTful API cho Giai đoạn 4. Mọi cấu trúc dữ liệu gửi và nhận đều được mô tả bằng bảng thuộc tính dữ liệu cụ thể, tuyệt đối không sử dụng định dạng JSON thô.
-
----
-
-## 1. Bản đồ các Inbound REST Controllers
-
-Hệ thống cung cấp 4 Controllers chính ở tầng Adapter Inbound để xử lý các yêu cầu:
-1.  **MatchController:** Tiếp nhận kế hoạch hành động của các Agent gửi từ đội chơi và điều phối trạng thái vòng đấu.
-2.  **ScoreController:** Cung cấp thông tin điểm số thời gian thực phục vụ người xem và các hệ thống phân tích.
-3.  **RankingController:** Cung cấp bảng xếp hạng chính thức được tính toán tự động sau mỗi lượt đấu.
-4.  **HistoryController:** Cung cấp dòng thời gian sự kiện lịch sử trận đấu và xuất bản nhật ký truyền tải API phục vụ Visualizer.
+Tài liệu này đặc tả toàn bộ hệ thống API RESTful dành cho các đội chơi tương tác và hệ thống Visualizer giám sát trận đấu. Toàn bộ các DTO được thiết kế dưới dạng bảng tham số chi tiết.
 
 ---
 
-## 2. Đặc tả chi tiết các API Endpoints và cấu trúc DTOs
+## 1. Danh sách các REST Controllers và Endpoints
 
-### 2.1. API gửi hành động của Agent (Submit Agent Action)
-*   **Method:** POST
-*   **Path:** `/api/matches/action`
-*   **Mô tả:** Đội chơi gửi danh sách các lệnh di chuyển hoặc chờ cho tất cả các Agent của mình trong lượt hiện tại.
+| Nhóm chức năng | Phương thức | Endpoint | Mô tả chức năng | Đối tượng sử dụng |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hành động** | `POST` | `/api/v1/matches/{matchId}/actions` | Gửi danh sách hành động cho các Agent trong Turn hiện tại. | Bot của các đội chơi |
+| **Trạng thái** | `GET` | `/api/v1/matches/{matchId}/state` | Truy vấn trạng thái chi tiết của trận đấu (Map, Agent, Spot). | Bot & Visualizer |
+| **Điểm số** | `GET` | `/api/v1/matches/{matchId}/scores` | Lấy chi tiết điểm số hiện tại của tất cả các đội. | Bot & Visualizer |
+| **Xếp hạng** | `GET` | `/api/v1/matches/{matchId}/ranking` | Truy vấn bảng xếp hạng đấu trường (áp dụng Anti-tie-break). | Bot & Visualizer |
+| **Lịch sử** | `GET` | `/api/v1/matches/{matchId}/history` | Lấy lịch sử sự kiện game phục vụ hiển thị Timeline. | Visualizer |
+| **Nhật ký mạng**| `GET` | `/api/v1/matches/{matchId}/logs/api` | Trích xuất nhật ký hiệu năng giao tiếp mạng để chẩn đoán độ trễ. | Visualizer & Giám sát |
 
-#### Bảng cấu trúc Request DTO: SubmitActionRequest
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng | Ràng buộc Validation |
+---
+
+## 2. Đặc tả cấu trúc DTO (Data Transfer Objects)
+
+### 2.1. API Gửi hành động Agent (Submit Action)
+*   **Request DTO**: `SubmitActionsRequest`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc Validation |
 | :--- | :--- | :--- | :--- |
-| `teamName` | String | Tên của đội chơi thực hiện gửi hành động. | Không được trống, khớp với tên đội đăng ký. |
-| `turnNumber` | Integer | Số thứ tự lượt đấu hiện tại mà đội chơi đang thực thi. | Không được null, lớn hơn 0, khớp với Turn hiện tại. |
-| `agentActions` | List<AgentActionDTO> | Danh sách các hành động chi tiết phân bổ cho từng Agent. | Không được rỗng, số lượng phần tử bằng số Agent. |
+| `teamId` | String | ID định danh của đội chơi gửi yêu cầu. | Bắt buộc, không được để trống. |
+| `turn` | Integer | Lượt chơi hiện tại mà bot đang muốn gửi hành động. | Bắt buộc, phải khớp với lượt hiện tại của trận đấu. |
+| `agentActions` | List (AgentActionDTO) | Danh sách hành động chi tiết của các Agent thuộc đội. | Bắt buộc, kích thước danh sách không vượt quá số Agent. |
 
-#### Bảng cấu trúc DTO con: AgentActionDTO
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng | Ràng buộc Validation |
+*   **DTO con**: `AgentActionDTO`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc Validation |
 | :--- | :--- | :--- | :--- |
-| `agentId` | String | Mã định danh duy nhất của Agent thực hiện. | Không được trống. |
-| `actionType` | String | Loại hành động của Agent. | Nhận giá trị cố định: `WAIT` hoặc `MOVE`. |
-| `targetCoordinate` | CoordinateDTO | Tọa độ ô đích di chuyển. | Bắt buộc không null khi loại hành động là `MOVE`. |
+| `agentId` | String | ID định danh của Agent thực hiện hành động. | Bắt buộc, không được để trống. |
+| `actionType` | String | Loại hành động (`MOVE`, `WAIT`, `COLLECT`, `SERVE`). | Bắt buộc, phải thuộc tập hợp hành động hợp lệ. |
+| `direction` | String | Hướng di chuyển trên bản đồ Hex (`UP`, `DOWN`, v.v.). | Chỉ bắt buộc và không rỗng khi `actionType` là `MOVE`. |
+| `stepSequence`| Integer | Thứ tự bước thực hiện trong lượt chơi hiện tại. | Bắt buộc, giá trị phải từ `1` đến `maxStepsPerTurn`. |
 
-#### Bảng cấu trúc DTO con: CoordinateDTO
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng | Ràng buộc Validation |
+*   **Response DTO**: `SubmitActionsResponse`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
 | :--- | :--- | :--- | :--- |
-| `x` | Integer | Tọa độ hàng của ô trên bản đồ. | Không null, nằm trong phạm vi chiều rộng bản đồ. |
-| `y` | Integer | Tọa độ cột của ô trên bản đồ. | Không null, nằm trong phạm vi chiều cao bản đồ. |
-
-#### Bảng cấu trúc Response DTO: SubmitActionResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `success` | Boolean | Trạng thái tiếp nhận request thành công (true/false). |
-| `message` | String | Nội dung phản hồi chi tiết từ server (như xác nhận hợp lệ hoặc lý do từ chối). |
-| `serverTimestamp` | Long | Dấu thời gian ghi nhận yêu cầu tại server khi đưa vào hàng đợi (ms). |
+| `matchId` | String | ID của trận đấu. | Không bao giờ rỗng. |
+| `status` | String | Trạng thái tiếp nhận yêu cầu (`ACCEPTED`, `REJECTED`).| Giá trị thuộc nhóm định nghĩa tiếp nhận. |
+| `timestamp` | Long | Thời điểm ghi nhận yêu cầu tại Server (mili-giây). | Số nguyên dương dài. |
+| `message` | String | Thông báo chi tiết lý do từ chối nếu có. | Trả về thông tin chi tiết khi trạng thái là `REJECTED`. |
 
 ---
 
-### 2.2. API lấy trạng thái trận đấu hiện tại (Get Match State)
-*   **Method:** GET
-*   **Path:** `/api/matches/state`
-*   **Mô tả:** Trả về trạng thái chi tiết của trận đấu bao gồm bản đồ, vị trí Agent, xăng và các ô đường bộ kèm lưu lượng giao thông động hiện tại.
+### 2.2. API Truy vấn trạng thái trận đấu (Get Match State)
+*   **Response DTO**: `MatchStateResponse`
 
-#### Bảng cấu trúc Response DTO: MatchStateResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `status` | String | Trạng thái hiện thời của trận đấu (`WAITING`, `PLAYING`, `FINISHED`). |
-| `currentTurn` | Integer | Số thứ tự lượt đấu hiện tại đang diễn ra. |
-| `remainingTimeMs` | Long | Thời gian còn lại (mili-giây) trước khi đóng Turn hiện tại. |
-| `teams` | List<TeamResponseDTO> | Danh sách các đội chơi kèm thông tin xăng, vị trí chi tiết của Agent. |
-| `spots` | List<SpotResponseDTO> | Danh sách các Spot Udon và số lượng mì tồn kho hiện tại cho từng đội. |
-| `roadsTraffic` | List<RoadTrafficResponseDTO> | Trạng thái mật độ giao thông động của tất cả các ô đường. |
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `matchId` | String | ID định danh của trận đấu. | Không rỗng. |
+| `currentTurn` | Integer | Lượt chơi hiện tại của hệ thống. | Giá trị lớn hơn hoặc bằng 0. |
+| `status` | String | Trạng thái trận đấu (`PLAYING`, `FINISHED`, v.v.).| Thuộc tập hợp MatchStatus. |
+| `turnStartTime` | Long | Thời gian bắt đầu lượt hiện thời (mili-giây). | Dùng để client tính thời gian đếm ngược còn lại. |
+| `teams` | List (TeamStateDTO) | Danh sách trạng thái vị trí, tài nguyên của các đội. | Đầy đủ thông tin của tất cả đội tham gia. |
+| `cells` | List (CellStateDTO) | Danh sách cấu trúc địa hình và giao thông các ô bản đồ. | Trả về toàn bộ ô trên bản đồ. |
+| `spots` | List (SpotStateDTO) | Danh sách trạng thái kho chứa của các điểm cấp Udon. | Trả về toàn bộ các Spot. |
 
----
+*   **DTO con**: `AgentStateDTO` (trong `TeamStateDTO`)
 
-### 2.3. API xem điểm số (Get Score)
-*   **Method:** GET
-*   **Path:** `/api/scores`
-*   **Mô tả:** Trích xuất điểm số chi tiết của tất cả các đội chơi phục vụ cập nhật bảng điểm hiển thị.
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `agentId` | String | ID định danh của Agent. | Không rỗng. |
+| `coordinateX` | Integer | Tọa độ X trên lưới Hex. | Số nguyên. |
+| `coordinateY` | Integer | Tọa độ Y trên lưới Hex. | Số nguyên. |
+| `remainingFuel` | Integer | Lượng nhiên liệu còn lại của Agent. | Giá trị từ 0 đến mức tối đa trong cấu hình. |
+| `remainingSteps`| Integer | Số bước đi Agent được thực hiện tiếp trong lượt này.| Giá trị từ 0 đến tối đa bước cấu hình. |
 
-#### Bảng cấu trúc Response DTO: MatchScoreResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `matchId` | String | Mã định danh duy nhất của trận đấu. |
-| `scores` | List<TeamScoreResponseDTO>| Danh sách điểm số chi tiết được ánh xạ theo từng đội chơi. |
+*   **DTO con**: `CellStateDTO`
 
-#### Bảng cấu trúc DTO con: TeamScoreResponseDTO
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `teamName` | String | Tên của đội chơi. |
-| `uniqueUdonCount` | Integer | Tổng số chủng loại Udon độc nhất đội đã thu thập được. |
-| `accumulatedDailyUdon` | Integer | Tổng số lượng mì Udon tích lũy theo ngày. |
-| `totalServings` | Integer | Tổng số lượt phục vụ mì thành công. |
-| `totalResponseTimeMs` | Long | Tổng thời gian phản hồi tích lũy của đội chơi (ms). |
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `coordinateX` | Integer | Tọa độ X của ô bản đồ. | Số nguyên. |
+| `coordinateY` | Integer | Tọa độ Y của ô bản đồ. | Số nguyên. |
+| `terrainType` | String | Loại địa hình (`PLAIN`, `MOUNTAIN`, `ROAD`, `POND`). | Thuộc tập hợp TerrainType. |
+| `trafficState` | String | Trạng thái kẹt xe (`SMOOTH`, `CONGESTED`, `TRAFFIC_JAM`).| Chỉ xuất hiện và có giá trị khi địa hình là `ROAD`. |
 
 ---
 
-### 2.4. API xem bảng xếp hạng (Get Ranking)
-*   **Method:** GET
-*   **Path:** `/api/rankings`
-*   **Mô tả:** Lấy bảng xếp hạng các đội xếp theo thứ tự ưu tiên các tiêu chí giải quyết hòa điểm.
+### 2.3. API Xem điểm số (Get Score)
+*   **Response DTO**: `MatchScoreResponse`
 
-#### Bảng cấu trúc Response DTO: RankingResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `rankings` | List<TeamRankDTO> | Danh sách xếp hạng các đội chơi được sắp xếp từ cao xuống thấp. |
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `matchId` | String | ID định danh của trận đấu. | Không rỗng. |
+| `scores` | List (TeamScoreResponseDTO) | Điểm số chi tiết của tất cả các đội. | Sắp xếp ngẫu nhiên theo thứ tự đăng ký. |
 
-#### Bảng cấu trúc DTO con: TeamRankDTO
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `rank` | Integer | Thứ hạng hiện tại của đội chơi (1, 2, 3...). |
-| `teamName` | String | Tên của đội chơi. |
-| `criteria` | RankingCriteriaDTO | Chi tiết các chỉ số tiêu chí dùng để phân thứ hạng. |
+*   **DTO con**: `TeamScoreResponseDTO`
 
----
-
-### 2.5. API truy vấn lịch sử sự kiện (Get Match History)
-*   **Method:** GET
-*   **Path:** `/api/matches/history`
-*   **Mô tả:** Cung cấp toàn bộ dòng lịch sử sự kiện diễn ra phục vụ chức năng phát lại (replay) của Visualizer.
-
-#### Bảng cấu trúc Response DTO: MatchHistoryResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `matchId` | String | Mã định danh trận đấu. |
-| `turnHistories` | List<TurnHistoryDTO> | Dòng lịch sử các lượt đấu chứa danh sách chi tiết sự kiện diễn ra. |
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `teamId` | String | ID định danh của đội chơi. | Không rỗng. |
+| `uniqueUdonTypes` | Integer | Số lượng các loại Udon độc nhất đã thu được. | Số nguyên không âm. |
+| `accumulatedDailyUdon`| Integer | Số lượng loại Udon tích lũy theo từng ngày. | Số nguyên không âm. |
+| `totalServings` | Integer | Tổng số lần phục vụ thành công. | Số nguyên không âm. |
+| `totalResponseTimeMs` | Long | Tổng thời gian phản hồi API của đội (mili-giây). | Số nguyên dương dài. |
+| `totalPoints` | Integer | Tổng điểm số quy đổi cuối cùng để so sánh thô. | Tính toán theo cấu thức tính điểm ở File 05. |
 
 ---
 
-### 2.6. API xuất nhật ký giao tiếp mạng (Get Communication Logs)
-*   **Method:** GET
-*   **Path:** `/api/logs/communication`
-*   **Mô tả:** Kết xuất dữ liệu nhật ký giao tiếp mạng phục vụ thống kê phân tích hiệu năng và phát hiện spam.
+### 2.4. API Xem bảng xếp hạng (Get Ranking)
+*   **Response DTO**: `RankingResponse`
 
-#### Bảng cấu trúc Response DTO: CommunicationLogResponse
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `logs` | List<ApiLogDTO> | Danh sách các bản ghi nhật ký truyền tải mạng chi tiết. |
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `matchId` | String | ID định danh của trận đấu. | Không rỗng. |
+| `rankings` | List (RankItemDTO) | Danh sách kết quả xếp hạng đã sắp xếp từ cao xuống thấp. | Xếp theo đúng thứ tự ưu tiên phân hạng tuyệt đối. |
 
-#### Bảng cấu trúc DTO con: ApiLogDTO
-| Trường dữ liệu (Field) | Kiểu dữ liệu | Ý nghĩa chức năng |
-| :--- | :--- | :--- |
-| `requestId` | String | Mã yêu cầu duy nhất được sinh ra ở Interceptor. |
-| `teamId` | String | Tên đội chơi gửi yêu cầu. |
-| `endpoint` | String | Địa chỉ API Endpoint được kết nối. |
-| `durationMs` | Long | Thời gian phản hồi của mạng (Độ trễ xử lý - ms). |
-| `payloadSize` | Long | Kích thước của dữ liệu gửi lên (Byte). |
-| `status` | Integer | Mã trạng thái HTTP phản hồi về phía Client. |
+*   **DTO con**: `RankItemDTO`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `rank` | Integer | Thứ hạng hiện tại (`1` cho đội đứng đầu, `2`, `3`...). | Số nguyên tăng dần từ 1. |
+| `teamId` | String | ID của đội chơi. | Không rỗng. |
+| `totalPoints` | Integer | Tổng điểm số quy đổi của đội. | Số nguyên không âm. |
+| `tieBreakerDetails` | String | Mô tả tiêu chí phụ nào đã quyết định thứ hạng này. | Trả về lý do (ví dụ: "Thắng nhờ tổng Servings lớn hơn"). |
+
+---
+
+### 2.5. API Truy vấn lịch sử trận đấu (Get History)
+*   **Response DTO**: `HistoryResponse`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `matchId` | String | ID định danh của trận đấu. | Không rỗng. |
+| `events` | List (GameEventDTO) | Danh sách các sự kiện dòng thời gian của trận đấu. | Sắp xếp tăng dần theo trường `timestamp`. |
+
+*   **DTO con**: `GameEventDTO`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `eventId` | String | Khóa duy nhất định danh sự kiện. | Định dạng UUID. |
+| `turn` | Integer | Lượt xảy ra sự kiện. | Số nguyên dương. |
+| `timestamp` | Long | Thời gian thực sự kiện xảy ra (mili-giây). | Số nguyên dài. |
+| `teamId` | String | Đội chơi liên quan trực tiếp đến sự kiện. | Có thể null nếu là sự kiện hệ thống (ví dụ: Traffic). |
+| `agentId` | String | Agent liên quan trực tiếp đến sự kiện. | Có thể null nếu sự kiện mức Team hoặc System. |
+| `eventType` | String | Loại sự kiện (`MOVEMENT`, `COLLECTION`, `TRAFFIC_UPDATE`).| Giá trị thuộc danh sách Event Type quy định. |
+| `eventDetails` | String | Mô tả chi tiết hành động hoặc tham số (ví dụ: "di chuyển sang ô A").| Chuỗi ký tự mô tả trực quan. |
+
+---
+
+### 2.6. API Xuất nhật ký giao tiếp mạng (Get Api Logs)
+*   **Response DTO**: `ApiLogsResponse`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `matchId` | String | ID định danh của trận đấu. | Không rỗng. |
+| `logs` | List (ApiLogDTO) | Danh sách nhật ký hiệu năng giao tiếp của các đội chơi. | Sắp xếp giảm dần theo thời gian tiếp nhận request. |
+
+*   **DTO con**: `ApiLogDTO`
+
+| Trường dữ liệu | Kiểu dữ liệu | Ý nghĩa | Ràng buộc xuất bản |
+| :--- | :--- | :--- | :--- |
+| `requestId` | String | Khóa duy nhất định danh yêu cầu HTTP. | Không rỗng. |
+| `teamId` | String | ID đội chơi thực hiện yêu cầu. | Không rỗng. |
+| `endpoint` | String | URI của REST API được gọi. | Định dạng đường dẫn dạng chuỗi. |
+| `durationMs` | Long | Tổng độ trễ xử lý của server (mili-giây). | Số nguyên dương biểu diễn độ trễ mạng/máy chủ. |
+| `payloadSize` | Long | Kích thước gói tin yêu cầu (bytes). | Kích thước vật lý của dữ liệu thô. |
+| `status` | Integer | HTTP Status phản hồi (`200`, `400`, `500`). | Mã trạng thái tiêu chuẩn RFC. |

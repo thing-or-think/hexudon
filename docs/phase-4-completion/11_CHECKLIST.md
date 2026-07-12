@@ -1,55 +1,56 @@
-# DANH SÁCH KIỂM TRA NGHIỆM THU (DEFINITION OF DONE) - GIAI ĐOẠN 4
+# DANH SÁCH KIỂM TRA NGHIỆM THU CHẤT LƯỢNG (DEFINITION OF DONE)
 
-Tài liệu này định nghĩa Tiêu chuẩn hoàn thành (Definition of Done - DoD) và danh sách kiểm tra (Checklist) nghiệm thu chất lượng thiết kế/triển khai cho Giai đoạn 4, tập trung vào việc giải quyết các điều kiện biên và trường hợp cực đoan (Edge Cases).
-
----
-
-## 1. Danh sách kiểm tra chất lượng theo Module nghiệp vụ
-
-### 1.1. Module Giao thông động (Traffic Flow)
-*   [ ] **Xử lý phép chia cho 0:** Đã tích hợp kiểm tra điều kiện biên: Nếu số lượng đội tham gia trận đấu bằng 0 (`teamCount = 0`), giá trị Calculated Flow mặc định trả về là `0.0` và trạng thái giao thông mặc định là `SMOOTH`.
-*   [ ] **Bù đắp dữ liệu quá khứ:** Tại lượt chơi thứ 2 (`currentTurn = 2`), dữ liệu của 2 lượt trước (lượt T-2, tức lượt 0) không tồn tại. Hệ thống phải tự động gán dữ liệu lượt T-2 bằng dữ liệu của lượt T-1 (lượt 1) để tính toán bình thường.
-*   [ ] **Cách ly luồng cập nhật:** Trạng thái giao thông động được tính toán và lưu trữ một lần duy nhất vào cuối mỗi lượt đấu. Bản đồ giao thông hoàn toàn bất biến trong suốt thời gian diễn ra các bước di chuyển của lượt đấu tiếp theo.
-
-### 1.2. Module Chi phí di chuyển (Movement Cost)
-*   [ ] **Chốt chi phí cố định (Cost Locking):** Chi phí di chuyển của Agent phải được tính toán dựa trên trạng thái giao thông tại thời điểm bắt đầu đi và chốt cố định trong suốt bước di chuyển đó. Mọi thay đổi mật độ giao thông xảy ra trong lượt không được ảnh hưởng đến chi phí xăng và bước đi của hành động hiện tại.
-*   [ ] **Không giới hạn Agent đứng đồng thời:** Thiết kế của ô bản đồ (`Cell`) phải hỗ trợ chứa không giới hạn số lượng Agent đứng đồng thời tại một thời điểm bước đi mà không gây lỗi hoặc xung đột ghi đè dữ liệu.
-*   [ ] **Ràng buộc địa hình cấm:** Di chuyển vào ô địa hình loại hồ nước (`POND`) phải bị phát hiện ở tầng Domain, ném ra ngoại lệ quy tắc chơi và hủy bỏ hành động ngay lập tức.
-
-### 1.3. Module Tính điểm và Xếp hạng (Scoring & Ranking)
-*   [ ] **Tính độc nhất của mì Udon:** Sử dụng cấu trúc kiểu dữ liệu Set (`Set<UdonType>`) để tự động loại bỏ các chủng loại mì Udon trùng lặp đã thu thập.
-*   [ ] **Thuật toán xếp hạng 5 cấp (Anti-tie-break):** Triển khai đầy đủ 5 cấp so sánh ưu tiên tuyệt đối trong `RankingService`:
-    1.  Số chủng loại Udon độc nhất đã thu thập (nhiều hơn xếp trên).
-    2.  Tổng tích lũy Udon thu hoạch hàng ngày (nhiều hơn xếp trên).
-    3.  Tổng số lần phục vụ mì Udon thành công (nhiều hơn xếp trên).
-    4.  Tổng thời gian phản hồi API tích lũy (nhỏ hơn xếp trên).
-    5.  Tung xúc xắc ngẫu nhiên (chỉ kích hoạt khi 4 chỉ số trên hòa điểm).
-*   [ ] **Tái tung xúc xắc khi hòa:** Nếu giá trị xúc xắc ngẫu nhiên của 2 đội bằng nhau, hệ thống phải tự động thực hiện lại phép tung xúc xắc trong một vòng lặp cho đến khi có sự khác biệt để đảm bảo không bao giờ tồn tại trạng thái đồng hạng.
-
-### 1.4. Module Khôi phục trạng thái (Match Recovery)
-*   [ ] **Đảm bảo ghi Snapshot thành công:** Điểm khôi phục `RecoveryPoint` chỉ được đánh dấu cờ `validated = true` sau khi giao dịch ghi dữ liệu của bản chụp `MatchSnapshot` tương ứng xuống Database hoàn tất không lỗi.
-*   [ ] **Dọn dẹp rác dữ liệu tương lai:** Quy trình khôi phục tự động hoặc yêu cầu tái đấu bắt buộc phải thực hiện xóa sạch toàn bộ các bản ghi sự kiện `GameEvent` và `TrafficHistory` của các lượt đấu lớn hơn hoặc bằng lượt khôi phục (`>= turnNumber + 1`) để tránh sai lệch dữ liệu phân tích.
+Tài liệu này cung cấp danh sách kiểm tra (Checklist) nghiệm thu chất lượng thiết kế và triển khai cho Giai đoạn 4, tập trung xử lý các trường hợp biên (Edge cases) khốc liệt nhất của hệ thống.
 
 ---
 
-## 2. Giải quyết các điều kiện biên cực đoan (Extreme Edge Cases)
+## 1. Tiêu chí Hoàn thành Chung (General Definition of Done)
 
-### 2.1. Request đến muộn đúng 1 phần triệu giây (Microsecond Late Request)
-*   **Tình huống:** Client gửi yêu cầu hành động và dữ liệu cập nhật đến Server đúng 1 phần triệu giây sau khi hệ thống chuyển trạng thái `isTurnClosed = true`.
-*   **Yêu cầu nghiệm thu:**
-    *   Hệ thống không được phép tiếp nhận xử lý yêu cầu này.
-    *   REST Controller bắt buộc phải chặn đứng yêu cầu ngay ở tầng lọc, ném ra ngoại lệ đóng lượt và trả về mã phản hồi HTTP 400 Bad Request cho Client.
-    *   Tuyệt đối không để xảy ra tình trạng luồng xử lý ghi dữ liệu vào hàng đợi ConcurrentMap khi luồng Scheduler đang thực hiện tráo đổi bộ đệm.
+*   [ ] **Không vi phạm Quy tắc Kiến trúc Hexagonal**: Tầng Domain không chứa bất kỳ Spring Framework imports hoặc dependencies bên ngoài nào.
+*   [ ] **Không rò rỉ Thực thể JPA/Mongo**: Lớp Entity của cơ sở dữ liệu không được truyền trực tiếp vào hoặc ra khỏi tầng Domain. Phải chuyển đổi qua Mapper ở tầng Application.
+*   [ ] **Bao phủ kiểm thử (Test Coverage)**: Mỗi tính năng nghiệp vụ mới đều phải có Unit Test độc lập. Độ bao phủ tối thiểu của các Domain Services mới là `95%`.
+*   [ ] **Tính Bất biến (Immutability)**: Mọi Value Object mới đều là bất biến.
+*   [ ] **Mô tả Không chứa mã nguồn**: Toàn bộ tài liệu thiết kế không chứa code Java, Python hay pseudo-code.
 
-### 2.2. Va chạm hoán đổi vị trí Agent (Agent Swapping Position Collision)
-*   **Tình huống:** Hai Agent của cùng một đội chơi hoán đổi vị trí trực tiếp cho nhau trong cùng một lượt (Agent A ở ô 1 di chuyển sang ô 2; đồng thời Agent B ở ô 2 di chuyển sang ô 1).
-*   **Yêu cầu nghiệm thu:**
-    *   Do ô bản đồ (`Cell`) hỗ trợ chứa không giới hạn số lượng Agent đứng đồng thời, hành động đi xuyên qua nhau này là hoàn toàn hợp lệ.
-    *   Hệ thống phải cho phép hai Agent di chuyển bình thường, cập nhật tọa độ đích thành công mà không báo lỗi va chạm hoặc khóa chết luồng di chuyển.
+---
 
-### 2.3. Tính bất biến của Value Objects (Value Object Immutability)
-*   **Tình huống:** Lập trình viên cố tình thay đổi thuộc tính của một đối tượng giá trị (như đổi tọa độ X của một `Coordinate` hoặc đổi `fuelCost` của `MovementCost`).
-*   **Yêu cầu nghiệm thu:**
-    *   Tất cả các lớp Value Object phải được định nghĩa dưới dạng Java `record` hoặc class khai báo từ khóa `final` với toàn bộ các thuộc tính là `private final`.
-    *   Tuyệt đối không định nghĩa các phương thức Setter.
-    *   Mọi thay đổi thông tin bắt buộc phải tạo ra một thực thể Value Object mới hoàn toàn.
+## 2. Danh sách kiểm tra Nghiệp vụ và xử lý Trường hợp biên (Edge Cases)
+
+### A. Phân hệ Giao thông Động (Traffic Flow)
+*   [ ] **Xử lý số lượng đội bằng 0 (Division by Zero)**:
+    *   *Kịch bản*: Trận đấu thử nghiệm hệ thống không có đội nào đăng ký (`totalTeams = 0`).
+    *   *Yêu cầu*: Thuật toán tại `TrafficCalculator.calculateFlow()` phải chặn giá trị 0 này và trả về kết quả lưu lượng mặc định bằng `0.0`, không ném ra lỗi ngoại lệ `ArithmeticException` gây sập máy chủ.
+*   [ ] **Phân định mức giao thông**:
+    *   *Kịch bản*: Lưu lượng calculated flow đúng bằng giá trị ngưỡng `traffic.threshold.congested` hoặc `traffic.threshold.jam`.
+    *   *Yêu cầu*: Phải so sánh chính xác để phân định trạng thái nghẽn đúng theo mô hình biên mở trái đóng phải (Ví dụ: `calculatedFlow >= congestedLimit` và `< jamLimit` thuộc trạng thái `CONGESTED`).
+
+### B. Chi phí Di chuyển địa hình (Movement Cost)
+*   [ ] **Chốt chi phí cố định (Cost Lock)**:
+    *   *Kịch bản*: Agent bắt đầu bước di chuyển của Turn $T$ từ ô A sang ô B (ô B đang ở trạng thái kẹt xe `TRAFFIC_JAM`). Giữa Turn, do kịch bản hoặc lệnh quản trị, ô B được giải tỏa giao thông trở lại `SMOOTH`.
+    *   *Yêu cầu*: Chi phí di chuyển của Agent phải được tính toán dựa trên trạng thái `TRAFFIC_JAM` tại đúng thời điểm bắt đầu lượt đi và khóa cứng lại cho bước đi này. Sự biến động giao thông diễn ra trong Turn không làm thay đổi chi phí đã trừ của Agent.
+*   [ ] **Giới hạn chứa Agent trên ô bản đồ (Unlimited Capacity)**:
+    *   *Kịch bản*: Có 100 Agent của tất cả các đội cùng thực hiện di chuyển vào chung một ô tọa độ $C$ tại cùng một bước đi.
+    *   *Yêu cầu*: Hệ thống phải xử lý lưu vết thành công vị trí của toàn bộ 100 Agent này mà không ném lỗi trùng lặp vị trí. Sự chen chúc chỉ được thể hiện ở việc lưu lượng stay steps tại ô $C$ sẽ tăng vọt lên 100 lượt, dẫn tới nghẽn nặng cho các lượt chơi sau.
+
+### C. Hệ thống Xếp hạng đấu trường (Ranking System)
+*   [ ] **Hòa toàn diện ở 4 cấp độ đầu**:
+    *   *Kịch bản*: Đội A và Đội B có cùng số lượng Udon độc nhất, cùng số Udon tích lũy theo ngày, cùng số servings thành công và tổng thời gian phản hồi mạng bằng nhau đến từng mili-giây.
+    *   *Yêu cầu*: Hệ thống phải gọi hàm `resolveTie()` sử dụng thuật toán tung xúc xắc dựa trên phép băm giả ngẫu nhiên chuỗi ID trận đấu và tên đội để phân hạng một cách nhất quán (không thay đổi kết quả sau mỗi lần khởi động lại máy chủ).
+
+### D. Xử lý Đồng thời & Bù trễ Mạng (Concurrency & Latency)
+*   [ ] **Gửi Request muộn đúng 1 phần triệu giây (Microsecond Post-closing)**:
+    *   *Kịch bản*: Một đội chơi gửi hành động muộn hơn thời gian đóng Turn (`turnStartTime + durationMs`) đúng $1$ microsecond (máy chủ tiếp nhận lúc thời gian trôi qua $2000.001$ ms).
+    *   *Yêu cầu*: Bộ phận tiếp nhận của `TurnExecutionQueue` khi chuyển trạng thái sang `LOCKED` phải từ chối yêu cầu này ngay lập tức, ghi nhận thời gian phản hồi ở mức tối đa và tự động áp dụng hành động `WAIT` cho Agent của đội đó.
+*   [ ] **Hai Agent của cùng một đội hoán đổi vị trí cho nhau (Agent Swap)**:
+    *   *Kịch bản*: Trong cùng một bước đi của Turn, Agent 1 đang ở tọa độ $X_1$ di chuyển sang $X_2$, đồng thời Agent 2 đang ở tọa độ $X_2$ di chuyển sang $X_1$.
+    *   *Yêu cầu*:
+        1.  Hàng đợi hành động phải ghi nhận cả hai yêu cầu.
+        2.  Thuật toán di chuyển tại `MatchState.simulateTurn()` không được phép đánh dấu xung đột vật lý và từ chối di chuyển. Hệ thống phải cho phép hai Agent đi ngang qua nhau và cập nhật tọa độ đích mới thành công vì bản đồ Hex của dự án hỗ trợ đứng chung ô.
+
+### E. Tính Bất biến của Value Objects (Immutability Verification)
+*   [ ] **Ngăn chặn sửa đổi thuộc tính**:
+    *   *Hành động*: Kiểm tra mã nguồn các lớp: `Coordinate`, `MovementCost`, `UdonType`, `TrafficThreshold`, `MatchSnapshot`.
+    *   *Yêu cầu*:
+        1.  Mọi thuộc tính (fields) phải được khai báo với từ khóa `private final`.
+        2.  Không định nghĩa bất kỳ phương thức thiết lập nào (không setter).
+        3.  Nếu thuộc tính có kiểu dữ liệu là một đối tượng có thể thay đổi (Mutable object như List, Set, Map), constructor phải thực hiện copy sâu (`Collections.unmodifiableList`, `Collections.unmodifiableMap` hoặc sao chép phần tử) để tránh rò rỉ tham chiếu ra bên ngoài.

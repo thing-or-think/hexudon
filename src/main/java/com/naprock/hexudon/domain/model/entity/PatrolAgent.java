@@ -3,6 +3,7 @@ package com.naprock.hexudon.domain.model.entity;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 
@@ -44,12 +45,10 @@ public class PatrolAgent extends Agent {
     @Override
     public MoveResult executeAction(
             Action action,
-            MatchState state,
-            MatchConfig config) {
+            MatchState state) {
 
         validateNotNull(action, "action");
         validateNotNull(state, "state");
-        validateNotNull(config, "config");
 
         if (action.getActionType() == ActionType.WAIT) {
 
@@ -87,35 +86,10 @@ public class PatrolAgent extends Agent {
             );
         }
 
-        int stepCost;
-        int fuelCost;
+        MovementCost movementCost = state.getMovementCosts().get(cell);
 
-        switch (cell.getTerrainType()) {
-
-            case ROAD -> {
-                stepCost = config.roadStepCost();
-                fuelCost = config.roadFuelCost();
-            }
-
-            case PLAIN -> {
-                stepCost = config.plainStepCost();
-                fuelCost = config.plainFuelCost();
-            }
-
-            case MOUNTAIN -> {
-                stepCost = config.mountainStepCost();
-                fuelCost = config.mountainFuelCost();
-            }
-
-            default ->
-                    throw new GameRuleViolationException(
-                            ErrorCode.INVALID_TARGET_TERRAIN,
-                            String.format(
-                                    "Unsupported terrain type: %s.",
-                                    cell.getTerrainType()
-                            )
-                    );
-        }
+        int stepCost = movementCost.getStepsNeeded();
+        int fuelCost = movementCost.getFuelNeeded();
 
         consumeStep(stepCost);
         consumeFuel(fuelCost);

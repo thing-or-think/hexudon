@@ -177,8 +177,7 @@ public abstract class Agent {
      */
     public abstract MoveResult executeAction(
             Action action,
-            MatchState state,
-            MatchConfig config
+            MatchState state
     );
 
     public abstract Agent deepCopy();

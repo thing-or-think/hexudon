@@ -23,7 +23,9 @@ public record MatchConfig(
         int maxSpamViolations,
 
         int roadFuelCost,
-        int roadStepCost,
+        int roadNormalStepCost,
+        int roadBusyStepCost,
+        int roadCongestedStepCost,
 
         int plainFuelCost,
         int plainStepCost,
@@ -78,7 +80,9 @@ public record MatchConfig(
         private int maxSpamViolations = 3;
 
         private int roadFuelCost = 2;
-        private int roadStepCost = 1;
+        private int roadNormalStepCost = 1;
+        private int roadBusyStepCost = 2;
+        private int roadCongestedStepCost = 4;
 
         private int plainFuelCost = 1;
         private int plainStepCost = 2;
@@ -155,8 +159,18 @@ public record MatchConfig(
         }
 
 
-        public Builder roadStepCost(int value) {
-            this.roadStepCost = value;
+        public Builder roadNormalStepCost(int value) {
+            this.roadNormalStepCost = value;
+            return this;
+        }
+
+        public Builder roadBusyStepCost(int value) {
+            this.roadBusyStepCost = value;
+            return this;
+        }
+
+        public Builder roadCongestedStepCost(int value) {
+            this.roadCongestedStepCost = value;
             return this;
         }
 
@@ -190,6 +204,20 @@ public record MatchConfig(
             return this;
         }
 
+        public Builder turnTimeLimitMs(int value) {
+            this.turnTimeLimitMs = value;
+            return this;
+        }
+
+        public Builder maxRequestsPerSecond(int value) {
+            this.maxRequestsPerSecond = value;
+            return this;
+        }
+
+        public Builder maxSpamViolations(int value) {
+            this.maxSpamViolations = value;
+            return this;
+        }
 
         public MatchConfig build() {
 
@@ -215,7 +243,10 @@ public record MatchConfig(
                     maxSpamViolations,
 
                     roadFuelCost,
-                    roadStepCost,
+
+                    roadNormalStepCost,
+                    roadBusyStepCost,
+                    roadCongestedStepCost,
 
                     plainFuelCost,
                     plainStepCost,

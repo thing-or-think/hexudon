@@ -13,7 +13,7 @@ import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
  * Any component that needs to trigger traffic calculation must invoke this
  * use case.</p>
  */
-public interface CalculateTrafficUseCase {
+public interface CalculateTurnEnvironmentUseCase {
 
     /**
      * Updates traffic information for the next game turn.
@@ -23,7 +23,7 @@ public interface CalculateTrafficUseCase {
      * @throws IllegalArgumentException if {@code matchState} or {@code config} is {@code null}
      * @throws GameRuleViolationException if a game rule is violated during traffic calculation
      */
-    void calculateNextTurnTraffic(
+    void calculate(
             MatchState matchState,
             MatchConfig config
     ) throws GameRuleViolationException;

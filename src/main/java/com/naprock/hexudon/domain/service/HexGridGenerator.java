@@ -8,7 +8,7 @@ import com.naprock.hexudon.domain.valueobject.TerrainType;
 
 import java.util.Random;
 
-public class HexGridUtils {
+public class HexGridGenerator {
 
     private static final Random RANDOM = new Random();
 
@@ -17,7 +17,7 @@ public class HexGridUtils {
     private static final int ROAD_RATE = 5;
     private static final int POND_RATE = 10;
 
-    public static void generateGrid(int width, int height, MatchState matchState) {
+    public static void generateMap(int width, int height, MatchState matchState) {
 
         if (width <= 0 || height <= 0 || matchState == null) {
             return;
@@ -26,41 +26,6 @@ public class HexGridUtils {
         createCells(width, height, matchState);
 
         createDefaultSpots(width, height, matchState);
-    }
-
-    public static boolean isAdjacent(
-            int x1,
-            int y1,
-            int x2,
-            int y2) {
-
-        int dx = x2 - x1;
-        int dy = y2 - y1;
-
-        if (dx == 0 && dy == 0) {
-            return false;
-        }
-
-        if (y1 % 2 != 0) {
-
-            return
-                    (dx == 0 && dy == -1) ||
-                            (dx == 1 && dy == -1) ||
-                            (dx == -1 && dy == 0) ||
-                            (dx == 1 && dy == 0) ||
-                            (dx == 0 && dy == 1) ||
-                            (dx == 1 && dy == 1);
-
-        }
-
-        return
-                (dx == -1 && dy == -1) ||
-                        (dx == 0 && dy == -1) ||
-                        (dx == -1 && dy == 0) ||
-                        (dx == 1 && dy == 0) ||
-                        (dx == -1 && dy == 1) ||
-                        (dx == 0 && dy == 1);
-
     }
 
     private static void createCells(
@@ -75,7 +40,7 @@ public class HexGridUtils {
                 matchState.addCell(
                         new Cell(
                                 new Coordinate(x, y),
-                                generateTerrainType()
+                                generateRandomTerrainType()
                         )
                 );
             }
@@ -100,7 +65,7 @@ public class HexGridUtils {
         matchState.addSpot(spot);
     }
 
-    private static TerrainType generateTerrainType() {
+    private static TerrainType generateRandomTerrainType() {
 
         int value = RANDOM.nextInt(100);
 

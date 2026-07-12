@@ -3,6 +3,7 @@ package com.naprock.hexudon.domain.model.entity;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 
@@ -26,12 +27,10 @@ public class RefuelAgent extends Agent{
     @Override
     public MoveResult executeAction(
             Action action,
-            MatchState state,
-            MatchConfig config) {
+            MatchState state) {
 
         validateNotNull(action, "action");
         validateNotNull(state, "state");
-        validateNotNull(config, "config");
 
         if (action.getActionType() == ActionType.WAIT) {
 
@@ -69,31 +68,9 @@ public class RefuelAgent extends Agent{
             );
         }
 
-        int stepCost;
+        MovementCost movementCost = state.getMovementCosts().get(cell);
 
-        switch (cell.getTerrainType()) {
-
-            case ROAD -> {
-                stepCost = config.roadStepCost();
-            }
-
-            case PLAIN -> {
-                stepCost = config.plainStepCost();
-            }
-
-            case MOUNTAIN -> {
-                stepCost = config.mountainStepCost();
-            }
-
-            default ->
-                    throw new GameRuleViolationException(
-                            ErrorCode.INVALID_TARGET_TERRAIN,
-                            String.format(
-                                    "Unsupported terrain type: %s.",
-                                    cell.getTerrainType()
-                            )
-                    );
-        }
+        int stepCost = movementCost.getStepsNeeded();
 
         consumeStep(stepCost);
 

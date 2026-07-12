@@ -1,76 +1,92 @@
-# QUẢN LÝ TRẠNG THÁI VÀ PHỤC HỒI TRẬN ĐẤU (MATCH STATE DESIGN & RECOVERY) - GIAI ĐOẠN 4
+# QUẢN LÝ TRẠNG THÁI TRẬN ĐẤU, PHỤC HỒI VÀ TÁI ĐẤU
 
-Tài liệu này đặc tả thiết kế cơ chế lưu trữ, quản lý trạng thái trận đấu, chiến lược chụp ảnh snapshot và quy trình khôi phục tự động khi xảy ra lỗi hệ thống hoặc yêu cầu tái đấu.
-
----
-
-## 1. Thành phần Cốt lõi của Hệ thống Phục hồi
-
-### 1.1. Thực thể: MatchSnapshot (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.recovery`
-*   **Ý nghĩa:** Chứa bản sao lưu toàn bộ thông tin cần thiết của trận đấu tại một lượt cụ thể.
-*   **Các thuộc tính chi tiết:**
-    *   `snapshotId` (Kiểu: `String`): Mã định danh duy nhất của bản chụp.
-    *   `matchId` (Kiểu: `String`): Mã trận đấu tương ứng.
-    *   `turnNumber` (Kiểu: `int`): Lượt đấu được sao lưu.
-    *   `timestamp` (Kiểu: `long`): Thời điểm chụp trạng thái (ms).
-    *   `matchStatus` (Kiểu: `MatchStatus`): Trạng thái vòng đấu lúc chụp (`PLAYING`, `FINISHED`).
-    *   `teamsData` (Kiểu: Danh sách đối tượng): Chứa trạng thái các đội (Tên đội, trạng thái xăng, bước đi còn lại, danh sách hành động hiện tại của từng Agent).
-    *   `spotsData` (Kiểu: Danh sách đối tượng): Chứa tọa độ các Spot và số lượng Udon tồn kho thực tế của từng đội tại thời điểm chụp.
-    *   `trafficData` (Kiểu: Danh sách đối tượng): Danh sách các ô đường kèm theo lưu lượng `flowValue` và trạng thái `RoadTrafficState` hiện hành.
-    *   `scoresData` (Kiểu: Danh sách đối tượng): Điểm số chi tiết hiện tại của tất cả các đội.
-
-### 1.2. Đối tượng giá trị: RecoveryPoint (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.model.recovery`
-*   **Ý nghĩa:** Điểm mốc phục hồi an toàn đã được hệ thống kiểm tra và chốt lưu trữ thành công.
-*   **Các thuộc tính chi tiết:**
-    *   `turnNumber` (Kiểu: `int`): Số lượt đấu tối đa đã hoàn thành an toàn.
-    *   `snapshotId` (Kiểu: `String`): Mã định danh bản chụp trạng thái tương ứng.
-    *   `validated` (Kiểu: `boolean`): Trạng thái xác nhận điểm khôi phục hợp lệ (chỉ đặt là true khi snapshot đã ghi xuống DB thành công).
+Tài liệu này mô tả chi tiết cơ chế chụp trạng thái trận đấu (Snapshotting), quy trình tự động rollback phục hồi dữ liệu khi sập nguồn (Match Recovery) và tính năng đấu lại từ một lượt bất kỳ do trọng tài chỉ định (Rematch).
 
 ---
 
-## 2. Chiến lược Chụp trạng thái (Snapshotting Strategy)
+## 1. Chiến lược Chụp Trạng thái (Snapshotting Strategy)
 
-*   **Thời điểm kích hoạt:** Chụp snapshot được thực hiện tự động ở **cuối mỗi lượt đấu (End of Turn)**. Quy trình này diễn ra sau khi kết thúc chu kỳ xử lý hành động (`simulateTurn()`) và tính toán giao thông mới, nhưng trước khi hàm `nextDay()` tăng số thứ tự lượt đấu lên `currentTurn + 1`.
-*   **Dữ liệu thu thập:**
-    *   Trạng thái bản đồ: Tọa độ, loại địa hình và trạng thái giao thông động của tất cả các ô.
-    *   Trạng thái Agent: Tọa độ hiện tại, lượng nhiên liệu còn lại, số bước đi còn lại.
-    *   Trạng thái Đội chơi: Tên đội, tình trạng truất quyền thi đấu, điểm số.
-    *   Trạng thái Điểm Udon: Số lượng Udon còn lại tại các ô Spot cho mỗi đội.
+### A. Thời điểm chụp Snapshot
+Để đảm bảo khôi phục hệ thống một cách nhất quán và chính xác, Snapshot được thực hiện tự động tại hai thời điểm:
+1.  **Đầu Turn (Post-transition)**: Ngay sau khi hàm `nextDay()` kết thúc (hệ thống tăng số lượt `currentTurn = currentTurn + 1`, reset tài nguyên nhiên liệu tối đa, reset số bước đi của Agent, nạp lại kho Udon tại các Spot). Snapshot này đại diện cho trạng thái ban đầu sạch sẽ của lượt chơi mới.
+2.  **Cuối Turn (Post-simulation)**: Ngay sau khi kết thúc mô phỏng các bước đi (`simulateTurn`) và cập nhật trạng thái giao thông (`updateTrafficForNextTurn`), điểm số đã được tính toán xong nhưng trước khi chuyển sang Turn kế tiếp.
 
----
+### B. Cấu trúc dữ liệu bên trong MatchSnapshot
 
-## 3. Quy trình Khôi phục tự động khi gặp sự cố (Rollback Flow)
+Dữ liệu lưu trữ trong một `MatchSnapshot` được tổ chức dưới dạng danh sách các cấu phần sau (tuyệt đối không chứa tham chiếu động của Java, được deep copy hoàn toàn hoặc serialization thành chuỗi JSON bất biến):
 
-Quy trình xử lý khôi phục trạng thái trận đấu khi máy chủ gặp sự cố sập nguồn đột ngột hoặc lỗi phần cứng được thực hiện theo thuật toán sau:
-
-1.  **Bước 1 - Quét điểm khôi phục:** Khi ứng dụng khởi động lại, dịch vụ khôi phục (`RecoveryApplicationService`) thực hiện gọi Outbound Port `MatchSnapshotRepositoryPort` để tìm kiếm thực thể `RecoveryPoint` mới nhất có thuộc tính `validated` bằng `true`.
-2.  **Bước 2 - Kiểm tra tính sẵn sàng:**
-    *   Nếu không tìm thấy bất kỳ điểm khôi phục hợp lệ nào: Hệ thống khởi tạo một trận đấu mới hoàn toàn ở Turn 1 với trạng thái ban đầu được định nghĩa trong tệp cấu hình hệ thống.
-    *   Nếu tìm thấy `RecoveryPoint`: Lấy mã `snapshotId` liên kết.
-3.  **Bước 3 - Tải ảnh chụp trạng thái:** Thực hiện truy vấn thực thể `MatchSnapshot` tương ứng với `snapshotId`.
-4.  **Bước 4 - Phục hồi trạng thái bộ nhớ:**
-    *   Nạp lại toàn bộ ô địa hình và gán lại trạng thái giao thông từ `trafficData` vào bộ nhớ đệm bản đồ của `MatchState`.
-    *   Khởi tạo lại danh sách đội chơi, gán lại chính xác tọa độ, nhiên liệu và bước đi của từng Agent từ `teamsData`.
-    *   Cập nhật điểm số thực tế của các đội chơi từ `scoresData`.
-    *   Thiết lập lại số Udon tồn kho tại các Spot từ `spotsData`.
-5.  **Bước 5 - Đặt lại đồng hồ lượt đấu:** Gán giá trị lượt chơi hiện tại của hệ thống: `currentTurn = RecoveryPoint.turnNumber`. Thiết lập trạng thái trận đấu thành `PLAYING`. Gán dấu thời gian bắt đầu lượt mới: `turnStartTime = thời gian hệ thống hiện tại`.
-6.  **Bước 6 - Kích hoạt hệ thống:** Mở cổng tiếp nhận yêu cầu gửi hành động cho lượt kế tiếp (`currentTurn + 1`) và gửi thông báo sẵn sàng tới các đội chơi.
+| Cấu phần dữ liệu | Kiểu dữ liệu mô tả | Ý nghĩa chi tiết |
+| :--- | :--- | :--- |
+| `matchId` | String | Mã định danh duy nhất của trận đấu đang diễn ra. |
+| `snapshotTurn` | Integer | Số lượt chơi tại thời điểm chụp snapshot. |
+| `status` | MatchStatus (Enum) | Trạng thái của trận đấu (`PLAYING`, `FINISHED`, v.v.). |
+| `teamsData` | List (Mô tả cấu trúc Team) | Bản sao danh sách các đội chơi kèm thông tin: tên đội, lượng nhiên liệu của từng Agent, số bước còn lại của Agent, vị trí tọa độ của Agent. |
+| `mapStateData` | List (Mô tả ô bản đồ) | Bản sao danh sách ô bản đồ gồm tọa độ, loại địa hình và trạng thái giao thông động (`RoadTrafficState`) hiện thời. |
+| `spotsData` | List (Mô tả Spot) | Bản sao danh sách các Spot gồm tọa độ và số lượng Udon còn lại trong kho cấp phát. |
+| `scoresData` | List (Mô tả điểm số) | Chi tiết điểm số của từng đội chơi: danh sách các loại Udon độc nhất thu được, tích lũy ngày, số servings, tổng response time. |
+| `trafficHistoryData`| List (Mô tả giao thông) | Nhật ký stay steps của các lượt trước phục vụ tính toán giao thông lượt tiếp theo. |
+| `timestamp` | Long | Thời gian ghi nhận snapshot trên server (mili-giây). |
 
 ---
 
-## 4. Quy trình Tái đấu từ lượt chỉ định (Rematch Flow)
+## 2. Quy trình Tự phục hồi sau Sự cố (Rollback Flow)
 
-Quy trình cho phép ban tổ chức kích hoạt đấu lại trận đấu từ lượt chơi thứ `X` bất kỳ được thực hiện theo thuật toán sau:
+Khi hệ thống máy chủ gặp sự cố đột ngột (sập nguồn, lỗi phần cứng) và khởi động lại, hệ thống sẽ thực hiện khôi phục tự động theo thuật toán từng bước sau:
 
-1.  **Bước 1 - Nhận yêu cầu:** Quản trị viên gửi yêu cầu tái đấu kèm tham số lượt bắt đầu lại là `X` thông qua REST API chuyên biệt.
-2.  **Bước 2 - Xác thực tính hợp lệ:** Hệ thống kiểm tra điều kiện lượt chơi: `X` phải lớn hơn 0 và nhỏ hơn hoặc bằng lượt đấu hiện tại (`currentTurn`).
-3.  **Bước 3 - Truy vết trạng thái quá khứ:**
-    *   Nếu `X` bằng 1: Hệ thống khôi phục lại trạng thái bắt đầu trận đấu (lượt chuẩn bị ban đầu).
-    *   Nếu `X` lớn hơn 1: Truy vấn `MatchSnapshot` của lượt trước đó, tức là lượt `X - 1`. Nếu không tồn tại bản chụp của lượt `X - 1` trong database, hệ thống trả về lỗi "Không tìm thấy snapshot phù hợp để tái đấu" và hủy quy trình.
-4.  **Bước 4 - Dọn dẹp dữ liệu tương lai:** Thực hiện xóa toàn bộ các bản ghi lịch sử sự kiện `GameEvent` và dữ liệu lịch sử giao thông `TrafficHistory` của tất cả các lượt đấu lớn hơn hoặc bằng `X` khỏi cơ sở dữ liệu để loại bỏ các dữ liệu rác của lượt đấu lỗi.
-5.  **Bước 5 - Khôi phục trạng thái bộ nhớ:** Áp dụng dữ liệu ảnh chụp `Snapshot(X-1)` vào thực thể `MatchState` đang chạy trong bộ nhớ đệm (thực hiện tương tự bước 4 của quy trình khôi phục tự động).
-6.  **Bước 6 - Thiết lập lượt đấu hiện tại:** Gán `currentTurn = X`.
-7.  **Bước 7 - Bắt đầu lại lượt:** Thiết lập trạng thái trận đấu thành `PLAYING`, ghi nhận `turnStartTime = thời gian hệ thống hiện tại`.
-8.  **Bước 8 - Phát tín hiệu tái đấu:** Gửi tín hiệu thông báo tái đấu đến tất cả client của các đội chơi, yêu cầu gửi lại kế hoạch hành động cho lượt đấu `X`.
+```mermaid
+graph TD
+    A[Khởi động lại Server] --> B{Tìm RecoveryPoint gần nhất?}
+    B -- Không có --> C[Khởi tạo trận đấu từ Turn 0]
+    B -- Có --> D[Tải dữ liệu Snapshot của Turn X]
+    D --> E[Khôi phục Map, Agent, Điểm số về Turn X]
+    E --> F[Thiết lập currentTurn = X + 1]
+    F --> G[Xóa các dữ liệu rác sau Turn X]
+    G --> H[Chuyển trạng thái sang PLAYING]
+    H --> I[Mở hàng đợi Turn X + 1 & Thông báo cho Client]
+```
+
+### Thuật toán phục hồi từng bước (Text-based Algorithm):
+1.  **Bước 1**: Tầng Adapter Persistence khi khởi động sẽ gọi Outbound Port `MatchSnapshotRepository.findLatestRecoveryPoint()`.
+2.  **Bước 2**: Hệ thống kiểm tra dữ liệu trả về:
+    *   Nếu không có `RecoveryPoint` nào tồn tại: Hệ thống kích hoạt quy trình tạo mới trận đấu từ đầu (Turn 0) và đưa trạng thái về `WAITING`. Kết thúc.
+    *   Nếu có `RecoveryPoint` tại Turn $X$: Tiến hành giải nén chuỗi dữ liệu trạng thái.
+3.  **Bước 3**: Khôi phục trạng thái bộ nhớ đệm:
+    *   Gán trạng thái bản đồ, danh sách các ô đường nhựa và trạng thái kẹt xe về đúng Snapshot của Turn $X$.
+    *   Gán danh sách Agent về tọa độ và mức nhiên liệu tương ứng ở cuối Turn $X$.
+    *   Khôi phục điểm số của các đội chơi, bao gồm lịch sử các loại Udon thu thập và số servings.
+4.  **Bước 4**: Dọn dẹp dữ liệu thừa:
+    *   Truy vấn cơ sở dữ liệu lịch sử sự kiện game và nhật ký mạng, thực hiện xóa bỏ toàn bộ các bản ghi `GameEvent` và `ApiCommunicationLog` có chỉ số lượt lớn hơn $X$. Điều này nhằm loại bỏ các dữ liệu rác được ghi nhận dở dang trong lượt bị sập nguồn.
+5.  **Bước 5**: Thiết lập lượt chơi mới:
+    *   Thiết lập `currentTurn = X + 1`.
+    *   Đặt trạng thái trận đấu là `PLAYING`.
+    *   Đặt `turnStartTime = System.currentTimeMillis()`.
+6.  **Bước 6**: Kích hoạt hệ thống giao tiếp:
+    *   Mở hàng đợi `TurnExecutionQueue` cho lượt $X + 1$.
+    *   Gửi bản tin đồng bộ hóa trạng thái qua WebSocket/API đến tất cả các Client của các đội chơi để họ biết trận đấu đã được khôi phục tại Turn $X + 1$ và bắt đầu gửi lệnh hành động.
+
+---
+
+## 3. Quy trình Tái đấu (Rematch Flow)
+
+Tính năng Rematch cho phép Trọng tài (Admin) đưa trận đấu quay ngược thời gian về một lượt chơi chỉ định để thực hiện đấu lại (ví dụ do sự cố mạng diện rộng của một đội chơi).
+
+### Thuật toán thực thi Rematch từng bước (Text-based Algorithm):
+1.  **Bước 1**: Nhận yêu cầu Rematch từ API của trọng tài với tham số `targetTurn` (lượt chơi mong muốn chạy lại, ví dụ Turn $Y$).
+2.  **Bước 2**: Kiểm tra tính hợp lệ của yêu cầu:
+    *   Nếu $Y$ nhỏ hơn hoặc bằng 1, hoặc lớn hơn `currentTurn` hiện tại: Trả về lỗi `400 Bad Request`.
+    *   Truy vấn Outbound Port để lấy Snapshot tại Turn $Y - 1$ (trạng thái ngay trước khi Turn $Y$ bắt đầu). Nếu không tìm thấy Snapshot của Turn $Y - 1$: Trả về lỗi hệ thống không thể tái đấu do thiếu điểm phục hồi.
+3.  **Bước 3**: Tạm dừng hệ thống:
+    *   Khóa hàng đợi tiếp nhận hành động `TurnExecutionQueue`.
+    *   Tạm dừng bộ định trình tự `RequestOrderingService`.
+4.  **Bước 4**: Khôi phục trạng thái:
+    *   Ghi đè trạng thái bộ nhớ trực tiếp (Memory State) của trận đấu bằng dữ liệu từ Snapshot của Turn $Y - 1$.
+    *   Đặt lại biến `currentTurn = Y`.
+    *   Thiết lập trạng thái trận đấu về `PLAYING`.
+5.  **Bước 5**: Dọn dẹp cơ sở dữ liệu lịch sử:
+    *   Xóa toàn bộ các `GameEvent` có `turn >= Y`.
+    *   Xóa toàn bộ các `ApiCommunicationLog` có `requestTime` lớn hơn hoặc bằng thời điểm ghi nhận đầu Turn $Y$ gốc.
+    *   Xóa toàn bộ các `RecoveryPoint` có `snapshotTurn >= Y`.
+6.  **Bước 6**: Tái thiết lập và phát sóng:
+    *   Cập nhật thời gian bắt đầu lượt: `turnStartTime = System.currentTimeMillis()`.
+    *   Giải phóng hàng đợi hành động, cho phép các đội gửi lại request cho Turn $Y$.
+    *   Gửi thông báo quảng bá (Broadcast) qua WebSocket tới tất cả các Client để thông báo sự kiện Rematch về Turn $Y$, yêu cầu các bot/client gửi lại hành động của lượt này.

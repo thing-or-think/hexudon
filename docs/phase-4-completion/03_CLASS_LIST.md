@@ -1,95 +1,113 @@
-# DANH MỤC CÁC LỚP THIẾT KẾ (CLASS LIST) - GIAI ĐOẠN 4
+# DANH MỤC CÁC LỚP VÀ GIAO DIỆN GIAI ĐOẠN 4
 
-Tài liệu này tổng hợp toàn bộ các lớp (Class), Giao diện (Interface), Kiểu liệt kê (Enum) và Đối tượng giá trị (Value Object) được thêm mới hoặc chỉnh sửa trong Giai đoạn 4, phân loại chi tiết theo từng module nghiệp vụ.
-
----
-
-## 1. Module Nghiệp vụ: Hệ thống giao thông động (Traffic Flow)
-
-| Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
-| :--- | :--- | :--- | :--- |
-| `TrafficFlow` | Value Object | `com.naprock.hexudon.domain.model.traffic` | Đại diện cho lưu lượng giao thông tại một tọa độ ô đường đi. |
-| `RoadTrafficState` | Enum | `com.naprock.hexudon.domain.model.traffic` | Các trạng thái giao thông đường bộ: `Smooth`, `Congested`, `Traffic Jam`. |
-| `TrafficLevel` | Enum | `com.naprock.hexudon.domain.model.traffic` | Các mức phân cấp lưu lượng giao thông: `Low`, `Medium`, `High`. |
-| `TrafficThreshold` | Value Object | `com.naprock.hexudon.domain.model.traffic` | Định nghĩa ngưỡng lưu lượng để phân định trạng thái kẹt xe. |
-| `TrafficSnapshot` | Value Object | `com.naprock.hexudon.domain.model.traffic` | Ảnh chụp nhanh dữ liệu giao thông của toàn bộ bản đồ tại một lượt (Turn). |
-| `TrafficHistory` | Entity | `com.naprock.hexudon.domain.model.traffic` | Lưu trữ tổng số lượt dừng chân của Agent tại tọa độ đường trong quá khứ. |
-| `TrafficCalculator` | Domain Service | `com.naprock.hexudon.domain.service.traffic` | Chứa logic thuần túy tính toán Calculated Flow và phân định RoadTrafficState. |
-| `TrafficCalculationService` | Application Service | `com.naprock.hexudon.application.service.traffic` | Dịch vụ điều phối tính toán giao thông khi kết thúc Turn và chuẩn bị Turn tiếp theo. |
-| `TrafficRepositoryPort` | Outbound Port (SPI) | `com.naprock.hexudon.application.port.out.traffic` | Giao diện cổng ra để truy vấn và lưu trữ dữ liệu lịch sử giao thông. |
-| `TrafficPersistenceAdapter` | Outbound Adapter | `com.naprock.hexudon.adapter.out.persistence.traffic` | Triển khai lưu trữ lịch sử giao thông xuống cơ sở dữ liệu qua Spring Data JPA. |
+Tài liệu này tổng hợp toàn bộ các Class, Interface, Enum, Value Object và Entity được thêm mới hoặc chỉnh sửa trong Giai đoạn 4, được phân loại theo Module nghiệp vụ cụ thể.
 
 ---
 
-## 2. Module Nghiệp vụ: Chi phí di chuyển địa hình (Terrain & Movement Cost)
+## 1. Module 1: Hệ thống giao thông động (Traffic Flow)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `MovementCost` | Value Object | `com.naprock.hexudon.domain.model.cost` | Chứa chi phí di chuyển đã chốt (gồm lượng xăng hao tốn và số bước đi tiêu hao). |
-| `MovementCostCalculator` | Domain Service | `com.naprock.hexudon.domain.service.cost` | Domain Service tính chi phí di chuyển cố định tại thời điểm bắt đầu đi. |
+| `TrafficFlow` | Entity | `com.naprock.hexudon.domain.model.traffic` | Đại diện cho thông tin lưu lượng giao thông thực tế tại một tọa độ đường. |
+| `RoadTrafficState` | Enum | `com.naprock.hexudon.domain.model.traffic` | Trạng thái nghẽn của đường (`SMOOTH`, `CONGESTED`, `TRAFFIC_JAM`). |
+| `TrafficCalculator` | Domain Service | `com.naprock.hexudon.domain.service` | Chứa logic thuần túy tính calculated flow và phân định trạng thái nghẽn. |
+| `TrafficThreshold` | Value Object | `com.naprock.hexudon.domain.model.traffic` | Chứa các ngưỡng (Thresholds) để xác định trạng thái giao thông. |
+| `TrafficLevel` | Enum | `com.naprock.hexudon.domain.model.traffic` | Mức độ giao thông hỗ trợ tính toán cấu hình. |
+| `TrafficSnapshot` | Value Object | `com.naprock.hexudon.domain.model.traffic` | Lưu trữ ảnh chụp nhanh trạng thái giao thông của toàn bản đồ tại một lượt. |
+| `CalculateTrafficUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.traffic` | Giao diện điều phối việc cập nhật và tính toán giao thông. |
+| `TrafficRepository` | Outbound Port | `com.naprock.hexudon.application.port.out.traffic` | Interface định nghĩa lưu trữ và truy vấn thông tin giao thông. |
+| `TrafficCalculationService`| Application Service| `com.naprock.hexudon.application.service` | Điều phối tiến trình cập nhật lưu lượng giao thông khi đóng Turn. |
+| `TrafficPersistenceAdapter`| Adapter | `com.naprock.hexudon.adapter.out.persistence.traffic`| Hiện thực hóa lưu trữ In-Memory trên RAM cho thông tin giao thông. |
+| `TrafficEntity` | Persistence Model | `com.naprock.hexudon.adapter.out.persistence.traffic`| Mô hình thực thể lưu trữ trên RAM cho thông tin giao thông. |
 
 ---
 
-## 3. Module Nghiệp vụ: Hệ thống tính điểm (Scoring System)
+## 2. Module 2: Chi phí di chuyển địa hình (Terrain & Movement Cost)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `UdonType` | Value Object | `com.naprock.hexudon.domain.model.scoring` | Định nghĩa loại Udon độc nhất được phân biệt bằng mã định danh (ID). |
-| `TeamScore` | Entity | `com.naprock.hexudon.domain.model.scoring` | Thực thể theo dõi điểm số chi tiết của từng đội: Số loại Udon, tích lũy ngày, số servings, response time. |
-| `MatchScore` | Entity | `com.naprock.hexudon.domain.model.scoring` | Thực thể tổng hợp điểm số toàn bộ trận đấu của tất cả các đội. |
-| `TeamScoreRepositoryPort` | Outbound Port (SPI) | `com.naprock.hexudon.application.port.out.scoring` | Cổng lưu trữ thông tin điểm số đội chơi xuống cơ sở dữ liệu bền vững. |
-| `ScoreController` | Inbound Adapter | `com.naprock.hexudon.adapter.in.rest.scoring` | Controller cung cấp API lấy điểm số chi tiết thời gian thực. |
+| `MovementCostCalculator` | Domain Service | `com.naprock.hexudon.domain.service` | Chứa công thức tính chi phí di chuyển dựa trên địa hình và trạng thái giao thông. |
+| `MovementCost` | Value Object | `com.naprock.hexudon.domain.model.movement` | Giá trị chi phí di chuyển (bất biến) gồm nhiên liệu tiêu hao và bước đi cần thiết. |
 
 ---
 
-## 4. Module Nghiệp vụ: Hệ thống xếp hạng đấu trường (Ranking System)
+## 3. Module 3: Hệ thống tính điểm (Scoring System)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `RankingCriteria` | Value Object | `com.naprock.hexudon.domain.service.ranking` | Chứa tiêu chí xếp hạng của đội chơi theo thứ tự ưu tiên tuyệt đối. |
-| `RankingService` | Domain Service | `com.naprock.hexudon.domain.service.ranking` | Thực hiện thuật toán so sánh điểm và phân thứ tự xếp hạng (Anti-tie-break). |
-| `RankingController` | Inbound Adapter | `com.naprock.hexudon.adapter.in.rest.scoring` | REST Controller cung cấp bảng xếp hạng hiện tại của vòng đấu. |
+| `TeamScore` | Entity | `com.naprock.hexudon.domain.model.score` | Lưu trữ chi tiết điểm số của một đội (các loại Udon, Servings, Response Time). |
+| `MatchScore` | Entity | `com.naprock.hexudon.domain.model.score` | Quản lý bảng điểm tổng hợp của toàn bộ các đội trong trận đấu. |
+| `UdonType` | Value Object | `com.naprock.hexudon.domain.model.score` | Loại Udon duy nhất đã thu thập để tính độ đa dạng tài nguyên. |
+| `UpdateScoreUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.scoring` | Giao diện cập nhật điểm cho Agent/Đội khi thực hiện hành động thành công. |
+| `TeamScoreRepository` | Outbound Port | `com.naprock.hexudon.application.port.out.scoring` | Interface lưu trữ và truy xuất điểm của các đội. |
+| `ScorePersistenceAdapter` | Adapter | `com.naprock.hexudon.adapter.out.persistence.score` | Thực thi các hoạt động lưu trữ điểm số vào cơ sở dữ liệu. |
+| `TeamScoreEntity` | DB Entity | `com.naprock.hexudon.adapter.out.persistence.score` | Bản ghi điểm số trong cơ sở dữ liệu. |
+| `ScoreMapper` | Mapper | `com.naprock.hexudon.application.mapper` | Ánh xạ giữa TeamScore (Domain) <-> TeamScoreEntity <-> TeamScoreResponse. |
+| `TeamScoreResponse` | DTO | `com.naprock.hexudon.application.dto` | Cấu trúc dữ liệu trả về thông tin điểm số của đội qua API. |
 
 ---
 
-## 5. Module Nghiệp vụ: Lịch sử trận đấu & Log sự kiện (Game Event History)
+## 4. Module 4: Hệ thống xếp hạng đấu trường (Ranking System)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `GameEvent` | Entity | `com.naprock.hexudon.domain.model.history` | Lưu trữ một sự kiện đơn lẻ trong game (eventId, turn, timestamp, teamId, payload). |
-| `TurnHistory` | Entity | `com.naprock.hexudon.domain.model.history` | Lưu trữ toàn bộ diễn biến lịch sử tóm tắt của một lượt chơi (Turn). |
-| `GameEventRepositoryPort` | Outbound Port (SPI) | `com.naprock.hexudon.application.port.out.history` | Cổng ra để ghi nhận và truy vấn lịch sử sự kiện đấu. |
-| `HistoryPersistenceAdapter` | Outbound Adapter | `com.naprock.hexudon.adapter.out.persistence.history` | Adapter triển khai lưu lịch sử đấu xuống Database JPA. |
-| `HistoryController` | Inbound Adapter | `com.naprock.hexudon.adapter.in.rest.history` | API REST cung cấp lịch sử đấu và timeline chi tiết phục vụ Visualizer. |
+| `RankingCriteria` | Value Object | `com.naprock.hexudon.domain.model.ranking` | Tiêu chí xếp hạng bao gồm bộ trọng số ưu tiên xếp hạng (Anti-tie-break). |
+| `RankingService` | Domain Service | `com.naprock.hexudon.domain.service` | Logic so sánh thứ hạng giữa các đội dựa theo 5 cấp độ tiêu chí. |
+| `GetRankingUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.scoring` | Giao diện truy vấn bảng xếp hạng hiện tại của trận đấu. |
+| `RankingMapper` | Mapper | `com.naprock.hexudon.application.mapper` | Chuyển đổi dữ liệu bảng xếp hạng sang DTO. |
+| `RankingResponse` | DTO | `com.naprock.hexudon.application.dto` | Trả về danh sách xếp hạng có thứ tự của các đội qua API. |
+| `RankingController` | Adapter (In) | `com.naprock.hexudon.adapter.in.rest` | Endpoint REST cung cấp thông tin xếp hạng thời gian thực. |
 
 ---
 
-## 6. Module Nghiệp vụ: Giám sát giao tiếp mạng (Communication Logging)
+## 5. Lịch sử trận đấu & Log sự kiện (Game Event History)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `ApiCommunicationLog` | Entity | `com.naprock.hexudon.domain.model.logging` | Lưu trữ chi tiết thông tin cuộc gọi API: requestId, latency, size, status... |
-| `CommunicationLogService` | Application Service | `com.naprock.hexudon.application.service.logging` | Xử lý nghiệp vụ phân tích và lưu nhật ký giao tiếp mạng bất đồng bộ. |
-| `ApiCommunicationLogRepositoryPort` | Outbound Port (SPI) | `com.naprock.hexudon.application.port.out.logging` | Giao diện cổng lưu trữ log mạng. |
-| `ApiLoggingInterceptor` | Inbound Adapter | `com.naprock.hexudon.adapter.in.rest.interceptor` | Interceptor đánh dấu thời gian, tính latency và kích thước payload của API. |
-| `LogController` | Inbound Adapter | `com.naprock.hexudon.adapter.in.rest.history` | API REST cung cấp nhật ký mạng và phân tích hiệu suất phục vụ Visualizer. |
+| `TurnHistory` | Entity | `com.naprock.hexudon.domain.model.history` | Tổng hợp toàn bộ các hành động và thay đổi trạng thái xảy ra trong một Turn. |
+| `GameEvent` | Entity | `com.naprock.hexudon.domain.model.history` | Lưu trữ một sự kiện game đơn lẻ (di chuyển, thu thập, cập nhật điểm, giao thông). |
+| `QueryHistoryUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.history` | Giao diện truy vấn dòng thời gian sự kiện của trận đấu. |
+| `GameEventRepository` | Outbound Port | `com.naprock.hexudon.application.port.out.history` | Interface lưu trữ sự kiện game vào cơ sở dữ liệu lịch sử. |
+| `HistoryPersistenceAdapter`| Adapter | `com.naprock.hexudon.adapter.out.persistence.history`| Thực thi ghi nhận và truy vấn chuỗi lịch sử sự kiện game. |
+| `GameEventEntity` | DB Entity | `com.naprock.hexudon.adapter.out.persistence.history`| Thực thể cơ sở dữ liệu đại diện cho một sự kiện game. |
+| `HistoryMapper` | Mapper | `com.naprock.hexudon.application.mapper` | Ánh xạ cấu trúc sự kiện game thành DTO hiển thị. |
+| `HistoryController` | Adapter (In) | `com.naprock.hexudon.adapter.in.rest` | REST Controller xuất dữ liệu timeline phục vụ Visualizer. |
 
 ---
 
-## 7. Module Nghiệp vụ: Trạng thái trận đấu & Khôi phục (Match Recovery)
+## 6. Giám sát giao tiếp mạng (Communication Logging)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `MatchSnapshot` | Entity | `com.naprock.hexudon.domain.model.recovery` | Thực thể chứa dữ liệu ảnh chụp trạng thái vòng đấu (Map, Agent, Score, Traffic). |
-| `RecoveryPoint` | Value Object | `com.naprock.hexudon.domain.model.recovery` | Xác định lượt chơi an toàn gần nhất để hệ thống sẵn sàng Rollback. |
-| `MatchSnapshotRepositoryPort` | Outbound Port (SPI) | `com.naprock.hexudon.application.port.out.recovery` | Cổng lưu trữ Snapshot trạng thái. |
-| `RecoveryPersistenceAdapter` | Outbound Adapter | `com.naprock.hexudon.adapter.out.persistence.recovery` | Adapter thực thi ghi/đọc Snapshot từ cơ sở dữ liệu. |
+| `ApiCommunicationLog` | Entity | `com.naprock.hexudon.domain.model.history` | Ghi nhận metadata của các yêu cầu HTTP từ các đội chơi đến server. |
+| `QueryApiLogUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.history` | Interface truy cập dữ liệu nhật ký mạng để chẩn đoán độ trễ. |
+| `ApiCommunicationLogRepository`| Outbound Port| `com.naprock.hexudon.application.port.out.history`| Interface định nghĩa việc lưu và truy vấn log mạng. |
+| `CommunicationLogService` | Application Service| `com.naprock.hexudon.application.service` | Điều phối lưu trữ và phân tích hiệu năng độ trễ. |
+| `ApiLogPersistenceAdapter`| Adapter | `com.naprock.hexudon.adapter.out.persistence.history`| Thực thi ghi nhật ký API vào MongoDB / JPA. |
+| `ApiLogEntity` | DB Entity | `com.naprock.hexudon.adapter.out.persistence.history`| Cấu trúc bảng lưu trữ thông tin log mạng. |
+| `ApiCommunicationInterceptor`| Adapter (In) | `com.naprock.hexudon.adapter.in.rest` | Spring MVC Interceptor chặn mọi API gửi đến để đo thời gian phản hồi. |
 
 ---
 
-## 8. Module Nghiệp vụ: Quản lý đồng thời (Concurrent Request)
+## 7. Giám sát trạng thái & Phục hồi (Match Recovery)
 
 | Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
 | :--- | :--- | :--- | :--- |
-| `TurnExecutionQueue` | Application Service | `com.naprock.hexudon.application.service.concurrency` | Hàng đợi lưu hành động của các đội gửi lên trong thời gian chạy lượt hiện tại. |
-| `RequestOrderingService` | Application Service | `com.naprock.hexudon.application.service.concurrency` | Thực hiện sắp xếp thứ tự công bằng dựa trên timestamp ghi nhận tại máy chủ. |
+| `MatchSnapshot` | Value Object | `com.naprock.hexudon.domain.model.recovery` | Đại diện cho ảnh chụp trạng thái đầy đủ bất biến tại đầu hoặc cuối Turn. |
+| `RecoveryPoint` | Entity | `com.naprock.hexudon.domain.model.recovery` | Điểm phục hồi chứa thông tin snapshot và siêu dữ liệu rollback. |
+| `MatchSnapshotRepository` | Outbound Port | `com.naprock.hexudon.application.port.out.recovery` | Interface lưu trữ và tìm kiếm các bản snapshot trạng thái. |
+| `MatchRecoveryUseCase` | Inbound Port | `com.naprock.hexudon.application.port.in.recovery` | Giao diện thực thi rollback trạng thái hoặc kích hoạt rematch từ Turn X. |
+| `MatchRecoveryService` | Application Service| `com.naprock.hexudon.application.service` | Phối hợp các bước khôi phục trạng thái và thông báo cho các bên liên quan. |
+| `MatchSnapshotPersistenceAdapter`| Adapter | `com.naprock.hexudon.adapter.out.persistence.recovery`| Lưu trữ sâu ảnh chụp trạng thái vào cơ sở dữ liệu. |
+| `MatchSnapshotEntity` | DB Entity | `com.naprock.hexudon.adapter.out.persistence.recovery`| Bảng lưu trữ dữ liệu nén JSON của Snapshot. |
+
+---
+
+## 8. Xử lý đồng thời & Xếp hàng (Concurrent Request)
+
+| Tên Thành phần | Kiểu | Package Hoàn chỉnh | Mô tả chức năng ngắn gọn |
+| :--- | :--- | :--- | :--- |
+| `SubmitAgentActionUseCase`| Inbound Port | `com.naprock.hexudon.application.port.in.concurrency`| Giao diện để các Adapter Controller đẩy hành động vào hàng đợi. |
+| `ConcurrentActionService` | Application Service| `com.naprock.hexudon.application.service` | Quản lý quy trình kiểm tra, đưa hành động vào hàng đợi và đóng Turn. |
+| `TurnExecutionQueue` | Infra Component| `com.naprock.hexudon.infrastructure.queue` | Hàng đợi chứa hành động trong một Turn, quản lý đa luồng an toàn. |
+| `RequestOrderingService` | Infra Component| `com.naprock.hexudon.infrastructure.ordering` | Trình tự hóa các yêu cầu dựa trên thời gian đo đạc chính xác tại Server. |

@@ -1,6 +1,5 @@
 package com.naprock.hexudon.domain.service;
 
-import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;

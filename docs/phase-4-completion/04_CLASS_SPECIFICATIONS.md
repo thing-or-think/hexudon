@@ -1,243 +1,219 @@
-# ĐẶC TẢ KỸ THUẬT CHI TIẾT CÁC LỚP (CLASS SPECIFICATIONS) - GIAI ĐOẠN 4
+# ĐẶC TẢ KỸ THUẬT CHI TIẾT CÁC LỚP GIAI ĐOẠN 4
 
-Tài liệu này chứa thông số đặc tả kỹ thuật chi tiết của tất cả các thực thể, đối tượng giá trị, cổng giao tiếp và dịch vụ miền được phát triển trong Giai đoạn 4.
-
----
-
-## 1. Hệ thống giao thông động (Traffic Flow)
-
-### 1.1. Lớp liệt kê: RoadTrafficState (Enum)
-*   **Package:** `com.naprock.hexudon.domain.model.traffic`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Trạng thái giao thông của một ô đường đi.
-*   **Các giá trị định nghĩa:**
-    *   `SMOOTH`: Thông thoáng (lưu lượng thấp).
-    *   `CONGESTED`: Ùn ứ (lưu lượng trung bình).
-    *   `TRAFFIC_JAM`: Kẹt xe (lưu lượng cao).
-
-### 1.2. Đối tượng giá trị: TrafficFlow (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.model.traffic`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Đại diện cho trạng thái giao thông tính toán tại một tọa độ ô đường.
-*   **Các thuộc tính (Fields):**
-    *   `coordinate` (Kiểu: `Coordinate`): Tọa độ của ô đường đi trên bản đồ.
-    *   `flowValue` (Kiểu: `double`): Lưu lượng giao thông tính toán thực tế.
-    *   `trafficState` (Kiểu: `RoadTrafficState`): Trạng thái giao thông được phân định.
-
-### 1.3. Đối tượng giá trị: TrafficThreshold (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.model.traffic`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Cấu hình ngưỡng để phân chia các mức độ giao thông.
-*   **Các thuộc tính (Fields):**
-    *   `congestionThreshold` (Kiểu: `double`): Ngưỡng để kích hoạt trạng thái ùn ứ (`CONGESTED`).
-    *   `trafficJamThreshold` (Kiểu: `double`): Ngưỡng để kích hoạt trạng thái kẹt xe (`TRAFFIC_JAM`).
-*   **Các phương thức (Methods):**
-    *   `determineState`: Trả về `RoadTrafficState`. Tham số: `flowValue` (double). Ý nghĩa: Phân loại trạng thái giao thông dựa trên giá trị lưu lượng đầu vào và các ngưỡng.
-
-### 1.4. Thực thể: TrafficHistory (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.traffic`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Lưu trữ số lượt dừng chân thực tế của Agent tại một ô đường trong một lượt cụ thể.
-*   **Các thuộc tính (Fields):**
-    *   `id` (Kiểu: `String`): Mã định danh duy nhất của bản ghi lịch sử.
-    *   `turnNumber` (Kiểu: `int`): Thứ tự lượt chơi (Turn) diễn ra sự kiện.
-    *   `coordinate` (Kiểu: `Coordinate`): Tọa độ ô đường đi được ghi nhận.
-    *   `staySteps` (Kiểu: `int`): Tổng số bước mà các Agent của mọi đội dừng chân tại ô này.
-
-### 1.5. Dịch vụ miền: TrafficCalculator (Domain Service)
-*   **Package:** `com.naprock.hexudon.domain.service.traffic`
-*   **Phạm vi truy cập:** Public
-*   **Mối quan hệ:** Phụ thuộc vào `TrafficThreshold` và `TrafficHistory`.
-*   **Các phương thức (Methods):**
-    *   `calculateFlow`: Trả về `TrafficFlow`. Tham số đầu vào:
-        *   `currentTurn` (int): Lượt chơi hiện tại cần tính toán giao thông.
-        *   `coord` (Coordinate): Tọa độ ô đường cần tính.
-        *   `histories` (List của `TrafficHistory`): Danh sách dữ liệu lịch sử các lượt trước.
-        *   `teamCount` (int): Tổng số đội chơi tham gia vòng đấu.
-        *   `threshold` (TrafficThreshold): Ngưỡng giao thông cấu hình.
-*   **Thuật toán từng bước tính toán Calculated Flow:**
-    1.  Kiểm tra điều kiện biên: Nếu số lượng đội chơi (`teamCount`) nhỏ hơn hoặc bằng 0, gán giá trị lưu lượng (`flowValue`) bằng 0.0, thiết lập trạng thái là `SMOOTH` và trả về đối tượng `TrafficFlow` ngay lập tức.
-    2.  Xác định hai lượt đấu trong quá khứ cần lấy dữ liệu:
-        *   Lượt thứ nhất liền trước: `T_1 = currentTurn - 1`.
-        *   Lượt thứ hai liền trước: `T_2 = currentTurn - 2`.
-    3.  Tìm kiếm trong danh sách `histories` số lượt dừng chân tại tọa độ `coord` ở lượt `T_1`. Nếu tìm thấy, gán giá trị vào biến `stepsT1`. Nếu không tìm thấy, gán `stepsT1 = 0`.
-    4.  Xác định số lượt dừng chân tại tọa độ `coord` ở lượt `T_2`. Tiến hành kiểm tra:
-        *   Nếu lượt hiện tại `currentTurn` bằng 2: Do lượt `T_2` (Lượt 0) không tồn tại, áp dụng nguyên tắc "ngày thứ 2 lùi lại chỉ lấy dữ liệu của ngày thứ 1 liền trước". Nghĩa là lấy giá trị của Lượt 1. Gán `stepsT2 = stepsT1`.
-        *   Nếu lượt hiện tại `currentTurn` lớn hơn hoặc bằng 3: Tìm kiếm dữ liệu lịch sử ở lượt `T_2`. Nếu tìm thấy, gán giá trị vào biến `stepsT2`. Nếu không tìm thấy, gán `stepsT2 = 0`.
-    5.  Tính tổng số bước dừng chân của cả 2 lượt trước đó: `totalSteps = stepsT1 + stepsT2`.
-    6.  Tính toán giá trị mật độ giao thông trung bình trên mỗi đội chơi: `calculatedFlow = totalSteps / (2.0 * teamCount)`.
-    7.  Gọi phương thức `threshold.determineState(calculatedFlow)` để tìm ra trạng thái giao thông tương ứng (`RoadTrafficState`).
-    8.  Khởi tạo đối tượng `TrafficFlow` với tọa độ `coord`, giá trị `calculatedFlow` và trạng thái giao thông vừa xác định, sau đó trả về.
+Tài liệu này đặc tả chi tiết thuộc tính, phương thức, mối quan hệ và thuật toán vận hành của các lớp trong Giai đoạn 4, được nhóm theo các phân hệ nghiệp vụ cốt lõi.
 
 ---
 
-## 2. Chi phí di chuyển địa hình (Terrain & Movement Cost)
+## 1. Phân hệ Hệ thống giao thông động (Traffic Flow)
 
-### 2.1. Đối tượng giá trị: MovementCost (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.model.cost`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Đại diện cho chi phí di chuyển đã chốt cố định của Agent cho một bước di chuyển.
-*   **Các thuộc tính (Fields):**
-    *   `fuelCost` (Kiểu: `int`): Lượng xăng hao phí cần thiết.
-    *   `stepCost` (Kiểu: `int`): Số bước đi bị tiêu hao trong lượt chơi.
+### 1.1. Lớp TrafficFlow (Domain Entity)
+*   **Mô tả**: Đại diện cho lượng giao thông thực tế đã được tính toán tại một tọa độ xác định trong trận đấu. Đối tượng này đóng vai trò chứa dữ liệu trạng thái giao thông và hoàn toàn không chứa logic tính toán.
+*   **Thuộc tính**:
+    *   `coordinate` (Kiểu: `Coordinate`, Phạm vi: private final): Tọa độ ô bản đồ.
+    *   `calculatedFlow` (Kiểu: `double`, Phạm vi: private final): Giá trị lưu lượng giao thông trung bình đã tính.
+    *   `trafficState` (Kiểu: `RoadTrafficState`, Phạm vi: private final): Trạng thái kẹt xe tương ứng.
+*   **Phương thức**:
+    *   Cung cấp các phương thức getter để truy xuất thuộc tính. Lớp này không chứa logic tính toán hay phương thức thay đổi trạng thái (Setter).
 
-### 2.2. Dịch vụ miền: MovementCostCalculator (Domain Service)
-*   **Package:** `com.naprock.hexudon.domain.service.cost`
-*   **Phạm vi truy cập:** Public
-*   **Các phương thức (Methods):**
-    *   `calculateMovementCost`: Trả về `MovementCost`. Tham số đầu vào:
-        *   `targetCell` (Cell): Ô bản đồ đích đến của Agent.
-        *   `trafficState` (RoadTrafficState): Trạng thái giao thông hiện tại của ô bản đồ đích đến (chỉ có tác dụng với địa hình `ROAD`).
-        *   `config` (MatchConfig): Cấu hình của trận đấu.
-*   **Thuật toán từng bước tính toán chi phí di chuyển:**
-    1.  Trích xuất kiểu địa hình (`TerrainType`) của ô đích đến `targetCell`.
-    2.  Kiểm tra điều kiện đi lại: Nếu kiểu địa hình là `POND` (Hồ nước), ném ra ngoại lệ `GameRuleViolationException` với mã lỗi tương ứng báo hiệu ô đích không thể đi vào.
-    3.  Thực hiện phân nhánh tính toán theo kiểu địa hình:
-        *   **Nếu địa hình là PLAIN (Đồng bằng):**
-            *   Gán `fuelCost = config.plainFuelCost()`.
-            *   Gán `stepCost = config.plainStepCost()`.
-        *   **Nếu địa hình là MOUNTAIN (Núi):**
-            *   Gán `fuelCost = config.mountainFuelCost()`.
-            *   Gán `stepCost = config.mountainStepCost()`.
-        *   **Nếu địa hình là ROAD (Đường đi):**
-            *   Lấy chi phí cơ sở từ cấu hình: `baseFuel = config.roadFuelCost()`, `baseStep = config.roadStepCost()`.
-            *   Kiểm tra `trafficState` của ô đường để áp dụng hệ số phạt ùn tắc giao thông:
-                *   Nếu `trafficState` là `SMOOTH` (Thông thoáng): Hệ số phạt bằng 1. Tính toán: `fuelCost = baseFuel`, `stepCost = baseStep`.
-                *   Nếu `trafficState` là `CONGESTED` (Ùn ứ): Hệ số phạt bằng 2. Tính toán: `fuelCost = baseFuel * 2`, `stepCost = baseStep * 2`.
-                *   Nếu `trafficState` là `TRAFFIC_JAM` (Kẹt xe): Hệ số phạt nhiên liệu bằng 4, bước đi bằng 3. Tính toán: `fuelCost = baseFuel * 4`, `stepCost = baseStep * 3`.
-    4.  Khởi tạo đối tượng `MovementCost` mới chứa các giá trị `fuelCost` và `stepCost` vừa tính toán và trả về đối tượng này.
+### 1.2. Lớp RoadTrafficState (Value Object - Bất biến)
+*   **Mô tả**: Lưu trạng thái giao thông chi tiết của từng ô đường nhựa, chứa thông tin mức độ giao thông (TrafficLevel) hiện thời và lưu lượng số thực (calculatedFlow).
+*   **Thuộc tính**:
+    *   `trafficLevel` (Kiểu: `TrafficLevel`, Phạm vi: private final): Cấp độ giao thông hiện thời (NORMAL, BUSY, CONGESTED).
+    *   `flowValue` (Kiểu: `double`, Phạm vi: private final): Giá trị lưu lượng thực tế.
+*   **Phương thức**:
+    *   `getTrafficLevel()`: Trả về `TrafficLevel`.
+    *   `getFlowValue()`: Trả về double.
 
----
+### 1.3. Lớp TrafficThreshold (Value Object - Bất biến)
+*   **Mô tả**: Chứa các ngưỡng số thực dùng làm căn cứ chuyển đổi phân định TrafficLevel cho hệ thống giao thông động.
+*   **Thuộc tính**:
+    *   `busyLimit` (Kiểu: `double`, Phạm vi: private final): Ngưỡng bắt đầu chuyển sang mức BUSY.
+    *   `congestedLimit` (Kiểu: `double`, Phạm vi: private final): Ngưỡng bắt đầu chuyển sang mức CONGESTED.
+*   **Phương thức**:
+    *   Constructor nhận `busyLimit` và `congestedLimit`. Không có setter.
+    *   `getBusyLimit()`: Trả về double.
+    *   `getCongestedLimit()`: Trả về double.
 
-## 3. Hệ thống tính điểm (Scoring System)
+### 1.4. Enum TrafficLevel
+*   **Mô tả**: Enum biểu diễn các mức độ giao thông trên đường nhựa. Hoàn toàn không chứa logic nghiệp vụ.
+*   **Mức độ**:
+    *   `NORMAL`: Giao thông bình thường, thông suốt.
+    *   `BUSY`: Giao thông đông đúc, bắt đầu tăng nhẹ chi phí.
+    *   `CONGESTED`: Kẹt xe nghiêm trọng, chi phí di chuyển tăng mạnh.
 
-### 3.1. Đối tượng giá trị: UdonType (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.model.scoring`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Loại Udon độc nhất mà Agent có thể thu thập được.
-*   **Các thuộc tính (Fields):**
-    *   `id` (Kiểu: `String`): Mã định danh duy nhất của loại Udon.
+### 1.5. Lớp TrafficSnapshot (Value Object - Bất biến)
+*   **Mô tả**: Ảnh chụp bất biến trạng thái giao thông của toàn bộ các ô đường tại một lượt chơi (Turn) xác định, được lưu lại phục vụ lịch sử.
+*   **Thuộc tính**:
+    *   `turn` (Kiểu: `int`, Phạm vi: private final): Chỉ số lượt chơi.
+    *   `flows` (Kiểu: `Map<Coordinate, TrafficFlow>`, Phạm vi: private final): Bản đồ lưu lượng kẹt xe tại từng tọa độ.
+*   **Phương thức**:
+    *   `getTurn()`: Trả về int.
+    *   `getFlowAt(Coordinate coord)`: Trả về `Optional<TrafficFlow>`.
 
-### 3.2. Thực thể: TeamScore (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.scoring`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Lưu trữ và theo dõi các chỉ số điểm số chi tiết của một đội chơi.
-*   **Các thuộc tính (Fields):**
-    *   `teamName` (Kiểu: `String`): Tên của đội chơi được tính điểm.
-    *   `collectedUdonTypes` (Kiểu: Set của `UdonType`): Tập hợp lưu trữ các loại Udon độc nhất đội chơi đã thu thập được từ trước đến nay.
-    *   `dailyUdonVolumes` (Kiểu: Map của `Integer` và `Integer`): Lưu trữ khối lượng Udon thu thập theo từng ngày. Key là số thứ tự lượt (Turn), Value là số lượng Udon thu thập được trong lượt đó.
-    *   `totalServings` (Kiểu: `int`): Tổng số lượt phục vụ Udon thành công.
-    *   `totalResponseTimeMs` (Kiểu: `long`): Tổng thời gian phản hồi API tích lũy của đội chơi (mili-giây).
-*   **Các phương thức (Methods):**
-    *   `getUniqueUdonCount`: Trả về `int`. Ý nghĩa: Trả về số lượng phần tử của tập hợp `collectedUdonTypes`.
-    *   `getAccumulatedDailyUdon`: Trả về `int`. Ý nghĩa: Cộng tổng tất cả các giá trị (Value) có trong bản đồ `dailyUdonVolumes`.
-    *   `addUdonCollection`: Trả về `void`. Tham số: `type` (UdonType), `turn` (int), `amount` (int). Ý nghĩa: Thêm loại Udon mới thu thập và cập nhật khối lượng Udon tích lũy trong ngày.
-    *   `incrementServings`: Trả về `void`. Ý nghĩa: Tăng tổng số lượt phục vụ thành công lên 1 đơn vị.
-    *   `addResponseTime`: Trả về `void`. Tham số: `responseTimeMs` (long). Ý nghĩa: Cộng dồn thời gian phản hồi của request vào biến tích lũy.
+### 1.6. Lớp TrafficCalculator (Domain Service)
+*   **Mô tả**: Dịch vụ miền chứa toàn bộ thuật toán cốt lõi để tính toán giao thông động. Hoàn toàn không truy cập repository và không phụ thuộc framework Spring.
+*   **Phương thức**:
+    *   `calculateFlow(int stayStepsTurn1, int stayStepsTurn2, int totalTeams)`:
+        *   Kiểu trả về: `double`.
+        *   *Quy tắc biên*: Nếu `totalTeams` bằng 0, trả về giá trị mặc định là `0.0` để tránh ngoại lệ chia cho 0 (`ArithmeticException`).
+    *   `determineState(double calculatedFlow, TrafficThreshold threshold)`:
+        *   Kiểu trả về: `RoadTrafficState` (phân loại dựa trên so sánh calculatedFlow với thresholds).
 
-### 3.3. Thực thể: MatchScore (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.scoring`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Tổng hợp điểm số của toàn trận đấu.
-*   **Các thuộc tính (Fields):**
-    *   `matchId` (Kiểu: `String`): Mã định danh trận đấu.
-    *   `teamScores` (Kiểu: Map của `String` và `TeamScore`): Điểm số chi tiết các đội. Key là tên đội.
+### 1.7. Giao diện CalculateTrafficUseCase (Inbound Port)
+*   **Mô tả**: Khai báo ca sử dụng (use case) cập nhật và tính toán lưu lượng giao thông động khi kết thúc lượt chơi.
+*   **Phương thức**:
+    *   `updateTrafficForNextTurn(MatchState matchState, MatchConfig config)`: Trả về void.
 
-### 3.4. Luồng xử lý và Lưu trữ Điểm số (Persistence Routing)
-1.  **Thực thi hành động:** Khi Agent hoàn thành một hành động hợp lệ (như thu thập Udon từ Spot), thực thể `PatrolAgent` gọi phương thức cập nhật tương ứng trên `Team` và `TeamScore`.
-2.  **Thời gian cập nhật:**
-    *   Cập nhật thời gian phản hồi: Thực hiện ngay khi kết thúc xử lý yêu cầu API gửi hành động từ đội chơi.
-    *   Cập nhật loại Udon và Servings: Thực hiện ngay sau khi bước đi của Agent tại vị trí Spot được giả lập thành công.
-    *   Cập nhật tích lũy ngày: Khi kết thúc Turn, hệ thống tổng kết toàn bộ số Udon thu hoạch trong ngày và chốt giá trị vào bản đồ `dailyUdonVolumes`.
-3.  **Lưu trữ dữ liệu:** Tầng Application kích hoạt Outbound Port `TeamScoreRepositoryPort` để đồng bộ thực thể `MatchScore` và `TeamScore` xuống cơ sở dữ liệu ở cuối mỗi lượt chơi (Turn).
+### 1.8. Giao diện TrafficRepository (Outbound Port)
+*   **Mô tả**: Khai báo các thao tác lưu trữ và đọc TrafficSnapshot. Hoàn toàn là abstraction và không phụ thuộc công nghệ lưu trữ.
+*   **Phương thức**:
+    *   `save(TrafficSnapshot snapshot)`: Trả về void.
+    *   `findByTurn(int turn)`: Trả về `Optional<TrafficSnapshot>`.
 
----
+### 1.9. Lớp TrafficCalculationService (Application Service)
+*   **Mô tả**: Hiện thực hóa `CalculateTrafficUseCase`, chịu trách nhiệm điều phối use case tính toán giao thông, thu thập dữ liệu đầu vào, gọi `TrafficCalculator` và lưu kết quả thông qua `TrafficRepository`.
+*   **Thuộc tính**:
+    *   `trafficRepository` (Kiểu: `TrafficRepository`, Phạm vi: private final)
+    *   `trafficCalculator` (Kiểu: `TrafficCalculator`, Phạm vi: private final)
+*   **Phương thức**:
+    *   `updateTrafficForNextTurn(MatchState matchState, MatchConfig config)`: Điều phối gom stay steps, tính lưu lượng và lưu snapshot.
 
-## 4. Hệ thống xếp hạng đấu trường (Ranking System)
+### 1.10. Lớp TrafficPersistenceAdapter (Adapter)
+*   **Mô tả**: Adapter triển khai Outbound Port `TrafficRepository`, thực hiện lưu trữ và truy vấn thông tin giao thông hoàn toàn trên bộ nhớ RAM (In-Memory). Không chứa bất kỳ mô tả hay cấu hình nào liên quan đến Spring Data JPA hay cơ sở dữ liệu vật lý.
+*   **Thuộc tính**:
+    *   `inMemoryDb` (Kiểu: `ConcurrentMap<Integer, TrafficEntity>`, Phạm vi: private final): Bản đồ RAM (Turn -> Entity).
+*   **Phương thức**:
+    *   `save(TrafficSnapshot snapshot)`: Ánh xạ sang Entity và lưu trên RAM.
+    *   `findByTurn(int turn)`: Tìm kiếm và ánh xạ ngược lại.
 
-### 4.1. Đối tượng giá trị: RankingCriteria (Value Object)
-*   **Package:** `com.naprock.hexudon.domain.service.ranking`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Nhóm các thông số xếp hạng làm tiêu chí so sánh.
-*   **Các thuộc tính (Fields):**
-    *   `uniqueUdonCount` (Kiểu: `int`): Số lượng loại Udon độc nhất đã thu thập.
-    *   `accumulatedDailyUdon` (Kiểu: `int`): Tổng tích lũy Udon theo ngày.
-    *   `totalServings` (Kiểu: `int`): Tổng số lượt phục vụ thành công.
-    *   `totalResponseTimeMs` (Kiểu: `long`): Tổng thời gian phản hồi tích lũy (ms).
-    *   `diceValue` (Kiểu: `int`): Giá trị tung xúc xắc ngẫu nhiên (sử dụng khi hòa điểm).
-
-### 4.2. Dịch vụ miền: RankingService (Domain Service)
-*   **Package:** `com.naprock.hexudon.domain.service.ranking`
-*   **Phạm vi truy cập:** Public
-*   **Các phương thức (Methods):**
-    *   `compareTeams`: Trả về `int` (1 nếu tiêu chí 1 xếp trên, -1 nếu tiêu chí 2 xếp trên, 0 nếu hòa). Tham số: `c1` (RankingCriteria), `c2` (RankingCriteria).
-    *   `resolveTie`: Trả về `int`. Tham số: `c1` (RankingCriteria), `c2` (RankingCriteria).
-*   **Thuật toán compareTeams() phân định thứ tự ưu tiên tuyệt đối (Anti-tie-break):**
-    1.  So sánh số loại Udon độc nhất:
-        *   Nếu `c1.uniqueUdonCount` lớn hơn `c2.uniqueUdonCount`, trả về 1.
-        *   Nếu `c1.uniqueUdonCount` nhỏ hơn `c2.uniqueUdonCount`, trả về -1.
-        *   Nếu bằng nhau, chuyển sang bước 2.
-    2.  So sánh tổng tích lũy Udon theo ngày:
-        *   Nếu `c1.accumulatedDailyUdon` lớn hơn `c2.accumulatedDailyUdon`, trả về 1.
-        *   Nếu `c1.accumulatedDailyUdon` nhỏ hơn `c2.accumulatedDailyUdon`, trả về -1.
-        *   Nếu bằng nhau, chuyển sang bước 3.
-    3.  So sánh tổng số lần phục vụ thành công:
-        *   Nếu `c1.totalServings` lớn hơn `c2.totalServings`, trả về 1.
-        *   Nếu `c1.totalServings` nhỏ hơn `c2.totalServings`, trả về -1.
-        *   Nếu bằng nhau, chuyển sang bước 4.
-    4.  So sánh tổng thời gian phản hồi API (đội phản hồi nhanh hơn xếp trên):
-        *   Nếu `c1.totalResponseTimeMs` nhỏ hơn `c2.totalResponseTimeMs`, trả về 1.
-        *   Nếu `c1.totalResponseTimeMs` lớn hơn `c2.totalResponseTimeMs`, trả về -1.
-        *   Nếu bằng nhau, chuyển sang bước 5.
-    5.  Xảy ra hòa điểm tuyệt đối. Kích hoạt cơ chế tung xúc xắc: Gọi phương thức giải quyết hòa điểm `resolveTie(c1, c2)` và trả về kết quả của phương thức này.
-
-*   **Thuật toán giải quyết hòa điểm resolveTie():**
-    1.  Trích xuất giá trị xúc xắc `c1.diceValue` và `c2.diceValue`.
-    2.  Nếu `c1.diceValue` lớn hơn `c2.diceValue`, trả về 1.
-    3.  Nếu `c1.diceValue` nhỏ hơn `c2.diceValue`, trả về -1.
-    4.  Nếu hai giá trị xúc xắc bằng nhau: Thực hiện tung xúc xắc ngẫu nhiên mới cho cả 2 tiêu chí. Gán giá trị mới và lặp lại việc so sánh cho đến khi phân định được bên có giá trị lớn hơn. Trả về kết quả so sánh cuối cùng.
+### 1.11. Lớp TrafficEntity (Persistence Model)
+*   **Mô tả**: Mô hình dữ liệu dùng trong adapter lưu trữ In-Memory. Hoàn toàn không chứa JPA annotations hay cấu hình bảng cơ sở dữ liệu vật lý.
+*   **Thuộc tính**:
+    *   `turn` (Kiểu: `int`, Phạm vi: private): Chỉ số lượt chơi.
+    *   `serializedState` (Kiểu: `String`, Phạm vi: private): Chuỗi dữ liệu trạng thái giao thông serialize để tránh rò rỉ tham chiếu của Domain.
+    *   `timestamp` (Kiểu: `long`, Phạm vi: private): Thời điểm ghi nhận.
 
 ---
 
-## 5. Lịch sử trận đấu & Log sự kiện (Game Event History)
+## 2. Phân hệ Chi phí di chuyển địa hình (Terrain & Movement Cost)
 
-### 5.1. Thực thể: GameEvent (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.history`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Ghi nhận một sự kiện nghiệp vụ chi tiết xảy ra trong game.
-*   **Các thuộc tính (Fields):**
-    *   `eventId` (Kiểu: `String`): Mã định danh duy nhất của sự kiện.
-    *   `turn` (Kiểu: `int`): Lượt xảy ra sự kiện.
-    *   `timestamp` (Kiểu: `long`): Dấu thời gian hệ thống tại thời điểm ghi nhận (ms).
-    *   `teamId` (Kiểu: `String`): Mã đội chơi liên quan (có thể rỗng).
-    *   `agentId` (Kiểu: `String`): Mã Agent thực hiện hành động (có thể rỗng).
-    *   `eventType` (Kiểu: `String`): Loại sự kiện (chỉ nhận: `Movement`, `Collection`, `ScoreUpdate`, `TrafficUpdate`).
-    *   `payload` (Kiểu: `String`): Dữ liệu chi tiết đính kèm dạng chuỗi cấu trúc chứa thông số tọa độ, năng lượng, hoặc điểm số tăng thêm.
+### 2.1. Lớp MovementCost (Value Object - Bất biến)
+*   **Mô tả**: Đại diện cho chi phí thực tế mà Agent phải trả để thực hiện di chuyển.
+*   **Thuộc tính**:
+    *   `fuelNeeded` (Kiểu: `int`, Phạm vi: private final): Số lượng nhiên liệu tiêu hao.
+    *   `stepsNeeded` (Kiểu: `int`, Phạm vi: private final): Số bước hành động trong hàng đợi cần tiêu tốn (số lượt chờ để hoàn thành bước đi).
+*   **Phương thức**:
+    *   Constructor nhận đầy đủ 2 thuộc tính trên. Không setter.
+    *   `getFuelNeeded()`, `getStepsNeeded()`.
 
-### 5.2. Thực thể: TurnHistory (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.history`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Gom nhóm các sự kiện lịch sử theo từng lượt chơi để kết xuất dòng thời gian cho Visualizer.
-*   **Các thuộc tính (Fields):**
-    *   `turnNumber` (Kiểu: `int`): Số thứ tự lượt đấu.
-    *   `events` (Kiểu: List của `GameEvent`): Danh sách sự kiện đã được lưu trữ trong lượt này.
-    *   `startTime` (Kiểu: `long`): Thời điểm bắt đầu lượt chơi.
-    *   `endTime` (Kiểu: `long`): Thời điểm kết thúc lượt chơi.
+### 2.2. Lớp MovementCostCalculator (Domain Service)
+*   **Mô tả**: Công thức tính toán chi phí di chuyển động.
+*   **Phương thức**:
+    *   `calculate(TerrainType terrain, RoadTrafficState trafficState, MatchConfig config)`:
+        *   Tham số: `terrain` (TerrainType), `trafficState` (RoadTrafficState), `config` (MatchConfig).
+        *   Kiểu trả về: `MovementCost`.
+        *   **Thuật toán từng bước**:
+            1.  Lấy hệ số chi phí nhiên liệu cơ bản (`baseFuel`) và số bước cơ bản (`baseSteps`) từ cấu hình `MatchConfig` cho loại `terrain` đó.
+                *   Mặc định: Plain (`baseFuel=1`, `baseSteps=1`), Mountain (`baseFuel=3`, `baseSteps=2`), Road (`baseFuel=1`, `baseSteps=1`).
+            2.  Nếu `terrain` là `TerrainType.ROAD`:
+                a. Tra cứu hệ số nhân giao thông từ cấu hình dựa trên trạng thái `trafficState`:
+                    *   `SMOOTH`: Hệ số nhiên liệu = `1.0`, Hệ số bước = `1.0`.
+                    *   `CONGESTED`: Hệ số nhiên liệu = `config.getCongestedFuelMultiplier()` (ví dụ: `1.5`), Hệ số bước = `config.getCongestedStepsMultiplier()` (ví dụ: `2`).
+                    *   `TRAFFIC_JAM`: Hệ số nhiên liệu = `config.getJamFuelMultiplier()` (ví dụ: `3.0`), Hệ số bước = `config.getJamStepsMultiplier()` (ví dụ: `4`).
+                b. Tính toán chi phí cuối cùng:
+                    *   `finalFuel = baseFuel * fuelMultiplier` (làm tròn lên số nguyên gần nhất).
+                    *   `finalSteps = baseSteps * stepsMultiplier` (làm tròn lên số nguyên gần nhất).
+            3.  Nếu không phải là `ROAD`, chi phí bằng chi phí cơ bản của địa hình đó.
+            4.  Trả về đối tượng `MovementCost(finalFuel, finalSteps)`.
+
+*   **Quy tắc biên chốt chi phí**:
+    *   Chi phí di chuyển được tính toán và khóa lại ngay tại thời điểm Agent bắt đầu lệnh di chuyển ở bước đầu tiên của lượt. Sự thay đổi trạng thái kẹt xe xảy ra giữa Turn không làm thay đổi chi phí của bước đi đang thực hiện.
 
 ---
 
-## 6. Giám sát giao tiếp mạng (Communication Logging)
+## 3. Phân hệ Hệ thống tính điểm (Scoring System)
 
-### 6.1. Thực thể: ApiCommunicationLog (Entity)
-*   **Package:** `com.naprock.hexudon.domain.model.logging`
-*   **Phạm vi truy cập:** Public
-*   **Ý nghĩa:** Nhật ký kỹ thuật lưu vết hiệu năng truyền tải mạng của các đội chơi.
-*   **Các thuộc tính (Fields):**
-    *   `requestId` (Kiểu: `String`): Mã định danh duy nhất của request.
-    *   `teamId` (Kiểu: `String`): Tên của đội chơi thực hiện gửi yêu cầu.
-    *   `endpoint` (Kiểu: `String`): Địa chỉ API endpoint được gọi.
-    *   `requestTime` (Kiểu: `long`): Dấu thời gian server tiếp nhận request.
-    *   `responseTime` (Kiểu: `long`): Dấu thời gian server hoàn thành trả dữ liệu.
-    *   `durationMs` (Kiểu: `long`): Độ trễ xử lý (tính bằng: `responseTime` - `requestTime`).
-    *   `payloadSize` (Kiểu: `long`): Kích thước dữ liệu request nhận được (Byte).
-    *   `status` (Kiểu: `int`): Mã trạng thái HTTP trả về cho Client.
+### 3.1. Lớp TeamScore (Entity)
+*   **Mô tả**: Lưu giữ thông tin điểm và chỉ số hiệu năng của một đội chơi.
+*   **Thuộc tính**:
+    *   `teamId` (Kiểu: `String`, Phạm vi: private): ID hoặc tên của đội.
+    *   `collectedUdonTypes` (Kiểu: `Set<UdonType>`, Phạm vi: private): Danh sách các loại Udon độc nhất thu thập được trong trận đấu.
+    *   `dailyUdonTypesHistory` (Kiểu: `Map<Integer, Set<UdonType>>`, Phạm vi: private): Danh sách các loại Udon độc nhất thu thập được phân tách theo từng lượt chơi (`Turn` -> `Set<UdonType>`).
+    *   `totalServings` (Kiểu: `int`, Phạm vi: private): Tổng số lượt phục vụ thành công.
+    *   `totalResponseTimeMs` (Kiểu: `long`, Phạm vi: private): Tổng thời gian phản hồi API của đội trong suốt trận đấu (tính bằng mili-giây).
+    *   `requestCount` (Kiểu: `int`, Phạm vi: private): Số lượng yêu cầu hợp lệ đã thực hiện để tính thời gian trung bình.
+*   **Phương thức**:
+    *   `getTeamId()`: Trả về String.
+    *   `getUniqueUdonTypesCount()`: Trả về `int` (kích thước của `collectedUdonTypes`).
+    *   `getAccumulatedDailyUdonTypes()`: Trả về `int`.
+        *   *Công thức*: Tổng số loại Udon thu thập của mỗi ngày cộng lại. Ví dụ: Ngày 1 thu được loại A và B (2 loại), ngày 2 thu được loại B và C (2 loại) -> Tích lũy = 2 + 2 = 4 loại.
+    *   `getTotalServings()`: Trả về int.
+    *   `getTotalResponseTimeMs()`: Trả về long.
+    *   `addUdonCollection(int turn, UdonType udon)`: Cập nhật Udon loại mới vào `collectedUdonTypes` và `dailyUdonTypesHistory` cho lượt chơi tương ứng. Trả về void.
+    *   `incrementServings()`: Tăng `totalServings` thêm 1. Trả về void.
+    *   `addResponseTime(long durationMs)`: Cộng dồn `durationMs` vào `totalResponseTimeMs` và tăng `requestCount` thêm 1. Trả về void.
+
+---
+
+## 4. Phân hệ Hệ thống xếp hạng đấu trường (Ranking System)
+
+### 4.1. Lớp RankingCriteria (Value Object - Bất biến)
+*   **Mô tả**: Chứa cấu hình các trọng số và cơ chế so sánh thứ hạng.
+*   **Thuộc tính**:
+    *   `maxTurns` (Kiểu: `int`): Số lượt tối đa phục vụ tính tích lũy ngày.
+
+### 4.2. Lớp RankingService (Domain Service)
+*   **Mô tả**: Chứa logic so sánh thứ hạng tuyệt đối (Anti-tie-break) giữa hai thực thể `TeamScore`.
+*   **Phương thức**:
+    *   `compareTeams(TeamScore t1, TeamScore t2)`:
+        *   Tham số: `t1` (TeamScore), `t2` (TeamScore).
+        *   Kiểu trả về: `int` (âm nếu `t1` xếp trên `t2`, dương nếu `t1` xếp dưới `t2`, 0 nếu bằng nhau tuyệt đối trước khi tung xúc xắc).
+        *   **Thuật toán so sánh tuần tự (Anti-tie-break)**:
+            1.  **Cấp độ 1 - Độ đa dạng Udon**: So sánh số lượng Udon độc nhất `t1.getUniqueUdonTypesCount()` và `t2.getUniqueUdonTypesCount()` (Giảm dần). Nếu khác nhau, trả về kết quả so sánh.
+            2.  **Cấp độ 2 - Tích lũy theo ngày**: So sánh `t1.getAccumulatedDailyUdonTypes()` và `t2.getAccumulatedDailyUdonTypes()` (Giảm dần). Nếu khác nhau, trả về kết quả.
+            3.  **Cấp độ 3 - Tổng số servings**: So sánh `t1.getTotalServings()` và `t2.getTotalServings()` (Giảm dần). Nếu khác nhau, trả về kết quả.
+            4.  **Cấp độ 4 - Thời gian phản hồi**: So sánh tổng thời gian phản hồi `t1.getTotalResponseTimeMs()` và `t2.getTotalResponseTimeMs()` (Tăng dần - ít thời gian hơn xếp trên). Nếu khác nhau, trả về kết quả.
+            5.  **Cấp độ 5 - Xử lý hòa (Tie-breaker)**: Gọi phương thức hỗ trợ `resolveTie(t1, t2)` để quyết định.
+    *   `resolveTie(TeamScore t1, TeamScore t2)`:
+        *   Tham số: `t1` (TeamScore), `t2` (TeamScore).
+        *   Kiểu trả về: `int`.
+        *   **Thuật toán ngẫu nhiên (Random Dice)**:
+            1.  Sử dụng một hàm băm giả ngẫu nhiên dựa trên sự kết hợp giữa mã định danh trận đấu (`matchId`) và tên của hai đội để đảm bảo tính nhất quán của kết quả khi khôi phục (nếu chạy lại vẫn ra cùng một kết quả xúc xắc).
+            2.  Băm chuỗi `matchId + t1.getTeamId() + t2.getTeamId()` để sinh số ngẫu nhiên.
+            3.  Nếu số ngẫu nhiên là số lẻ, chọn `t1` thắng (trả về -1), ngược lại chọn `t2` thắng (trả về 1).
+
+---
+
+## 5. Phân hệ Lịch sử trận đấu & Log sự kiện (Game Event History)
+
+### 5.1. Lớp GameEvent (Entity)
+*   **Mô tả**: Mô tả chi tiết một hành động hoặc biến cố vật lý xảy ra trong trận đấu.
+*   **Thuộc tính**:
+    *   `eventId` (Kiểu: `String`, Phạm vi: private): Khóa chính duy nhất.
+    *   `turn` (Kiểu: `int`, Phạm vi: private): Lượt xảy ra sự kiện.
+    *   `timestamp` (Kiểu: `long`, Phạm vi: private): Thời điểm xảy ra sự kiện (mili-giây).
+    *   `teamId` (Kiểu: `String`, Phạm vi: private): Đội liên quan (có thể rỗng nếu là sự kiện hệ thống).
+    *   `agentId` (Kiểu: `String`, Phạm vi: private): Agent liên quan (có thể rỗng).
+    *   `eventType` (Kiểu: `String`, Phạm vi: private): Loại sự kiện (`MOVEMENT`, `COLLECTION`, `SCORE_UPDATE`, `TRAFFIC_UPDATE`).
+    *   `payload` (Kiểu: `Map<String, Object>`, Phạm vi: private): Thông tin động dưới dạng Key-Value (ví dụ: tọa độ đi/đến, loại Udon, điểm cộng thêm).
+*   **Phương thức**:
+    *   `getEventId()`, `getTurn()`, `getTimestamp()`, `getEventType()`, `getPayload()`.
+    *   Constructor nhận đầy đủ tham số để tạo mới sự kiện bất biến.
+
+---
+
+## 6. Phân hệ Giám sát giao tiếp mạng (Api Communication Log)
+
+### 6.1. Lớp ApiCommunicationLog (Entity)
+*   **Mô tả**: Nhật ký kỹ thuật ghi lại hiệu năng của các truy cập REST API.
+*   **Thuộc tính**:
+    *   `requestId` (Kiểu: `String`, Phạm vi: private): ID ngẫu nhiên định danh yêu cầu.
+    *   `teamId` (Kiểu: `String`, Phạm vi: private): Tên đội thực hiện request.
+    *   `endpoint` (Kiểu: `String`, Phạm vi: private): Đường dẫn API (URI).
+    *   `requestTime` (Kiểu: `long`, Phạm vi: private): Thời gian tiếp nhận (mili-giây).
+    *   `responseTime` (Kiểu: `long`, Phạm vi: private): Thời gian phản hồi (mili-giây).
+    *   `durationMs` (Kiểu: `long`, Phạm vi: private): Độ trễ xử lý thực tế (`responseTime - requestTime`).
+    *   `payloadSize` (Kiểu: `long`, Phạm vi: private): Kích thước gói tin request (bytes).
+    *   `status` (Kiểu: `int`, Phạm vi: private): Mã phản hồi HTTP (ví dụ: `200`, `400`, `500`).
+*   **Phương thức**:
+    *   Các phương thức getter chuẩn cho toàn bộ thuộc tính. Không có phương thức thay đổi trạng thái (Setter).

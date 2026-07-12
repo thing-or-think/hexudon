@@ -1,16 +1,18 @@
 package com.naprock.hexudon.application.service;
 
 
-import com.naprock.hexudon.application.port.in.CalculateTrafficUseCase;
+import com.naprock.hexudon.application.port.in.CalculateTurnEnvironmentUseCase;
 import com.naprock.hexudon.application.port.in.InitializeTrafficUseCase;
 import com.naprock.hexudon.application.port.out.TrafficRepositoryPort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import com.naprock.hexudon.domain.model.traffic.TrafficSnapshot;
 import com.naprock.hexudon.domain.model.valueobject.Cell;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;
 import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.service.MovementCostCalculator;
 import com.naprock.hexudon.domain.service.TrafficCalculator;
 import com.naprock.hexudon.domain.valueobject.TerrainType;
 import org.springframework.stereotype.Service;
@@ -30,12 +32,13 @@ import java.util.Objects;
  * All business calculation is delegated to {@link TrafficCalculator}.</p>
  */
 @Service
-public class TrafficService implements
-        CalculateTrafficUseCase,
+public class TurnEnvironmentService implements
+        CalculateTurnEnvironmentUseCase,
         InitializeTrafficUseCase {
 
     private final TrafficRepositoryPort trafficRepositoryPort;
     private final TrafficCalculator trafficCalculator;
+    private final MovementCostCalculator movementCostCalculator;
 
     /**
      * Creates a new application service.
@@ -43,19 +46,21 @@ public class TrafficService implements
      * @param trafficRepositoryPort repository used to persist traffic snapshots
      * @param trafficCalculator domain service responsible for traffic calculation
      */
-    public TrafficService(
+    public TurnEnvironmentService(
             final TrafficRepositoryPort trafficRepositoryPort,
-            final TrafficCalculator trafficCalculator) {
+            final TrafficCalculator trafficCalculator,
+            final MovementCostCalculator movementCostCalculator) {
 
         this.trafficRepositoryPort = Objects.requireNonNull(trafficRepositoryPort);
         this.trafficCalculator = Objects.requireNonNull(trafficCalculator);
+        this.movementCostCalculator = Objects.requireNonNull(movementCostCalculator);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void calculateNextTurnTraffic(
+    public void calculate(
             final MatchState state,
             final MatchConfig config
     ) throws GameRuleViolationException {
@@ -79,20 +84,48 @@ public class TrafficService implements
                 )
         );
 
+        state.setMovementCosts(
+                movementCostCalculator.calculate(
+                        state.getCellIndex(),
+                        nextSnapshot.getFlows(),
+                        config
+                )
+        );
+
         trafficRepositoryPort.save(nextSnapshot);
+
+
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void initializeTraffic(MatchState state) {
+    public void initializeTraffic(MatchState state, MatchConfig config) {
         Objects.requireNonNull(state);
 
         Map<Coordinate, TrafficFlow> flows = new HashMap<>();
+        Map<Coordinate, MovementCost> costs = new HashMap<>();
         for (Cell cell : state.getCells()) {
+            Coordinate coordinate = cell.getCoordinate();
+            TrafficFlow flow = new TrafficFlow(coordinate);
+
             if (cell.getTerrainType() == TerrainType.ROAD) {
-                Coordinate coordinate = cell.getCoordinate();
-                flows.put(coordinate, new TrafficFlow(coordinate));
+                flows.put(coordinate, flow);
+            }
+
+            if (cell.getTerrainType() != TerrainType.POND) {
+                costs.put(
+                        coordinate,
+                        movementCostCalculator.calculate(
+                                cell.getTerrainType(),
+                                flow.getTrafficLevel(),
+                                config
+                        ));
             }
         }
+
+        state.setMovementCosts(costs);
 
         TrafficSnapshot snapshot = new TrafficSnapshot(
                 state.getCurrentTurn(),

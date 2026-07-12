@@ -11,7 +11,7 @@ import com.naprock.hexudon.domain.model.entity.*;
 import com.naprock.hexudon.domain.model.valueobject.Action;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;
 import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
-import com.naprock.hexudon.domain.service.HexGridUtils;
+import com.naprock.hexudon.domain.service.HexGridGenerator;
 import com.naprock.hexudon.domain.valueobject.*;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -33,10 +33,12 @@ public class MatchApplicationService implements
 
     private final MatchStateStorePort stateStorePort;
     private final MatchConfigLoaderPort configLoaderPort;
+    private final InitializeTrafficUseCase initializeTrafficUseCase;
 
     public MatchApplicationService(
             MatchStateStorePort stateStorePort,
-            MatchConfigLoaderPort configLoaderPort) {
+            MatchConfigLoaderPort configLoaderPort,
+            InitializeTrafficUseCase initializeTrafficUseCase) {
         this.stateStorePort = Objects.requireNonNull(
                 stateStorePort,
                 "stateStorePort must not be null"
@@ -44,6 +46,11 @@ public class MatchApplicationService implements
         this.configLoaderPort = Objects.requireNonNull(
                 configLoaderPort,
                 "configLoaderPort must not be null"
+        );
+
+        this.initializeTrafficUseCase = Objects.requireNonNull(
+                initializeTrafficUseCase,
+                "initializeTrafficUseCase must not be null"
         );
     }
 
@@ -190,7 +197,8 @@ public class MatchApplicationService implements
 
         MatchConfig config = configLoaderPort.loadConfig();
 
-        HexGridUtils.generateGrid(config.mapWidth(), config.mapHeight(), state);
+        HexGridGenerator.generateMap(config.mapWidth(), config.mapHeight(), state);
+        initializeTrafficUseCase.initializeTraffic(state, config);
 
         stateStorePort.saveState(state);
     }

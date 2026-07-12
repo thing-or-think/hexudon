@@ -8,6 +8,7 @@ import com.naprock.hexudon.domain.model.entity.Agent;
 import com.naprock.hexudon.domain.model.entity.PatrolAgent;
 import com.naprock.hexudon.domain.model.entity.Spot;
 import com.naprock.hexudon.domain.model.entity.Team;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.ActionType;
 import com.naprock.hexudon.domain.valueobject.AgentExecutionResult;
@@ -27,6 +28,7 @@ public class MatchState {
     private final List<Cell> cells;
     private List<Spot> spots;
     private final Map<Coordinate, Cell> cellIndex;
+    private Map<Coordinate, MovementCost> movementCosts;
 
     public MatchState() {
         this.status = MatchStatus.WAITING;
@@ -167,6 +169,10 @@ public class MatchState {
         return cellIndex.get(coord);
     }
 
+    public Map<Coordinate, Cell> getCellIndex() {
+        return cellIndex;
+    }
+
     public Team getTeam(String teamName) {
         for (Team team : teams) {
             if (team.getTeamName().equals(teamName)) {
@@ -174,6 +180,24 @@ public class MatchState {
             }
         }
         return null;
+    }
+
+    public Map<Coordinate, MovementCost> getMovementCosts() {
+        return movementCosts;
+    }
+
+    public void setMovementCosts(Map<Coordinate, MovementCost> movementCosts) {
+        this.movementCosts = movementCosts;
+    }
+
+    public void updateMovementCosts(Map<Coordinate, MovementCost> costs) {
+        validateNotNull(costs, "costs");
+
+        costs.forEach((coordinate, movementCost) -> {
+            validateNotNull(coordinate, "coordinate");
+            validateNotNull(movementCost, "movementCost");
+            movementCosts.put(coordinate, movementCost);
+        });
     }
 
     public void start(MatchConfig config) {
@@ -239,7 +263,7 @@ public class MatchState {
                             System.currentTimeMillis()
                     );
                 }
-                agent.executeAction(action, this, config);
+                agent.executeAction(action, this);
 
                 if (agent instanceof PatrolAgent patrolAgent) {
                     patrolAgent.collectUdon(this, team);

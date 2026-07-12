@@ -22,24 +22,36 @@ class TrafficCalculatorTest {
     @BeforeEach
     void setUp() {
         calculator = new TrafficCalculator();
+
         matchConfig = MatchConfig.builder()
-                .maxTeams(2)
                 .mapWidth(5)
                 .mapHeight(5)
+
+                .initialFuel(100)
+                .maxFuel(100)
+
                 .maxTurns(10)
+                .maxStepsPerTurn(5)
+
+                .maxTeams(2)
                 .agentsPerTeam(2)
+
                 .patrolAgents(1)
                 .refuelAgents(1)
-                .initialFuel(100)
+
                 .plainStepCost(1)
                 .plainFuelCost(10)
-                .roadStepCost(1)
+
+                .roadNormalStepCost(1)
+                .roadBusyStepCost(2)
+                .roadCongestedStepCost(3)
                 .roadFuelCost(5)
+
                 .mountainStepCost(2)
                 .mountainFuelCost(20)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
+
                 .initialSpotUdonStock(5)
+
                 .build();
     }
 

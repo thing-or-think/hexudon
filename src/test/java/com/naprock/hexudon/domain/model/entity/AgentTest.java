@@ -5,10 +5,15 @@ import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
+import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
+import com.naprock.hexudon.domain.service.MovementCostCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,7 +35,9 @@ class AgentTest {
                 .initialFuel(100)
                 .plainStepCost(1)
                 .plainFuelCost(10)
-                .roadStepCost(1)
+                .roadNormalStepCost(1)
+                .roadBusyStepCost(2)
+                .roadCongestedStepCost(3)
                 .roadFuelCost(5)
                 .mountainStepCost(2)
                 .mountainFuelCost(20)
@@ -45,6 +52,18 @@ class AgentTest {
         state.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
         state.addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
         state.addCell(new Cell(new Coordinate(2, 0), TerrainType.POND));
+
+        // Populate movement costs for cells to prevent NullPointerException in agent actions
+        Map<Coordinate, MovementCost> movementCosts = new HashMap<>();
+        MovementCostCalculator costCalculator = new MovementCostCalculator();
+        for (Cell cell : state.getCells()) {
+            if (cell.getTerrainType() != TerrainType.POND) {
+                MovementCost cost = costCalculator.calculate(cell.getTerrainType(), TrafficLevel.NORMAL, config);
+                movementCosts.put(cell.getCoordinate(), cost);
+                ((Map) movementCosts).put(cell, cost);
+            }
+        }
+        state.setMovementCosts(movementCosts);
     }
 
     @Test
@@ -90,7 +109,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.WAIT, null, 123L);
-        MoveResult result = agent.executeAction(action, state, config);
+        MoveResult result = agent.executeAction(action, state);
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 0), result.getTargetCoordinate());
@@ -107,7 +126,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(1, 0), 123L);
-        MoveResult result = agent.executeAction(action, state, config);
+        MoveResult result = agent.executeAction(action, state);
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(1, 0), result.getTargetCoordinate());
@@ -125,11 +144,11 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(0, 1), 123L);
-        MoveResult result = agent.executeAction(action, state, config);
+        MoveResult result = agent.executeAction(action, state);
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 1), result.getTargetCoordinate());
-        assertEquals(config.roadStepCost(), result.getStepCost());
+        assertEquals(config.roadNormalStepCost(), result.getStepCost());
         assertEquals(config.roadFuelCost(), result.getFuelCost());
 
         assertEquals(new Coordinate(0, 1), agent.getCoordinate());
@@ -145,7 +164,7 @@ class AgentTest {
         agent.moveTo(new Coordinate(0, 1)); // odd row (y=1)
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(1, 1), 123L);
-        MoveResult result = agent.executeAction(action, state, config);
+        MoveResult result = agent.executeAction(action, state);
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(1, 1), result.getTargetCoordinate());
@@ -164,19 +183,19 @@ class AgentTest {
 
         Action actionNonExistent = new Action(1, ActionType.MOVE, new Coordinate(2, 2), 123L);
         GameRuleViolationException ex1 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionNonExistent, state, config));
+                () -> agent.executeAction(actionNonExistent, state));
         assertEquals(ErrorCode.INVALID_TARGET_TERRAIN, ex1.getErrorCode());
 
         agent.moveTo(new Coordinate(1, 0));
         Action actionPond = new Action(1, ActionType.MOVE, new Coordinate(2, 0), 123L);
         GameRuleViolationException ex2 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionPond, state, config));
+                () -> agent.executeAction(actionPond, state));
         assertEquals(ErrorCode.INVALID_TARGET_TERRAIN, ex2.getErrorCode());
 
         agent.moveTo(new Coordinate(0, 0));
         Action actionNonAdjacent = new Action(1, ActionType.MOVE, new Coordinate(1, 1), 123L);
         GameRuleViolationException ex3 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionNonAdjacent, state, config));
+                () -> agent.executeAction(actionNonAdjacent, state));
         assertEquals(ErrorCode.CELL_OUT_OF_BOUNDS, ex3.getErrorCode());
     }
 
@@ -214,11 +233,11 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(0, 1), 123L);
-        MoveResult result = agent.executeAction(action, state, config);
+        MoveResult result = agent.executeAction(action, state);
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 1), result.getTargetCoordinate());
-        assertEquals(config.roadStepCost(), result.getStepCost());
+        assertEquals(config.roadNormalStepCost(), result.getStepCost());
         assertEquals(0, result.getFuelCost());
 
         assertEquals(new Coordinate(0, 1), agent.getCoordinate());

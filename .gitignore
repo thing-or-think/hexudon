@@ -9,6 +9,8 @@ build/
 /out/
 bin/
 /dist/
+docs/
+CLASS SPECIFICATIONS/
 
 # Environment variables & Secrets
 .env

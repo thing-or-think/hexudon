@@ -1,54 +1,43 @@
-# CẤU TRÚC CẤU HÌNH TRẬN ĐẤU (MATCH CONFIGURATION FORMAT) - GIAI ĐOẠN 4
+# CẤU TRÚC CẤU HÌNH TRẬN ĐẤU (MATCH CONFIGURATION FORMAT)
 
-Tài liệu này đặc tả toàn bộ các tham số cấu hình hệ thống bằng bảng dữ liệu chi tiết, định nghĩa các ngưỡng hoạt động, hệ số phạt, trọng số điểm và giới hạn thời gian cho Giai đoạn 4.
+Tài liệu này đặc tả toàn bộ các tham số cấu hình hệ thống phục vụ cho các tính năng mới trong Giai đoạn 4. Toàn bộ cấu hình được lưu trữ ở dạng bảng dữ liệu mô tả thuộc tính.
 
 ---
 
-## 1. Tham số Cấu hình Giao thông động (Traffic Calculation Parameters)
+## 1. Bảng cấu hình các tham số hệ thống Giai đoạn 4
 
-| Tên tham số | Kiểu dữ liệu | Giá trị mặc định | Ý nghĩa chức năng | Ràng buộc kiểm tra |
+| Nhóm tham số | Mã tham số | Kiểu dữ liệu | Giá trị mặc định | Ý nghĩa & Quy tắc nghiệp vụ |
 | :--- | :--- | :--- | :--- | :--- |
-| `trafficWeightT1` | Double | 1.0 | Trọng số áp dụng cho số bước dừng chân ở lượt đấu liền trước (Turn T-1). | Lớn hơn 0 |
-| `trafficWeightT2` | Double | 1.0 | Trọng số áp dụng cho số bước dừng chân ở 2 lượt đấu trước (Turn T-2). | Lớn hơn 0 |
-| `congestionThreshold` | Double | 1.5 | Ngưỡng lưu lượng trung bình để ô đường bộ rơi vào trạng thái ùn ứ (`CONGESTED`). | Lớn hơn 0, nhỏ hơn `trafficJamThreshold` |
-| `trafficJamThreshold` | Double | 3.0 | Ngưỡng lưu lượng trung bình để ô đường bộ rơi vào trạng thái kẹt xe (`TRAFFIC_JAM`). | Lớn hơn `congestionThreshold` |
+| **Giao thông** | `traffic.threshold.congested` | Double | `2.0` | Ngưỡng tính toán (calculated flow) để chuyển đường nhựa sang trạng thái `CONGESTED`. |
+| **Giao thông** | `traffic.threshold.jam` | Double | `5.0` | Ngưỡng tính toán để chuyển đường nhựa sang trạng thái `TRAFFIC_JAM`. |
+| **Chi phí cơ bản**| `terrain.plain.base.fuel` | Integer | `1` | Nhiên liệu tiêu hao cơ bản khi Agent đi qua ô Đất bằng (`PLAIN`). |
+| **Chi phí cơ bản**| `terrain.plain.base.steps` | Integer | `1` | Số bước hành động bị tiêu tốn khi Agent đi qua ô Đất bằng (`PLAIN`). |
+| **Chi phí cơ bản**| `terrain.mountain.base.fuel` | Integer | `3` | Nhiên liệu tiêu hao cơ bản khi Agent đi qua ô Núi (`MOUNTAIN`). |
+| **Chi phí cơ bản**| `terrain.mountain.base.steps`| Integer | `2` | Số bước hành động bị tiêu tốn khi Agent đi qua ô Núi (`MOUNTAIN`). |
+| **Chi phí cơ bản**| `terrain.road.base.fuel` | Integer | `1` | Nhiên liệu tiêu hao cơ bản khi Agent đi qua ô Đường nhựa (`ROAD`). |
+| **Chi phí cơ bản**| `terrain.road.base.steps` | Integer | `1` | Số bước hành động bị tiêu tốn khi Agent đi qua ô Đường nhựa (`ROAD`). |
+| **Hệ số giao thông**| `movement.multiplier.congested.fuel`| Double | `1.5` | Hệ số nhân nhiên liệu áp dụng khi ô đường có trạng thái `CONGESTED`. |
+| **Hệ số giao thông**| `movement.multiplier.congested.steps`| Integer | `2` | Số bước tiêu tốn thực tế áp dụng khi ô đường có trạng thái `CONGESTED`. |
+| **Hệ số giao thông**| `movement.multiplier.jam.fuel` | Double | `3.0` | Hệ số nhân nhiên liệu áp dụng khi ô đường có trạng thái `TRAFFIC_JAM`. |
+| **Hệ số giao thông**| `movement.multiplier.jam.steps` | Integer | `4` | Số bước tiêu tốn thực tế áp dụng khi ô đường có trạng thái `TRAFFIC_JAM`. |
+| **Tính điểm** | `score.points.unique.udon` | Integer | `1000` | Số điểm cộng thêm cho mỗi loại Udon độc nhất (`Unique Udon Type`) trong cả trận. |
+| **Tính điểm** | `score.points.accumulated.daily`| Integer | `500` | Số điểm cộng thêm cho mỗi loại Udon tích lũy theo từng ngày. |
+| **Tính điểm** | `score.points.serving` | Integer | `200` | Số điểm cộng thêm cho mỗi lượt phục vụ Udon thành công. |
+| **Đồng thời & Trễ**| `concurrency.turn.timeout.ms` | Long | `2000` | Thời gian tối đa của một lượt chơi (Turn) trước khi Server tự động đóng Turn (mili-giây). |
+| **Đồng thời & Trễ**| `concurrency.agent.action.timeout.ms`| Long | `1000` | Thời gian chờ tối đa cho một Request hành động từ Agent của đội chơi (mili-giây). |
+| **Đồng thời & Trễ**| `concurrency.max.queued.requests`| Integer | `500` | Dung lượng hàng đợi chứa Request hành động của các đội chơi. |
 
 ---
 
-## 2. Hệ số chi phí di chuyển địa hình và giao thông (Movement Cost Multipliers)
+## 2. Quy tắc áp dụng Cấu hình trong các Module nghiệp vụ
 
-Các hệ số dưới đây được nhân trực tiếp với chi phí nhiên liệu cơ sở (`roadFuelCost`, `plainFuelCost`, `mountainFuelCost`) và bước đi cơ sở (`roadStepCost`, `plainStepCost`, `mountainStepCost`) được định nghĩa trong cấu hình.
-
-| Tên tham số | Kiểu dữ liệu | Giá trị mặc định | Địa hình áp dụng | Ý nghĩa chức năng |
-| :--- | :--- | :--- | :--- | :--- |
-| `roadSmoothFuelMultiplier` | Double | 1.0 | ROAD (Thông thoáng) | Hệ số nhân chi phí xăng của đường khi thông thoáng. |
-| `roadSmoothStepMultiplier` | Double | 1.0 | ROAD (Thông thoáng) | Hệ số nhân số bước tiêu hao của đường khi thông thoáng. |
-| `roadCongestedFuelMultiplier`| Double | 2.0 | ROAD (Ùn ứ) | Hệ số nhân chi phí xăng của đường khi bị ùn ứ. |
-| `roadCongestedStepMultiplier`| Double | 2.0 | ROAD (Ùn ứ) | Hệ số nhân số bước tiêu hao của đường khi bị ùn ứ. |
-| `roadJamFuelMultiplier` | Double | 4.0 | ROAD (Kẹt xe) | Hệ số nhân chi phí xăng của đường khi bị kẹt xe. |
-| `roadJamStepMultiplier` | Double | 3.0 | ROAD (Kẹt xe) | Hệ số nhân số bước tiêu hao của đường khi bị kẹt xe. |
-| `plainFuelMultiplier` | Double | 1.0 | PLAIN | Hệ số nhân chi phí xăng trên địa hình đồng bằng. |
-| `plainStepMultiplier` | Double | 1.0 | PLAIN | Hệ số nhân bước đi tiêu hao trên địa hình đồng bằng. |
-| `mountainFuelMultiplier` | Double | 1.0 | MOUNTAIN | Hệ số nhân chi phí xăng trên địa hình núi. |
-| `mountainStepMultiplier` | Double | 1.0 | MOUNTAIN | Hệ số nhân bước đi tiêu hao trên địa hình núi. |
-
----
-
-## 3. Tham số cấu hình Trọng số tính điểm (Scoring Weights)
-
-| Tên tham số | Kiểu dữ liệu | Giá trị mặc định | Ý nghĩa chức năng |
-| :--- | :--- | :--- | :--- |
-| `uniqueUdonScoreWeight` | Integer | 100 | Điểm thưởng cho mỗi chủng loại mì Udon độc nhất thu thập được. |
-| `dailyUdonVolumeWeight` | Integer | 10 | Điểm cộng thêm trên từng đơn vị Udon thu hoạch hàng ngày. |
-| `servingScoreWeight` | Integer | 50 | Điểm thưởng cho mỗi lượt phục vụ mì Udon thành công. |
-
----
-
-## 4. Tham số giới hạn thời gian và tần suất API (Timeouts & Rate Limits)
-
-| Tên tham số | Kiểu dữ liệu | Giá trị mặc định | Ý nghĩa chức năng | Ràng buộc kiểm tra |
-| :--- | :--- | :--- | :--- | :--- |
-| `turnTimeLimitMs` | Integer | 1000 | Thời gian tối đa (mili-giây) của một lượt đấu. Server tự động đóng Turn khi hết thời gian này. | Lớn hơn 100 |
-| `apiTimeoutMs` | Integer | 200 | Thời gian tối đa cho phép một HTTP API request xử lý (mili-giây). Quá thời gian này sẽ báo lỗi Timeout. | Lớn hơn 10 |
-| `maxRequestsPerSecond` | Integer | 10 | Số lượng request API tối đa một đội chơi được phép gửi lên trong 1 giây. | Lớn hơn 0 |
-| `maxSpamViolations` | Integer | 3 | Số lần vi phạm gửi request vượt hạn mức tối đa cho phép trước khi đội chơi bị truất quyền thi đấu (`disqualified`). | Lớn hơn 0 |
+1.  **Tính Giao thông**: Ngưỡng kẹt xe `congested` và `jam` là số thực, cho phép cấu hình linh hoạt. Công thức kiểm tra lưu lượng sẽ so sánh số thực thu được sau phép chia trung bình với hai ngưỡng này để xếp hạng giao thông.
+2.  **Tính Chi phí di chuyển**: 
+    *   Đối với địa hình Đất bằng (`PLAIN`) và Núi (`MOUNTAIN`), chi phí di chuyển luôn cố định và bằng chi phí cơ bản đã cấu hình.
+    *   Đối với Đường nhựa (`ROAD`), chi phí được tính bằng công thức:
+        *   `Nhiên liệu tiêu hao = terrain.road.base.fuel * Hệ số nhân nhiên liệu tương ứng` (làm tròn lên số nguyên kế tiếp).
+        *   `Số bước hành động tiêu hao = Hệ số bước đi tương ứng` (thay thế hoàn toàn số bước đi cơ bản).
+3.  **Tính Điểm**:
+    *   Điểm tổng của mỗi đội tại bất kỳ thời điểm nào được tính theo công thức: 
+        $$\text{Tổng Điểm} = (\text{Số Udon độc nhất} \times \text{score.points.unique.udon}) + (\text{Tổng Udon tích lũy ngày} \times \text{score.points.accumulated.daily}) + (\text{Tổng số servings} \times \text{score.points.serving})$$
+4.  **Kiểm soát thời gian phản hồi**: Khi quá thời gian `concurrency.agent.action.timeout.ms` mà đội không phản hồi hành động hợp lệ, hệ thống sẽ tự động coi như đội đó chọn hành động `WAIT` cho Agent trong bước đó và ghi nhận thời gian phản hồi bằng đúng ngưỡng timeout.

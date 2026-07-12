@@ -1,5 +1,6 @@
 package com.naprock.hexudon.application.service;
 
+import com.naprock.hexudon.application.port.in.InitializeTrafficUseCase;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
@@ -9,6 +10,9 @@ import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.model.entity.Team;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
+import com.naprock.hexudon.domain.model.movement.MovementCost;
+import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
+import com.naprock.hexudon.domain.service.MovementCostCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -27,6 +31,7 @@ class MatchApplicationServiceTest {
     private MatchStateStorePort stateStorePort;
     private MatchConfigLoaderPort configLoaderPort;
     private MatchApplicationService service;
+    private InitializeTrafficUseCase initializeTrafficUseCase;
 
     private MatchConfig config;
     private MatchState state;
@@ -35,7 +40,8 @@ class MatchApplicationServiceTest {
     void setUp() {
         stateStorePort = mock(MatchStateStorePort.class);
         configLoaderPort = mock(MatchConfigLoaderPort.class);
-        service = new MatchApplicationService(stateStorePort, configLoaderPort);
+        initializeTrafficUseCase = mock(InitializeTrafficUseCase.class);
+        service = new MatchApplicationService(stateStorePort, configLoaderPort, initializeTrafficUseCase);
 
         config = MatchConfig.builder()
                 .mapWidth(5)
@@ -48,7 +54,9 @@ class MatchApplicationServiceTest {
                 .initialFuel(100)
                 .plainStepCost(1)
                 .plainFuelCost(10)
-                .roadStepCost(1)
+                .roadNormalStepCost(1)
+                .roadBusyStepCost(2)
+                .roadCongestedStepCost(4)
                 .roadFuelCost(5)
                 .mountainStepCost(2)
                 .mountainFuelCost(20)
@@ -61,6 +69,18 @@ class MatchApplicationServiceTest {
         state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
         state.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
         state.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
+
+        // Populate movement costs for cells to prevent NullPointerException in agent actions
+        Map<Coordinate, MovementCost> movementCosts = new HashMap<>();
+        MovementCostCalculator costCalculator = new MovementCostCalculator();
+        for (Cell cell : state.getCells()) {
+            if (cell.getTerrainType() != TerrainType.POND) {
+                MovementCost cost = costCalculator.calculate(cell.getTerrainType(), TrafficLevel.NORMAL, config);
+                movementCosts.put(cell.getCoordinate(), cost);
+                ((Map) movementCosts).put(cell, cost);
+            }
+        }
+        state.setMovementCosts(movementCosts);
 
         when(configLoaderPort.loadConfig()).thenReturn(config);
         when(stateStorePort.loadState()).thenReturn(state);
