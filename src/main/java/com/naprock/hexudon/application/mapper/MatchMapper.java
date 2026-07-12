@@ -4,6 +4,7 @@ import com.naprock.hexudon.application.dto.*;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.entity.*;
+import com.naprock.hexudon.domain.model.score.TeamScore;
 import com.naprock.hexudon.domain.model.valueobject.Action;
 import com.naprock.hexudon.domain.model.valueobject.Cell;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;
@@ -25,11 +26,28 @@ public class MatchMapper {
     public MatchMapper() {
     }
 
+    public TeamScoreResponse toTeamScoreResponse(TeamScore teamScore) {
+        if (teamScore == null) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "teamScore must be not null."
+            );
+        }
+
+        return new TeamScoreResponse(
+                teamScore.getTeamId(),
+                teamScore.getUniqueUdonTypesCount(),
+                teamScore.getAccumulatedDailyUdonTypes(),
+                teamScore.getTotalServings(),
+                teamScore.getTotalResponseTimeMs()
+        );
+    }
+
     public MatchStateResponse toMatchStateResponse(MatchState state) {
         if (state == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "MatchState không được phép null."
+                    "MatchState must be not null."
             );
         }
 

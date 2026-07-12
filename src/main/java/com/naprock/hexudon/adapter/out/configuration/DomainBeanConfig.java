@@ -1,6 +1,7 @@
 package com.naprock.hexudon.adapter.out.configuration;
 
 import com.naprock.hexudon.domain.service.MovementCostCalculator;
+import com.naprock.hexudon.domain.service.RankingService;
 import com.naprock.hexudon.domain.service.TrafficCalculator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,4 +18,10 @@ public class DomainBeanConfig {
     public MovementCostCalculator movementCostCalculator() {
         return new MovementCostCalculator();
     }
+
+    @Bean
+    public RankingService rankingService() {
+        return new RankingService();
+    }
+
 }

@@ -11,6 +11,7 @@ bin/
 /dist/
 docs/
 CLASS SPECIFICATIONS/
+graph/
 
 # Environment variables & Secrets
 .env
