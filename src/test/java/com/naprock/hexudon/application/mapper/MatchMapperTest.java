@@ -4,6 +4,7 @@ import com.naprock.hexudon.application.dto.*;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.model.entity.*;
+import com.naprock.hexudon.domain.model.score.UdonType;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,14 +94,14 @@ class MatchMapperTest {
 
     @Test
     void testToSpotResponse() {
-        Spot spot = new Spot(new Coordinate(3, 3), "UDON_WELL");
+        Spot spot = new Spot(new Coordinate(3, 3), new UdonType("UDON_WELL"));
         spot.setUdonStock("Alpha", 5);
 
         SpotResponse response = mapper.toSpotResponse(spot);
         assertNotNull(response);
         assertEquals(3, response.coordinate().x());
         assertEquals(3, response.coordinate().y());
-        assertEquals("UDON_WELL", response.spotType());
+        assertEquals(new UdonType("UDON_WELL"), response.udonType());
         assertEquals(5, response.teamUdonStocks().get("Alpha"));
 
         assertThrows(GameRuleViolationException.class, () -> mapper.toSpotResponse(null));
@@ -111,7 +112,7 @@ class MatchMapperTest {
         MatchState state = new MatchState();
         state.setStatus(MatchStatus.PLAYING);
         state.setCurrentTurn(2);
-        state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
 
         MatchStateResponse response = mapper.toMatchStateResponse(state);
         assertNotNull(response);

@@ -27,10 +27,10 @@ public class RefuelAgent extends Agent{
     @Override
     public MoveResult executeAction(
             Action action,
-            MatchState state) {
+            GameMap gameMap) {
 
         validateNotNull(action, "action");
-        validateNotNull(state, "state");
+        validateNotNull(gameMap, "gameMap");
 
         if (action.getActionType() == ActionType.WAIT) {
 
@@ -45,7 +45,7 @@ public class RefuelAgent extends Agent{
 
         Coordinate destination = action.getTargetCoordinate();
 
-        Cell cell = state.getCell(destination);
+        Cell cell = gameMap.getCell(destination);
 
         if (cell == null) {
             throw new GameRuleViolationException(
@@ -68,7 +68,7 @@ public class RefuelAgent extends Agent{
             );
         }
 
-        MovementCost movementCost = state.getMovementCosts().get(cell);
+        MovementCost movementCost = gameMap.getMovementCosts().get(cell.getCoordinate());
 
         int stepCost = movementCost.getStepsNeeded();
 

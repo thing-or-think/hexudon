@@ -6,6 +6,7 @@ import com.naprock.hexudon.application.port.in.InitializeTrafficUseCase;
 import com.naprock.hexudon.application.port.out.TrafficRepositoryPort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.entity.GameMap;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import com.naprock.hexudon.domain.model.traffic.TrafficSnapshot;
@@ -84,9 +85,9 @@ public class TurnEnvironmentService implements
                 )
         );
 
-        state.setMovementCosts(
+        state.getGameMap().updateMovementCosts(
                 movementCostCalculator.calculate(
-                        state.getCellIndex(),
+                        state.getGameMap().getCellIndex(),
                         nextSnapshot.getFlows(),
                         config
                 )
@@ -101,12 +102,12 @@ public class TurnEnvironmentService implements
      * {@inheritDoc}
      */
     @Override
-    public void initializeTraffic(MatchState state, MatchConfig config) {
-        Objects.requireNonNull(state);
+    public void initializeTraffic(GameMap gameMap, MatchConfig config) {
+        Objects.requireNonNull(gameMap);
 
         Map<Coordinate, TrafficFlow> flows = new HashMap<>();
         Map<Coordinate, MovementCost> costs = new HashMap<>();
-        for (Cell cell : state.getCells()) {
+        for (Cell cell : gameMap.getCells()) {
             Coordinate coordinate = cell.getCoordinate();
             TrafficFlow flow = new TrafficFlow(coordinate);
 
@@ -125,10 +126,10 @@ public class TurnEnvironmentService implements
             }
         }
 
-        state.setMovementCosts(costs);
+        gameMap.updateMovementCosts(costs);
 
         TrafficSnapshot snapshot = new TrafficSnapshot(
-                state.getCurrentTurn(),
+                1,
                 flows
         );
 

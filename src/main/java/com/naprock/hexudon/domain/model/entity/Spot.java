@@ -2,6 +2,7 @@ package com.naprock.hexudon.domain.model.entity;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.model.score.UdonType;
 import com.naprock.hexudon.domain.model.valueobject.Coordinate;
 
 import java.util.Collections;
@@ -12,15 +13,15 @@ import java.util.Objects;
 public class Spot {
 
     private final Coordinate coordinate;
-    private final String spotType;
+    private final UdonType udonType;
     private final Map<String, Integer> teamUdonStocks;
 
-    public Spot(Coordinate coordinate, String spotType) {
+    public Spot(Coordinate coordinate, UdonType udonType) {
         validateNotNull(coordinate, "coordinate");
-        validateNotNull(spotType, "spotType");
+        validateNotNull(udonType, "udonType");
 
         this.coordinate = coordinate;
-        this.spotType = spotType;
+        this.udonType = udonType;
         this.teamUdonStocks = new HashMap<>();
     }
 
@@ -28,7 +29,7 @@ public class Spot {
         validateNotNull(other, "Spot");
 
         this.coordinate = new Coordinate(other.coordinate);
-        this.spotType = other.spotType;
+        this.udonType = new UdonType(other.udonType.typeName());
         this.teamUdonStocks = new HashMap<>(other.teamUdonStocks);
     }
 
@@ -36,8 +37,8 @@ public class Spot {
         return coordinate;
     }
 
-    public String getSpotType() {
-        return spotType;
+    public UdonType getUdonType() {
+        return udonType;
     }
 
     public Map<String, Integer> getTeamUdonStocks() {

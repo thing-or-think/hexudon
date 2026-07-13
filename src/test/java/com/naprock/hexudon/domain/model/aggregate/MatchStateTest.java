@@ -5,6 +5,7 @@ import com.naprock.hexudon.domain.exception.business.MatchStateConflictException
 import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.entity.*;
+import com.naprock.hexudon.domain.model.score.UdonType;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
@@ -50,22 +51,21 @@ class MatchStateTest {
                 .build();
 
         state = new MatchState();
-        state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
-        state.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
-        state.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
-        state.addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
+        state.getGameMap().addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
 
         // Populate movement costs for cells to prevent NullPointerException in agent actions
         Map<Coordinate, MovementCost> movementCosts = new HashMap<>();
         MovementCostCalculator costCalculator = new MovementCostCalculator();
-        for (Cell cell : state.getCells()) {
+        for (Cell cell : state.getGameMap().getCells()) {
             if (cell.getTerrainType() != TerrainType.POND) {
                 MovementCost cost = costCalculator.calculate(cell.getTerrainType(), TrafficLevel.NORMAL, config);
                 movementCosts.put(cell.getCoordinate(), cost);
-                ((Map) movementCosts).put(cell, cost);
             }
         }
-        state.setMovementCosts(movementCosts);
+        state.getGameMap().updateMovementCosts(movementCosts);
     }
 
     @Test
@@ -74,8 +74,8 @@ class MatchStateTest {
         assertEquals(0, state.getCurrentTurn());
         assertEquals(0L, state.getTurnStartTime());
         assertTrue(state.getTeams().isEmpty());
-        assertEquals(4, state.getCells().size());
-        assertTrue(state.getSpots().isEmpty());
+        assertEquals(4, state.getGameMap().getCells().size());
+        assertTrue(state.getGameMap().getSpots().isEmpty());
     }
 
     @Test
@@ -122,23 +122,23 @@ class MatchStateTest {
         state.registerTeam(new Team("Alpha"), 2);
         assertNotNull(state.requireTeam("Alpha"));
         assertThrows(ResourceNotFoundException.class, () -> state.requireTeam("Beta"));
-        assertThrows(GameRuleViolationException.class, () -> state.requireTeam(""));
+        assertThrows(ResourceNotFoundException.class, () -> state.requireTeam(""));
     }
 
     @Test
     void testAddCell_duplicateThrowsException() {
         GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
-                () -> state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN)));
+                () -> state.getGameMap().addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN)));
         assertEquals(ErrorCode.DUPLICATE_RESOURCE, ex.getErrorCode());
     }
 
     @Test
     void testAddSpot_duplicateThrowsException() {
-        Spot spot1 = new Spot(new Coordinate(0, 0), "UDON_WELL");
-        state.addSpot(spot1);
+        Spot spot1 = new Spot(new Coordinate(0, 0), UdonType.TANUKI);
+        state.getGameMap().addSpot(spot1);
 
         GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
-                () -> state.addSpot(spot1));
+                () -> state.getGameMap().addSpot(spot1));
         assertEquals(ErrorCode.DUPLICATE_RESOURCE, ex.getErrorCode());
     }
 
@@ -206,7 +206,7 @@ class MatchStateTest {
         // Refuel agent waits
         refuel.setActions(List.of(new Action(1, ActionType.WAIT, null, 123L)));
 
-        List<AgentExecutionResult> results = state.simulateTurn(team, config);
+        List<AgentExecutionResult> results = new com.naprock.hexudon.domain.service.MatchSimulationService().simulateTurn(state, team, config);
 
         assertNotNull(results);
         assertEquals(2, results.size());

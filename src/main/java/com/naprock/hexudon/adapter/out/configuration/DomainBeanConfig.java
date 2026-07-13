@@ -1,8 +1,6 @@
 package com.naprock.hexudon.adapter.out.configuration;
 
-import com.naprock.hexudon.domain.service.MovementCostCalculator;
-import com.naprock.hexudon.domain.service.RankingService;
-import com.naprock.hexudon.domain.service.TrafficCalculator;
+import com.naprock.hexudon.domain.service.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,6 +20,16 @@ public class DomainBeanConfig {
     @Bean
     public RankingService rankingService() {
         return new RankingService();
+    }
+
+    @Bean
+    HexGridGenerator hexGridGenerator() {
+        return new HexGridGenerator();
+    }
+
+    @Bean
+    MatchSimulationService matchSimulationService() {
+        return new MatchSimulationService();
     }
 
 }

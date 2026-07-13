@@ -1,43 +1,56 @@
 package com.naprock.hexudon.domain.service;
 
-import com.naprock.hexudon.domain.model.valueobject.Cell;
-import com.naprock.hexudon.domain.model.aggregate.MatchState;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
+import com.naprock.hexudon.domain.model.entity.GameMap;
 import com.naprock.hexudon.domain.model.entity.Spot;
+import com.naprock.hexudon.domain.model.score.UdonType;
+import com.naprock.hexudon.domain.model.valueobject.Cell;
+import com.naprock.hexudon.domain.model.valueobject.Coordinate;
 import com.naprock.hexudon.domain.valueobject.TerrainType;
 
 import java.util.Random;
 
 public class HexGridGenerator {
 
-    private static final Random RANDOM = new Random();
+    private final Random random;
 
     private static final int PLAIN_RATE = 65;
     private static final int MOUNTAIN_RATE = 20;
     private static final int ROAD_RATE = 5;
     private static final int POND_RATE = 10;
 
-    public static void generateMap(int width, int height, MatchState matchState) {
+    private static final int SPOT_RATE = 50;
+    private static final int MIN_SPOT_DISTANCE = 3;
 
-        if (width <= 0 || height <= 0 || matchState == null) {
-            return;
-        }
 
-        createCells(width, height, matchState);
-
-        createDefaultSpots(width, height, matchState);
+    public HexGridGenerator() {
+        this.random = new Random();
     }
 
-    private static void createCells(
-            int width,
-            int height,
-            MatchState matchState) {
+    public HexGridGenerator(Random random) {
+        this.random = random;
+    }
+
+    public void generateMap(int width, int height, GameMap gameMap) {
+
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException(
+                    "Map size must be positive"
+            );
+        }
+
+        if (gameMap == null) {
+            throw new IllegalArgumentException(
+                    "GameMap must not be null"
+            );
+        }
+    }
+
+
+    private void createCells(int width, int height, GameMap gameMap) {
 
         for (int y = 0; y < height; y++) {
-
             for (int x = 0; x < width; x++) {
-
-                matchState.addCell(
+                gameMap.addCell(
                         new Cell(
                                 new Coordinate(x, y),
                                 generateRandomTerrainType()
@@ -47,44 +60,110 @@ public class HexGridGenerator {
         }
     }
 
-    private static void createDefaultSpots(int width,
-                                    int height,
-                                    MatchState matchState) {
 
-        int centerX = width / 2;
-        int centerY = height / 2;
+    private void createSpots(
+            int width,
+            int height,
+            GameMap gameMap
+    ) {
 
-        Cell center = matchState.getCell(new Coordinate(centerX, centerY));
+        int spotCount =
+                calculateSpotCount(
+                        width,
+                        height
+                );
 
-        if (center == null) {
-            return;
+        int created = 0;
+
+        int maxAttempt = spotCount * 20;
+        int attempt = 0;
+
+        while (created < spotCount && attempt < maxAttempt) {
+
+            Coordinate coordinate = randomCoordinate(width, height);
+            Cell cell = gameMap.getCell(coordinate);
+
+            if (isValidSpotCell(cell)
+                    && !hasSpotNear(
+                    coordinate,
+                    gameMap
+            )) {
+                gameMap.addSpot(
+                        new Spot(coordinate,UdonType.random(random))
+                );
+                created++;
+            }
+            attempt++;
         }
-
-        Spot spot = new Spot(center.getCoordinate(), "FUEL_STATION");
-
-        matchState.addSpot(spot);
     }
 
-    private static TerrainType generateRandomTerrainType() {
+    private int calculateSpotCount(
+            int width,
+            int height
+    ) {
 
-        int value = RANDOM.nextInt(100);
+        int area = width * height;
 
+        return Math.max(
+                1,
+                area / SPOT_RATE
+        );
+    }
+
+
+    private Coordinate randomCoordinate(
+            int width,
+            int height
+    ) {
+
+        return new Coordinate(
+                random.nextInt(width),
+                random.nextInt(height)
+        );
+    }
+
+
+    private boolean isValidSpotCell(
+            Cell cell
+    ) {
+
+        if (cell == null) {
+            return false;
+        }
+
+
+        return cell.getTerrainType() != TerrainType.POND
+                && cell.getTerrainType() != TerrainType.MOUNTAIN;
+    }
+
+
+    private boolean hasSpotNear(
+            Coordinate coordinate,
+            GameMap gameMap
+    ) {
+
+        return gameMap.getSpots()
+                .stream()
+                .anyMatch(
+                        spot ->
+                                spot.getCoordinate().distanceTo(coordinate) < MIN_SPOT_DISTANCE
+                );
+    }
+
+    private TerrainType generateRandomTerrainType() {
+
+        int value = random.nextInt(100);
         if (value < PLAIN_RATE) {
             return TerrainType.PLAIN;
         }
-
         value -= PLAIN_RATE;
-
         if (value < MOUNTAIN_RATE) {
             return TerrainType.MOUNTAIN;
         }
-
         value -= MOUNTAIN_RATE;
-
         if (value < ROAD_RATE) {
             return TerrainType.ROAD;
         }
-
         return TerrainType.POND;
     }
 }

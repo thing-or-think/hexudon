@@ -3,6 +3,7 @@ package com.naprock.hexudon.domain.model.entity;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.aggregate.MatchState;
+import com.naprock.hexudon.domain.model.score.UdonType;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
@@ -47,23 +48,22 @@ class AgentTest {
                 .build();
 
         state = new MatchState();
-        state.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
-        state.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
-        state.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
-        state.addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
-        state.addCell(new Cell(new Coordinate(2, 0), TerrainType.POND));
+        state.getGameMap().addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
+        state.getGameMap().addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
+        state.getGameMap().addCell(new Cell(new Coordinate(2, 0), TerrainType.POND));
 
         // Populate movement costs for cells to prevent NullPointerException in agent actions
         Map<Coordinate, MovementCost> movementCosts = new HashMap<>();
         MovementCostCalculator costCalculator = new MovementCostCalculator();
-        for (Cell cell : state.getCells()) {
+        for (Cell cell : state.getGameMap().getCells()) {
             if (cell.getTerrainType() != TerrainType.POND) {
                 MovementCost cost = costCalculator.calculate(cell.getTerrainType(), TrafficLevel.NORMAL, config);
                 movementCosts.put(cell.getCoordinate(), cost);
-                ((Map) movementCosts).put(cell, cost);
             }
         }
-        state.setMovementCosts(movementCosts);
+        state.getGameMap().updateMovementCosts(movementCosts);
     }
 
     @Test
@@ -109,7 +109,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.WAIT, null, 123L);
-        MoveResult result = agent.executeAction(action, state);
+        MoveResult result = agent.executeAction(action, state.getGameMap());
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 0), result.getTargetCoordinate());
@@ -126,7 +126,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(1, 0), 123L);
-        MoveResult result = agent.executeAction(action, state);
+        MoveResult result = agent.executeAction(action, state.getGameMap());
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(1, 0), result.getTargetCoordinate());
@@ -144,7 +144,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(0, 1), 123L);
-        MoveResult result = agent.executeAction(action, state);
+        MoveResult result = agent.executeAction(action, state.getGameMap());
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 1), result.getTargetCoordinate());
@@ -164,7 +164,7 @@ class AgentTest {
         agent.moveTo(new Coordinate(0, 1)); // odd row (y=1)
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(1, 1), 123L);
-        MoveResult result = agent.executeAction(action, state);
+        MoveResult result = agent.executeAction(action, state.getGameMap());
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(1, 1), result.getTargetCoordinate());
@@ -183,19 +183,19 @@ class AgentTest {
 
         Action actionNonExistent = new Action(1, ActionType.MOVE, new Coordinate(2, 2), 123L);
         GameRuleViolationException ex1 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionNonExistent, state));
+                () -> agent.executeAction(actionNonExistent, state.getGameMap()));
         assertEquals(ErrorCode.INVALID_TARGET_TERRAIN, ex1.getErrorCode());
 
         agent.moveTo(new Coordinate(1, 0));
         Action actionPond = new Action(1, ActionType.MOVE, new Coordinate(2, 0), 123L);
         GameRuleViolationException ex2 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionPond, state));
+                () -> agent.executeAction(actionPond, state.getGameMap()));
         assertEquals(ErrorCode.INVALID_TARGET_TERRAIN, ex2.getErrorCode());
 
         agent.moveTo(new Coordinate(0, 0));
         Action actionNonAdjacent = new Action(1, ActionType.MOVE, new Coordinate(1, 1), 123L);
         GameRuleViolationException ex3 = assertThrows(GameRuleViolationException.class,
-                () -> agent.executeAction(actionNonAdjacent, state));
+                () -> agent.executeAction(actionNonAdjacent, state.getGameMap()));
         assertEquals(ErrorCode.CELL_OUT_OF_BOUNDS, ex3.getErrorCode());
     }
 
@@ -204,26 +204,26 @@ class AgentTest {
         PatrolAgent agent = new PatrolAgent(new Coordinate(0, 0));
         Team team = new Team("Alpha");
 
-        Spot spot = new Spot(new Coordinate(0, 0), "UDON_WELL");
+        Spot spot = new Spot(new Coordinate(0, 0), UdonType.TANUKI);
         spot.setUdonStock("Alpha", 5);
-        state.addSpot(spot);
+        state.getGameMap().addSpot(spot);
 
-        agent.collectUdon(state, team);
+        agent.collectUdon(state.getCurrentTurn(), state.getGameMap(), team);
         assertEquals(1, team.getCollectedUdon());
         assertEquals(4, spot.getUdonStock("Alpha"));
         assertTrue(agent.hasVisitedSpotToday(new Coordinate(0, 0)));
 
-        agent.collectUdon(state, team);
+        agent.collectUdon(state.getCurrentTurn(), state.getGameMap(), team);
         assertEquals(1, team.getCollectedUdon());
         assertEquals(4, spot.getUdonStock("Alpha"));
 
         agent.clearVisitedSpotsToday();
         agent.moveTo(new Coordinate(1, 0));
-        Spot spot2 = new Spot(new Coordinate(1, 0), "UDON_WELL");
+        Spot spot2 = new Spot(new Coordinate(1, 0), UdonType.TANUKI);
         spot2.setUdonStock("Alpha", 0);
-        state.addSpot(spot2);
+        state.getGameMap().addSpot(spot2);
 
-        agent.collectUdon(state, team);
+        agent.collectUdon(state.getCurrentTurn(), state.getGameMap(), team);
         assertEquals(1, team.getCollectedUdon());
     }
 
@@ -233,7 +233,7 @@ class AgentTest {
         agent.resetTurnResources(100, 5);
 
         Action action = new Action(1, ActionType.MOVE, new Coordinate(0, 1), 123L);
-        MoveResult result = agent.executeAction(action, state);
+        MoveResult result = agent.executeAction(action, state.getGameMap());
 
         assertTrue(result.isSuccess());
         assertEquals(new Coordinate(0, 1), result.getTargetCoordinate());

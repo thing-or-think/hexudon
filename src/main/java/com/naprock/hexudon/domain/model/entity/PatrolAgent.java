@@ -2,7 +2,6 @@ package com.naprock.hexudon.domain.model.entity;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.aggregate.MatchState;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.valueobject.*;
 import com.naprock.hexudon.domain.valueobject.*;
@@ -45,10 +44,10 @@ public class PatrolAgent extends Agent {
     @Override
     public MoveResult executeAction(
             Action action,
-            MatchState state) {
+            GameMap gameMap) {
 
         validateNotNull(action, "action");
-        validateNotNull(state, "state");
+        validateNotNull(gameMap, "gameMap");
 
         if (action.getActionType() == ActionType.WAIT) {
 
@@ -63,7 +62,7 @@ public class PatrolAgent extends Agent {
 
         Coordinate destination = action.getTargetCoordinate();
 
-        Cell cell = state.getCell(destination);
+        Cell cell = gameMap.getCell(destination);
 
         if (cell == null) {
             throw new GameRuleViolationException(
@@ -86,7 +85,7 @@ public class PatrolAgent extends Agent {
             );
         }
 
-        MovementCost movementCost = state.getMovementCosts().get(cell);
+        MovementCost movementCost = gameMap.getMovementCosts().get(cell.getCoordinate());
 
         int stepCost = movementCost.getStepsNeeded();
         int fuelCost = movementCost.getFuelNeeded();
@@ -103,15 +102,17 @@ public class PatrolAgent extends Agent {
         );
     }
 
-    public void collectUdon(MatchState state,
-                            Team team) {
+    public void collectUdon(
+            int turn,
+            GameMap gameMap,
+            Team team) {
 
-        validateNotNull(state, "state");
+        validateNotNull(gameMap, "state");
         validateNotNull(team, "team");
 
         Spot targetSpot = null;
 
-        for (Spot spot : state.getSpots()) {
+        for (Spot spot : gameMap.getSpots()) {
             if (spot.getCoordinate().equals(coordinate)) {
                 targetSpot = spot;
                 break;

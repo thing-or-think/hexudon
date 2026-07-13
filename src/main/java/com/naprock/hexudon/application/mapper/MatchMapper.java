@@ -55,8 +55,8 @@ public class MatchMapper {
                 state.getStatus(),
                 state.getCurrentTurn(),
                 state.getTeams().stream().map(this::toTeamResponse).toList(),
-                state.getCells().stream().map(this::toCellResponse).toList(),
-                state.getSpots().stream().map(this::toSpotResponse).toList()
+                state.getGameMap().getCells().stream().map(this::toCellResponse).toList(),
+                state.getGameMap().getSpots().stream().map(this::toSpotResponse).toList()
         );
     }
 
@@ -102,7 +102,7 @@ public class MatchMapper {
 
         return new SpotResponse(
                 toCoordinateResponse(spot.getCoordinate()),
-                spot.getSpotType(),
+                spot.getUdonType(),
                 spot.getTeamUdonStocks()
         );
     }
