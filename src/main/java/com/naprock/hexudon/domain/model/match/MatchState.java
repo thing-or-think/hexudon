@@ -34,6 +34,10 @@ public class MatchState {
         this.scoreBoard = new ScoreBoard();
     }
 
+    public boolean isPlaying() {
+        return status == MatchStatus.PLAYING;
+    }
+
     public void finishTurn(MatchConfig config) {
 
         validateNotNull(config, "config");

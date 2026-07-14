@@ -34,6 +34,7 @@ import java.util.Map;
 
 @Service
 public class MatchApplicationService implements
+        CheckAndSimulateTurnUseCase,
         InitializeMatchUseCase,
         GetMatchConfigUseCase,
         GetMatchStateUseCase,
@@ -57,6 +58,17 @@ public class MatchApplicationService implements
         this.agentSpawnService = agentSpawnService;
         this.actionValidator = actionValidator;
         this.hexGridGenerator = hexGridGenerator;
+    }
+
+    @Override
+    public void checkAndSimulateTurn() {
+        MatchState state = stateStorePort.loadState();
+        MatchConfig config = configLoaderPort.loadConfig();
+        long time = System.currentTimeMillis();
+        if (time - state.getTurnStartTime() >= config.turnTimeLimitMs() && state.isPlaying()) {
+            state.finishTurn(config);
+        }
+        stateStorePort.saveState(state);
     }
 
     @Override
