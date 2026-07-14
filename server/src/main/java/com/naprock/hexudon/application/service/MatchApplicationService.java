@@ -4,6 +4,7 @@ import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
+import com.naprock.hexudon.application.dto.team.TeamResponse;
 import com.naprock.hexudon.application.mapper.MatchMapper;
 import com.naprock.hexudon.application.model.match.MatchStateData;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;
@@ -116,7 +117,7 @@ public class MatchApplicationService implements
     }
 
     @Override
-    public void registerTeam(TeamRegisterRequest request) {
+    public TeamResponse registerTeam(TeamRegisterRequest request) {
         TeamRegistrationData teamRegistrationData = MatchMapper.toTeamRegistrationData(request);
 
         MatchConfig config = configLoaderPort.loadConfig();
@@ -149,6 +150,7 @@ public class MatchApplicationService implements
         state.registerTeam(team, config.maxTeams());
 
         stateStorePort.saveState(state);
+        return MatchMapper.toTeamResponse(team);
     }
 
     @Override

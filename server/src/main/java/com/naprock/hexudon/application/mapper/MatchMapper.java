@@ -3,6 +3,7 @@ package com.naprock.hexudon.application.mapper;
 import com.naprock.hexudon.application.dto.agent.AgentResponse;
 import com.naprock.hexudon.application.dto.match.*;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
+import com.naprock.hexudon.application.dto.team.TeamResponse;
 import com.naprock.hexudon.application.dto.team.TeamScoreResponse;
 import com.naprock.hexudon.application.model.match.MatchStateData;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;
@@ -16,6 +17,7 @@ import com.naprock.hexudon.domain.model.map.Spot;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.movement.Action;
 import com.naprock.hexudon.domain.model.score.TeamScore;
+import com.naprock.hexudon.domain.model.team.Team;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 
 import java.util.List;
@@ -23,6 +25,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public final class MatchMapper {
+
+
+    public static TeamResponse toTeamResponse(Team team) {
+        return new TeamResponse(
+                team.getTeamName(),
+                team.getAgents().stream().map(MatchMapper::toAgentResponse).toList());
+    }
 
     public static Map<String, List<Action>> toDomainMap(SubmitActionRequest request) {
         return request.actions()

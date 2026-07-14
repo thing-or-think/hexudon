@@ -1,390 +1,359 @@
-# hexudon-server
+# HEXUDON
 
-`hexudon-server` là một ứng dụng máy chủ backend viết bằng Spring Boot triển khai luật chơi và cơ chế mô phỏng cho trò chơi đấu trí theo lượt "Hexudon". Trò chơi được diễn ra trên một bản đồ lưới lục giác (Odd-R offset grid), nơi các đội chơi đăng ký đội và lập trình điều khiển các tác tử (Agent) đi thu hoạch các loại mì Udon và hỗ trợ tiếp nhiên liệu cho nhau để đạt điểm số cao nhất trên bảng xếp hạng.
+[![Java Version](https://img.shields.io/badge/Java-21-orange.svg)](https://jdk.java.net/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.4-green.svg)](https://spring.io/projects/spring-boot)
+[![Build Status](https://img.shields.io/badge/Maven-Build-blue.svg)](#build--run)
 
-Dự án được xây dựng theo mô hình phát triển hướng domain (**Domain-Driven Design - DDD**) kết hợp kiến trúc lục giác (**Hexagonal Architecture / Ports and Adapters**), giúp tách biệt hoàn toàn phần lõi nghiệp vụ trò chơi khỏi các công nghệ và framework bên ngoài.
+`HEXUDON` is a multi-agent, turn-based simulation tactical game server and monitoring dashboard. The game is played on a hexagonal offset grid map where teams register and submit actions to control autonomous agents. The objective is to harvest different types of Udon noodles, coordinate agent refuelling, and optimize paths to score points while adapting to dynamically updating traffic flow constraints.
 
----
-
-## Overview
-
-Dự án này giải quyết bài toán mô phỏng một trận đấu đa tác tử, đa quốc gia/đội chơi cạnh tranh trên bản đồ lưới lục giác. Cụ thể, hệ thống cung cấp các chức năng chính hiện có sau:
-
-*   **Tự động khởi tạo trận đấu và bản đồ (Map Generation):** Sinh ngẫu nhiên lưới lục giác kích thước rộng/cao cấu hình được. Bản đồ chứa các ô địa hình (Đất trống, Núi, Đường đi, Ao nước) và bố trí ngẫu nhiên các điểm chứa mì Udon (Spots) cách nhau một khoảng cách tối thiểu đảm bảo tính phân tán.
-*   **Đăng ký Đội chơi & Sinh Tác tử (Team & Agent Registration):** Hỗ trợ tối đa một số lượng đội chơi đăng ký. Khi đăng ký, hệ thống tự động sinh ngẫu nhiên vị trí xuất phát cho hai loại Agent của mỗi đội:
-    *   **PatrolAgent (Agent tuần tra):** Có nhiệm vụ di chuyển trên bản đồ và thu thập các gói mì Udon tại các Spot. Di chuyển của PatrolAgent tiêu tốn nhiên liệu và điểm bước đi.
-    *   **RefuelAgent (Agent tiếp nhiên liệu):** Di chuyển trên bản đồ và hỗ trợ nạp đầy nhiên liệu cho PatrolAgent đứng chung ô tọa độ.
-*   **Thẩm định hành động (Action Validation):** Kiểm tra tính hợp lệ của chuỗi hành động di chuyển/chờ do đội chơi gửi lên thông qua giả lập bước chạy trước khi cập nhật chính thức.
-*   **Quản lý lưu lượng giao thông (Traffic Tracker):** Mô phỏng tình trạng kẹt xe trên các ô đường đi (ROAD). Khi có nhiều Agent của các đội cùng đi qua hoặc đứng tại một ô đường đi, mức độ ùn tắc tăng lên (NORMAL -> BUSY -> CONGESTED) làm tăng chi phí di chuyển (bước đi) qua ô đó ở lượt kế tiếp.
-*   **Bảng điểm & Xếp hạng (ScoreBoard):** Theo dõi số lượng mì Udon thu thập được của từng đội theo từng lượt chơi dựa trên các loại mì (TANUKI, KITSUNE, TEMPURA, BEEF), tính toán số lượng bát mì phục vụ và tổng thời gian phản hồi của đội chơi.
-*   **Lưu trữ tạm thời (In-Memory Database):** Toàn bộ trạng thái trận đấu được quản lý và lưu giữ ngay trên bộ nhớ RAM để đảm bảo tốc độ phản hồi nhanh.
+The project is strictly designed using **Domain-Driven Design (DDD)** and **Hexagonal Architecture (Ports and Adapters)**, ensuring the core game simulation engine remains completely isolated from external frameworks like Spring Boot or web interfaces.
 
 ---
 
-## Tech Stack
-
-Dự án sử dụng các công nghệ chính sau:
-
-*   **Language:** Java 21
-*   **Framework:** Spring Boot 3.5.4 (sử dụng `spring-boot-starter-web` cho REST API)
-*   **Validation:** Jakarta Bean Validation (`spring-boot-starter-validation`)
-*   **Utilities:** Lombok (rút gọn code boilerplate)
-*   **Database / Storage:** In-Memory (lưu trữ trong bộ nhớ RAM thông qua các Java Collection)
-*   **Build Tool:** Maven
-*   **Testing Framework:** JUnit 5, Mockito, Spring Boot Test, ArchUnit 1.3.0 (dùng để kiểm thử kiến trúc lục giác)
+## Table of Contents
+- [System Architecture](#system-architecture)
+  - [Architectural Layers](#architectural-layers)
+  - [Dependency & Flow of Control](#dependency--flow-of-control)
+  - [Mermaid System Diagram](#mermaid-system-diagram)
+- [Module Structure](#module-structure)
+- [Technology Stack](#technology-stack)
+- [Project Folder Tree](#project-folder-tree)
+- [Build & Run](#build--run)
+  - [Prerequisites](#prerequisites)
+  - [1. Backend Server (`hexudon-server`)](#1-backend-server-hexudon-server)
+  - [2. Frontend Monitor (`hexudon-monitor`)](#2-frontend-monitor-hexudon-monitor)
+- [Configuration](#configuration)
+- [REST API Endpoints](#rest-api-endpoints)
+- [Core Simulation Engine & Domain Model](#core-simulation-engine--domain-model)
+  - [Hex Grid Geometry](#hex-grid-geometry)
+  - [Terrain & Udon Spot Generation](#terrain--udon-spot-generation)
+  - [Turn Lifecycle & Scheduler](#turn-lifecycle--scheduler)
+  - [Agent Types & Support Mechanics](#agent-types--support-mechanics)
+  - [Traffic & Congestion Mechanics](#traffic--congestion-mechanics)
+  - [Scoring System](#scoring-system)
+- [Testing](#testing)
+- [Known Limitations & Engine Bugs](#known-limitations--engine-bugs)
+- [Contribution Guide](#contribution-guide)
 
 ---
 
-## Architecture
+## System Architecture
 
-Dự án áp dụng **Kiến trúc lục giác (Hexagonal Architecture)** để phân tách các mối quan tâm:
+The project is structured according to **Hexagonal Architecture** guidelines to decouple core business logic from outer technologies.
 
-*   **Domain Layer:** Nằm ở lõi trong cùng, chứa các thực thể (Entities), Value Objects, Domain Services và logic nghiệp vụ thuần túy của trò chơi Hexudon. Tầng này độc lập hoàn toàn và không phụ thuộc vào bất kỳ framework nào (kể cả Spring).
-*   **Application Layer:** Chứa các cổng giao tiếp nghiệp vụ (Inbound/Outbound Ports), Dịch vụ ứng dụng (`MatchApplicationService` điều phối các cổng) và các lớp vận chuyển dữ liệu (DTOs, Mappers).
-*   **Adapter Layer:** Chứa các Adapter triển khai chi tiết kỹ thuật:
-    *   *Inbound Adapters (Driving)*: `MatchController` (REST API), `MatchInitializerRunner` (tự khởi tạo bản đồ ở startup).
-    *   *Outbound Adapters (Driven)*: `InMemoryMatchStateRepository` (lưu trữ In-memory), `FileMatchConfigLoader` (đọc file text cấu hình).
-*   **Infrastructure Layer:** Chứa cấu hình hạ tầng như chính sách CORS (`WebConfig`), cấu hình Spring (`AppConfig`) và các tiện ích dùng chung (`FileUtils`).
+### Architectural Layers
 
-### Sơ đồ kiến trúc (Architecture Diagram)
+1. **Domain Layer (`com.naprock.hexudon.domain`)**:
+   - Contains core entities, aggregates, value objects, exceptions, and pure domain services.
+   - Independent of external frameworks (no imports of Spring libraries).
+2. **Application Layer (`com.naprock.hexudon.application`)**:
+   - **Inbound Ports**: Define use cases (e.g., [RegisterTeamUseCase](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/port/in/RegisterTeamUseCase.java)).
+   - **Outbound Ports**: Define adapter interfaces (e.g., [MatchStateStorePort](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/port/out/MatchStateStorePort.java)).
+   - **Application Services**: [MatchApplicationService](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/service/MatchApplicationService.java) implements use cases and coordinates ports.
+   - **DTOs & Mappers**: Translate network payloads to domain objects.
+3. **Adapter Layer (`com.naprock.hexudon.adapter`)**:
+   - **Inbound (Driving)**: REST controllers ([MatchController](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/adapter/in/rest/MatchController.java)) and command-line runners ([MatchInitializerRunner](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/adapter/in/initializer/MatchInitializerRunner.java)).
+   - **Outbound (Driven)**: Persistence storage ([InMemoryMatchStateRepository](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/adapter/out/persistence/InMemoryMatchStateRepository.java)) and configuration loaders ([FileMatchConfigLoader](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/adapter/out/loader/FileMatchConfigLoader.java)).
+4. **Infrastructure Layer (`com.naprock.hexudon.infrastructure`)**:
+   - Setup for Spring scheduling ([SchedulerConfig](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/infrastructure/configuration/SchedulerConfig.java)), CORS configuration ([WebConfig](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/infrastructure/configuration/WebConfig.java)), and utility classes.
 
-```text
-         +---------------------------------------------------------+
-         |                      ADAPTER LAYER                      |
-         |                                                         |
-         |  [Inbound Adapters]              [Outbound Adapters]    |
-         |  - MatchController               - InMemoryMatchRepo    |
-         |  - MatchInitializerRunner        - FileMatchConfigLoader|
-         |                                  - DomainBeanConfig     |
-         +------------|------------------------------^-------------+
-                      |                              |
-         +------------v------------------------------|-------------+
-         |                     APPLICATION LAYER                   |
-         |                                                         |
-         |  [Inbound Ports]                 [Outbound Ports]       |
-         |  - RegisterTeamUseCase           - MatchConfigLoaderPort|
-         |  - SubmitActionsUseCase          - MatchStateStorePort  |
-         |  - GetMatchStateUseCase                                 |
-         |                                                         |
-         |               [MatchApplicationService]                 |
-         +---------------------------|-----------------------------+
-                                     |
-         +---------------------------v-----------------------------+
-         |                       DOMAIN LAYER                      |
-         |                                                         |
-         |  [Entities & Aggregates]         [Domain Services]      |
-         |  - MatchState (Aggregate Root)   - HexGridGenerator     |
-         |  - Team, Agent (Patrol, Refuel)  - ActionValidator      |
-         |  - GameMap, Spot, ScoreBoard     - AgentSpawnService    |
-         |                                                         |
-         |  [Value Objects]                 [Exceptions]           |
-         |  - Coordinate, Direction, Cell   - BusinessException    |
-         |  - Action, MovementCost          - GameRuleViolation... |
-         +---------------------------------------------------------+
+### Dependency & Flow of Control
+Dependencies always point inwards. Adapters depend on Application Ports, which interact with Domain Entities. The Domain Layer has no external dependencies.
+
+```mermaid
+graph TD
+    %% Define layers
+    subgraph Adapter Layer
+        direction LR
+        REST["MatchController (REST API)"]
+        InitRunner["MatchInitializerRunner (Startup)"]
+        InMemoryRepo["InMemoryMatchStateRepository (In-Memory Store)"]
+        ConfigLoader["FileMatchConfigLoader (File Loader)"]
+    end
+
+    subgraph Application Layer
+        direction TB
+        %% Use cases / Ports
+        UseCases["Inbound Ports (Use Cases)<br>- InitializeMatchUseCase<br>- RegisterTeamUseCase<br>- SubmitActionsUseCase<br>- GetMatchStateUseCase<br>- GetMatchConfigUseCase<br>- CheckAndSimulateTurnUseCase"]
+        OutPorts["Outbound Ports (Driven)<br>- MatchStateStorePort<br>- MatchConfigLoaderPort"]
+        AppService["MatchApplicationService<br>(Coordinates ports & services)"]
+    end
+
+    subgraph Domain Layer
+        direction TB
+        %% Domain model
+        AggRoot["MatchState (Aggregate Root)"]
+        TeamObj["Team"]
+        AgentObj["Agent (PatrolAgent, RefuelAgent)"]
+        GameMapObj["GameMap"]
+        SpotObj["Spot"]
+        ScoreObj["ScoreBoard / TeamScore"]
+        TrafficObj["TrafficTracker / TrafficHistory"]
+        
+        %% Domain Services
+        GridGen["HexGridGenerator"]
+        SpawnSrv["AgentSpawnService"]
+        ActVal["ActionValidator"]
+    end
+
+    %% Wiring
+    REST --> |Calls| UseCases
+    InitRunner --> |Calls| UseCases
+    UseCases --- AppService
+    AppService --- OutPorts
+    OutPorts --> InMemoryRepo
+    OutPorts --> ConfigLoader
+
+    AppService --> |Uses| AggRoot
+    AppService --> |Uses| GridGen
+    AppService --> |Uses| SpawnSrv
+    AppService --> |Uses| ActVal
+
+    AggRoot --> TeamObj
+    AggRoot --> GameMapObj
+    AggRoot --> ScoreObj
+    AggRoot --> TrafficObj
+    TeamObj --> AgentObj
+    GameMapObj --> SpotObj
 ```
 
 ---
 
-## Project Structure
+## Module Structure
 
-Cấu trúc cây thư mục mã nguồn của dự án như sau:
+The codebase is split into two primary components:
+- **Parent (`hexudon`)**: Coordinates the multi-module Maven compilation.
+- **Server Module (`hexudon-server` / `/server`)**: Standard Spring Boot Maven project containing the domain engine, REST endpoint, configuration loading, and simulation scheduling.
+- **Monitor Client (`hexudon-monitor` / `/hexudon-monitor`)**: A React/Vite-based admin dashboard application to visualize match state, maps, scores, and traffic flow in real-time.
+
+---
+
+## Technology Stack
+
+- **Backend (`hexudon-server`)**:
+  - **Language**: Java 21
+  - **Framework**: Spring Boot 3.5.4 (using `spring-boot-starter-web` & `spring-boot-starter-validation`)
+  - **Utilities**: Lombok
+  - **Testing**: JUnit 5, Mockito, ArchUnit 1.3.0 (architectural verification)
+  - **Build**: Apache Maven 3.9.x
+- **Frontend Dashboard (`hexudon-monitor`)**:
+  - **Framework**: React 19 + TypeScript
+  - **Build Tool**: Vite 8.1.1
+  - **Styling**: TailwindCSS v4
+  - **State Management**: Zustand
+  - **Charts**: Recharts
+  - **Icons**: Lucide React
+  - **HTTP Client**: Axios
+
+---
+
+## Project Folder Tree
+
+Here are the important paths in the repository layout:
 
 ```text
 .
-├── .gitignore
-├── pom.xml
-└── src
-    └── main
-        ├── java
-        │   └── com
-        │       └── naprock
-        │           └── hexudon
-        │               ├── HexudonApplication.java
-        │               ├── adapter
-        │               │   ├── in
-        │               │   │   ├── initializer
-        │               │   │   │   └── MatchInitializerRunner.java
-        │               │   │   └── rest
-        │               │   │       ├── MatchController.java
-        │               │   │       └── advice
-        │               │   │           ├── ErrorResponse.java
-        │               │   │           ├── GlobalExceptionHandler.java
-        │               │   │           └── ValidationErrorDetail.java
-        │               │   └── out
-        │               │       ├── configuration
-        │               │       │   └── DomainBeanConfig.java
-        │               │       ├── loader
-        │               │       │   └── FileMatchConfigLoader.java
-        │               │       └── persistence
-        │               │           └── InMemoryMatchStateRepository.java
-        │               ├── application
-        │               │   ├── dto
-        │               │   │   ├── agent
-        │               │   │   │   └── AgentResponse.java
-        │               │   │   ├── match
-        │               │   │   │   ├── ActionRequest.java
-        │               │   │   │   ├── CellResponse.java
-        │               │   │   │   ├── CoordinateRequest.java
-        │               │   │   │   ├── CoordinateResponse.java
-        │               │   │   │   ├── MatchConfigResponse.java
-        │               │   │   │   ├── MatchStateResponse.java
-        │               │   │   │   ├── SpotResponse.java
-        │               │   │   │   ├── SubmitActionRequest.java
-        │               │   │   │   └── TrafficResponse.java
-        │               │   │   └── team
-        │               │   │       ├── TeamRegisterRequest.java
-        │               │   │       ├── TeamResponse.java
-        │               │   │       └── TeamScoreResponse.java
-        │               │   ├── mapper
-        │               │   │   └── MatchMapper.java
-        │               │   ├── model
-        │               │   │   ├── match
-        │               │   │   │   └── MatchStateData.java
-        │               │   │   └── team
-        │               │   │       └── TeamRegistrationData.java
-        │               │   ├── port
-        │               │   │   ├── in
-        │               │   │   │   ├── GetMatchConfigUseCase.java
-        │               │   │   │   ├── GetMatchStateUseCase.java
-        │               │   │   │   ├── InitializeMatchUseCase.java
-        │               │   │   │   └── RegisterTeamUseCase.java
-        │               │   │   │   └── SubmitActionsUseCase.java
-        │               │   │   └── out
-        │               │   │       ├── MatchConfigLoaderPort.java
-        │               │   │       └── MatchStateStorePort.java
-        │               │   └── service
-        │               │       └── MatchApplicationService.java
-        │               ├── domain
-        │               │   ├── exception
-        │               │   │   ├── base
-        │               │   │   │   ├── BusinessException.java
-        │               │   │   │   └── SystemException.java
-        │               │   │   ├── business
-        │               │   │   │   ├── GameRuleViolationException.java
-        │               │   │   │   ├── MatchStateConflictException.java
-        │               │   │   │   ├── RateLimitExceededException.java
-        │               │   │   │   └── ResourceNotFoundException.java
-        │               │   │   ├── code
-        │               │   │   │   └── ErrorCode.java
-        │               │   │   └── system
-        │               │   │       └── ConfigLoadException.java
-        │               │   ├── model
-        │               │   │   ├── agent
-        │               │   │   │   ├── Agent.java
-        │               │   │   │   ├── AgentType.java
-        │               │   │   │   ├── PatrolAgent.java
-        │               │   │   │   └── RefuelAgent.java
-        │               │   │   ├── geometry
-        │               │   │   │   ├── Coordinate.java
-        │               │   │   │   └── Direction.java
-        │               │   │   ├── map
-        │               │   │   │   ├── Cell.java
-        │               │   │   │   ├── GameMap.java
-        │               │   │   │   ├── Spot.java
-        │               │   │   │   ├── TerrainType.java
-        │               │   │   │   ├── TrafficLevel.java
-        │               │   │   │   └── UdonType.java
-        │               │   │   ├── match
-        │               │   │   │   ├── MatchConfig.java
-        │               │   │   │   ├── MatchState.java
-        │               │   │   │   └── MatchStatus.java
-        │               │   │   ├── movement
-        │               │   │   │   ├── Action.java
-        │               │   │   │   ├── ActionType.java
-        │               │   │   │   ├── MovementCost.java
-        │               │   │   │   └── MoveResult.java
-        │               │   │   ├── score
-        │               │   │   │   ├── ScoreBoard.java
-        │               │   │   │   └── TeamScore.java
-        │               │   │   ├── team
-        │               │   │   │   ├── CollectResult.java
-        │               │   │   │   └── Team.java
-        │               │   │   └── traffic
-        │               │   │       ├── TrafficFlow.java
-        │               │   │       ├── TrafficHistory.java
-        │               │   │       ├── TrafficLevel.java
-        │               │   │       └── TrafficTracker.java
-        │               │   └── service
-        │               │       ├── ActionValidator.java
-        │               │       ├── AgentSpawnService.java
-        │               │       ├── GeneratedMap.java
-        │               │       └── HexGridGenerator.java
-        │               └── infrastructure
-        │                   ├── configuration
-        │                   │   ├── AppConfig.java
-        │                   │   └── WebConfig.java
-        │                   └── util
-        │                       └── FileUtils.java
-        └── resources
-            ├── application.yml
-            ├── match_config.txt
-            └── sample.txt
+├── pom.xml                                   # Parent POM
+├── server                                    # Spring Boot Server Module
+│   ├── pom.xml
+│   └── src
+│       ├── main
+│       │   ├── java/com/naprock/hexudon
+│       │   │   ├── adapter/in/rest               # REST Controllers
+│       │   │   ├── adapter/in/initializer        # Startup command run
+│       │   │   ├── adapter/out/persistence       # In-memory storage repository
+│       │   │   ├── adapter/out/loader            # File config loader
+│       │   │   ├── application/port              # Inbound/Outbound Ports
+│       │   │   ├── application/service           # MatchApplicationService
+│       │   │   ├── domain/model/agent            # PatrolAgent, RefuelAgent, Agent abstract
+│       │   │   ├── domain/model/geometry         # Coordinate, Direction
+│       │   │   ├── domain/model/map              # GameMap, Cell, Spot
+│       │   │   ├── domain/model/match            # MatchState, MatchConfig
+│       │   │   ├── domain/model/traffic          # TrafficTracker, TrafficHistory
+│       │   │   ├── domain/model/score            # ScoreBoard, TeamScore
+│       │   │   └── infrastructure/configuration  # WebConfig, SchedulerConfig
+│       │   └── resources
+│       │       ├── application.yml           # Spring Boot parameters
+│       │       └── match_config.txt          # Match engine rules configuration
+│       └── test                              # Test classes (JUnit 5, ArchUnit)
+└── hexudon-monitor                           # Frontend Dashboard React App
+    ├── index.html
+    ├── package.json
+    ├── vite.config.ts
+    └── src
+        ├── components                        # SVG grid, score boards, controls
+        ├── pages                             # Route-based dashboard layouts
+        ├── stores                            # Zustand global state hooks
+        └── main.tsx                          # App Entrypoint
 ```
 
-### Giải thích các package chính:
-*   `adapter`: Triển khai các thành phần cấu hình và giao diện kết nối cụ thể (REST endpoints, persistence memory, loaders).
-*   `application`: Quản lý các logic chuyển đổi dữ liệu DTO, định nghĩa UseCases (in/out ports) và cài đặt lớp nghiệp vụ ứng dụng điều phối chính.
-*   `domain`: Mô hình hóa các thực thể cốt lõi, Value Objects và thuật toán vận hành trò chơi (di chuyển, luật chơi kẹt xe, tính toán điểm số).
-*   `infrastructure`: Chứa cấu hình CORS, Spring Context và các helper class đọc ghi file chung.
-
 ---
 
-## Core Concepts
+## Build & Run
 
-Dưới đây là mô tả chi tiết các thành phần chính thực sự tồn tại trong mã nguồn:
+### Prerequisites
+- **Java Development Kit (JDK) 21** or later
+- **Maven 3.9.x** or later
+- **Node.js 18+** & **npm**
 
-### Domain Model / Entity
-*   **MatchState (Aggregate Root):** Quản lý trạng thái vòng đời trận đấu (`status`), vòng lặp các lượt chơi (`currentTurn`), thời gian, danh sách các đội chơi, bản đồ trò chơi, lịch sử giao thông và bảng điểm. Cung cấp phương thức `finishTurn(config)` để thực thi từng bước đi cho tất cả Agent của các đội, cập nhật bảng điểm, mật độ giao thông và chuyển lượt chơi.
-*   **Team:** Đại diện cho một đội chơi đăng ký tham gia, quản lý danh sách Agent thuộc đội. Cung cấp phương thức điều khiển Agent thực thi hành động (`executeStep`) và tính năng tự động tiếp nhiên liệu cho PatrolAgent (`autoRefuel`).
-*   **Agent (Abstract Class) & Subclasses (`PatrolAgent`, `RefuelAgent`):** Thực thể đại diện cho các nhân vật di động trên bản đồ.
-    *   `Agent` quản lý vị trí hiện tại, lượng nhiên liệu (`fuel`), số bước đi còn lại (`remainingSteps`), và danh sách các hành động dự kiến thực hiện trong lượt.
-    *   `PatrolAgent` có khả năng thu hoạch mì Udon (`collectUdon`) và tiêu hao cả nhiên liệu lẫn bước đi khi di chuyển.
-    *   `RefuelAgent` không tiêu hao nhiên liệu khi đi, có khả năng nạp đầy nhiên liệu cho PatrolAgent đứng cùng ô tọa độ.
-*   **Spot:** Điểm lưu trữ mì Udon trên bản đồ. Để đảm bảo tính công bằng, lượng tồn kho của Spot được quản lý theo từng đội chơi riêng biệt (`teamUdonStocks`), đội này lấy Udon không làm hao hụt Udon của đội khác.
-*   **TeamScore:** Theo dõi kết quả thi đấu của mỗi đội chơi gồm: danh sách các loại mì đã thu hoạch được, lịch sử thu hoạch theo lượt, tổng số bát mì phục vụ và tổng thời gian phản hồi.
+### 1. Backend Server (`hexudon-server`)
 
-### Value Object
-*   **Coordinate:** Biểu diễn tọa độ của lưới lục giác trong hệ tọa độ Odd-R offset. Cung cấp thuật toán xác định ô kề cạnh (`isAdjacentTo`) và đo khoảng cách hex grid (`distanceTo`) bằng cách chuyển đổi sang hệ tọa độ Cube (`CubeCoordinate`).
-*   **Direction:** Enum biểu diễn 6 hướng di chuyển hợp lệ trên lưới lục giác ngang ngang (Odd-R).
-*   **Cell:** Đại diện cho một ô lưới có vị trí `Coordinate` và loại địa hình `TerrainType`. Ô có địa hình là `POND` thì Agent không thể đi vào (`isWalkable() == false`).
-*   **MovementCost:** Mô tả chi phí bước đi và nhiên liệu cần tiêu thụ khi Agent di chuyển vào ô đích.
-*   **MoveResult:** Lưu kết quả thực thi một bước đi (Thành công/Thất bại) cùng tọa độ cuối cùng của Agent.
-*   **Action:** Hành động di chuyển hoặc chờ của Agent kèm tọa độ đích tương ứng.
-*   **UdonType:** Record loại mì Udon (`TANUKI`, `KITSUNE`, `TEMPURA`, `BEEF`).
-*   **TrafficFlow:** Bản ghi lưu giữ số lượt Agent di chuyển qua hoặc đứng lại ở ô đường đi (`ROAD`) ở lượt hiện tại và lượt trước đó.
+To build the Maven project, navigate to the parent folder and run:
+```bash
+mvn clean install
+```
 
-### Domain Service
-*   **HexGridGenerator:** Tạo ngẫu nhiên lưới lục giác với tỷ lệ địa hình phân bổ: PLAIN (65%), MOUNTAIN (20%), ROAD (5%), POND (10%). Bố trí ngẫu nhiên các điểm chứa mì Udon (Spot) trên các ô không phải POND hay MOUNTAIN với khoảng cách kề nhau tối thiểu là 3.
-*   **AgentSpawnService:** Sinh ngẫu nhiên tọa độ xuất phát hợp lệ (chỉ trên các ô `isWalkable() == true`) và đảm bảo các Agent không xuất phát trùng vị trí.
-*   **ActionValidator:** Thẩm định danh sách chuỗi hành động mà đội chơi gửi lên. Sử dụng một tác tử giả lập để chạy thử hành động nhằm phát hiện hành vi lỗi (ví dụ: đi vào ô không đi được, đi không kề cạnh) trước khi cho phép gán chính thức các hành động vào Agent thật.
+To run the Spring Boot server (running on `http://localhost:8080` by default):
+```bash
+# From the project root
+mvn spring-boot:run -pl server
+```
+Or run the built `.jar` file directly:
+```bash
+java -jar server/target/hexudon-server-1.0.0.jar
+```
 
-### Use Case (Inbound Port) & Outbound Port
-*   **Use Cases:** `InitializeMatchUseCase` (Khởi tạo bản đồ và trận đấu), `GetMatchConfigUseCase` (Lấy cấu hình trận đấu), `GetMatchStateUseCase` (Lấy trạng thái lượt hiện tại), `RegisterTeamUseCase` (Đăng ký đội chơi mới), `SubmitActionsUseCase` (Gửi hành động cho các Agent).
-*   **Outbound Ports:** `MatchConfigLoaderPort` (Tải cấu hình), `MatchStateStorePort` (Lưu/đọc trạng thái trận đấu).
+### 2. Frontend Monitor (`hexudon-monitor`)
 
-### Controller / API
-*   `MatchController`: Cung cấp các REST endpoints để tương tác với game.
+To install packages and run the development server locally:
+```bash
+cd hexudon-monitor
+npm install
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your web browser. 
 
----
-
-## API Documentation
-
-Mã nguồn `MatchController.java` cung cấp các API RESTful sau đây phục vụ cho việc thi đấu:
-
-### 1. Đăng ký đội chơi
-*   **HTTP Method:** `POST`
-*   **Path:** `/api/match/register`
-*   **Request Body (`TeamRegisterRequest`):**
-    ```json
-    {
-      "teamName": "TeamA",
-      "amountPatrol": 1,
-      "amountRefuel": 1
-    }
-    ```
-*   **Phản hồi:** `201 Created`
-*   **Mục đích:** Đăng ký đội chơi tham gia vào trận đấu. Hệ thống sẽ sinh ngẫu nhiên vị trí xuất phát cho các Agent của đội dựa trên số lượng Patrol và Refuel đã yêu cầu.
-
-### 2. Xem cấu hình trận đấu
-*   **HTTP Method:** `GET`
-*   **Path:** `/api/match/config`
-*   **Phản hồi (`MatchConfigResponse`):** Trả về kích thước bản đồ, thông tin chi tiết của tất cả các ô lưới (`cells`) kèm địa hình, vị trí các điểm Udon (`spots`), số lượng Agent tối đa, dung tích bình nhiên liệu và số bước di chuyển tối đa trong một lượt.
-*   **Mục đích:** Giúp client tải thông tin cấu trúc bản đồ ban đầu để chuẩn bị chiến thuật.
-
-### 3. Xem trạng thái trận đấu hiện tại
-*   **HTTP Method:** `GET`
-*   **Path:** `/api/match/state`
-*   **Request Header:** `X-Team-Name: <tên_đội_chơi>` (Bắt buộc)
-*   **Phản hồi (`MatchStateResponse`):** Trả về trạng thái trận đấu (`WAITING`, `PLAYING`, `FINISHED`), lượt chơi hiện tại, thông tin chi tiết các Agent thuộc sở hữu của đội yêu cầu, mức độ giao thông trên các ô ROAD ở lượt trước, thông số tồn kho Udon tại các Spot của đội, và điểm số của toàn bộ các đội.
-*   **Mục đích:** Đội chơi lấy thông tin cập nhật sau từng lượt để tính toán hành động tiếp theo.
-
-### 4. Gửi hành động của các Agent trong lượt hiện tại
-*   **HTTP Method:** `POST`
-*   **Path:** `/api/match/actions`
-*   **Request Header:** `X-Team-Name: <tên_đội_chơi>` (Bắt buộc)
-*   **Request Body (`SubmitActionRequest`):**
-    ```json
-    {
-      "actions": [
-        {
-          "agentId": "A1",
-          "actionType": "MOVE",
-          "coordinate": {
-            "x": 2,
-            "y": 3
-          }
-        }
-      ]
-    }
-    ```
-*   **Phản hồi:** `202 Accepted`
-*   **Mục đích:** Đội chơi gửi chuỗi hành động di chuyển/chờ cho từng Agent của mình trong lượt đi hiện tại.
+The dashboard provides a **Mock vs Live Mode** toggle on the sidebar:
+- **Mock Mode** (Default): Visualizes simulated mock data without needing the backend.
+- **Live Mode**: Polls the Spring Boot server endpoints at `http://localhost:8080` every 2 seconds.
 
 ---
 
 ## Configuration
 
-*   **Cấu hình môi trường Spring Boot:** Thiết lập trong file `src/main/resources/application.yml` (ví dụ: cổng mạng HTTP mặc định là `8080`).
-*   **Cấu hình thông số trận đấu:** Thiết lập trong file `src/main/resources/match_config.txt`. Các thông số bao gồm:
-    *   `mapWidth`, `mapHeight`: Kích thước bản đồ.
-    *   `maxTurns`: Số lượt đi tối đa.
-    *   `maxTeams`: Số lượng đội tối đa tham gia.
-    *   `agentsPerTeam`: Số lượng tác tử tối đa của mỗi đội.
-    *   `initialFuel`, `maxFuel`: Lượng xăng khởi động và xăng tối đa của tác tử.
-    *   `plainStepCost`, `mountainStepCost`, `roadStepCost`: Chi phí di chuyển bằng điểm bước đi theo địa hình.
-    *   `plainFuelCost`, `mountainFuelCost`, `roadFuelCost`: Chi phí di chuyển tiêu hao xăng theo địa hình của PatrolAgent.
-    *   `maxStepsPerTurn`: Số bước đi tối đa mỗi lượt đấu.
-    *   `initialSpotUdonStock`: Lượng Udon khởi tạo ban đầu tại mỗi Spot.
+The simulation engine is configured via two files under `server/src/main/resources`:
+
+1. **`application.yml`**:
+   - `server.port`: Web server HTTP port (default: `8080`).
+   - `match.scheduler.interval`: Frequency (in ms) of turn expiration checks (default: `1000`).
+
+2. **`match_config.txt`**:
+   Sets match constraints and game rules. Parsed at startup by `FileMatchConfigLoader`.
+   - `mapWidth` / `mapHeight`: Grid dimensions.
+   - `maxTurns`: Number of turns before the match automatically finishes.
+   - `maxTeams`: Max number of teams allowed to register.
+   - `agentsPerTeam`: Mandatory agent count per team.
+   - `maxFuel`: Max fuel capacity.
+   - `maxStepsPerTurn`: Step count limit assigned to agents at the start of a turn.
+   - `turnTimeLimitMs`: Time limit (in milliseconds) for a team to submit actions for a turn.
+   - `initialSpotUdonStock`: Quantity of Udon noodles initialized at each Spot.
 
 ---
 
-## How To Run
+## REST API Endpoints
 
-### Yêu cầu hệ thống (Requirement)
-*   Java Development Kit (JDK) phiên bản 21 hoặc mới hơn.
-*   Apache Maven 3.9.x hoặc mới hơn.
+The [MatchController](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/adapter/in/rest/MatchController.java) exposes the following API endpoints:
 
-### Các lệnh thực thi thực tế từ project:
-*   **Lệnh dọn dẹp và đóng gói dự án (Build):**
-    ```bash
-    mvn clean package
-    ```
-*   **Lệnh chạy server cục bộ (Run):**
-    ```bash
-    mvn spring-boot:run
-    ```
-*   **Lệnh chạy các bài kiểm thử tự động (Test):**
-    ```bash
-    mvn test
-    ```
+| Method | Path | Required Header | Request Body DTO | Response Body DTO | Status | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **POST** | `/api/match/register` | None | [TeamRegisterRequest](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/team/TeamRegisterRequest.java) | [TeamResponse](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/team/TeamResponse.java) | `201 Created` | Registers a team. Automatically spawns requested `Patrol` and `Refuel` agents at randomized, walk-accessible, non-colliding cells. |
+| **GET** | `/api/match/config` | None | None | [MatchConfigResponse](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/match/MatchConfigResponse.java) | `200 OK` | Retrieves map grid cells, terrain types, spot coordinates, and match rules/constraints. |
+| **GET** | `/api/match/state` | `X-Team-Name` | None | [MatchStateResponse](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/match/MatchStateResponse.java) | `200 OK` | Retrieves match status, current turn index, scores, traffic overlays, and details of agents owned by the request's team. |
+| **POST** | `/api/match/actions` | `X-Team-Name` | [SubmitActionRequest](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/match/SubmitActionRequest.java) | None | `202 Accepted` | Submits a queue of move/wait actions for the team's agents. It is validated via simulation prior to acceptance. |
+
+---
+
+## Core Simulation Engine & Domain Model
+
+### Hex Grid Geometry
+The grid layout uses a horizontal **Odd-R offset hexagonal grid** coordinate representation (represented by [Coordinate](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/geometry/Coordinate.java)).
+- Columns correspond to the `x` axis, and Rows correspond to the `y` axis.
+- Odd rows are shifted by half a hex width.
+- Hex grid distance calculations (in `distanceTo(other)`) convert coordinates into a **3D Cube Coordinate** model `Cube(x, y, z)` before applying the standard distance formula:
+  \[\text{Distance} = \max(|dx|, |dy|, |dz|)\]
+
+### Terrain & Udon Spot Generation
+The map is dynamically generated by [HexGridGenerator](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/service/HexGridGenerator.java) at initialization:
+- **Terrain Cell Types**: Plain (`PLAIN` - 65%), Mountain (`MOUNTAIN` - 20%), Road (`ROAD` - 5%), and Pond (`POND` - 10%).
+- **Udon Spots**: Generated on walkable cells (`PLAIN` or `ROAD`). The number of spots generated equals:
+  \[\max(1, \frac{\text{Width} \times \text{Height}}{50})\]
+  A minimum spacing distance of **3 hexes** is enforced between spots. Spot types are randomized: `TANUKI`, `KITSUNE`, `TEMPURA`, or `BEEF`.
+
+### Turn Lifecycle & Scheduler
+The match states are: `WAITING`, `PLAYING`, and `FINISHED`.
+- At startup, the server automatically generates the map and remains in the `WAITING` state.
+- When teams are registered and the match starts, the status shifts to `PLAYING`.
+- [SchedulerConfig](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/infrastructure/configuration/SchedulerConfig.java) runs a periodic check (interval defined in `application.yml`). When the time delta since `turnStartTime` exceeds `turnTimeLimitMs`, the use case triggers `finishTurn(config)`:
+  1. Iterates from the maximum step count `maxStepsPerTurn` down to step `1`.
+  2. Resolves team auto-refueling checks.
+  3. Executes queued agent steps (`executeAction`) and records movement paths and udon collections.
+  4. Applies collected udon increments to the scoreboard.
+  5. Computes traffic flow updates based on agent paths.
+  6. Resets agent step allocations, regenerates daily udon spot stocks, updates cell step costs based on traffic levels, and increments the turn count.
+
+### Agent Types & Support Mechanics
+- **PatrolAgent**: Tracks a list of spots visited during the current turn. Visited spots are reset at the beginning of each turn. PatrolAgents consume fuel on movement according to terrain cost.
+- **RefuelAgent**: Does not consume fuel. Provides refueling support.
+- **Auto-Refueling**: At each step iteration of `finishTurn`, if a `RefuelAgent` and a `PatrolAgent` belonging to the same team occupy the exact same coordinate, the `PatrolAgent`'s fuel tank is immediately refilled to `maxFuel`.
+
+### Traffic & Congestion Mechanics
+Only cells of type `ROAD` are tracked for traffic updates by [TrafficTracker](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/traffic/TrafficTracker.java):
+- Every time an agent moves through or stops at a `ROAD` coordinate, the coordinate's step count is incremented.
+- At the end of the turn, the traffic rate is calculated as:
+  \[\text{Traffic Rate} = \frac{\text{Previous Steps} + \text{Current Steps}}{\text{Total Registered Teams}}\]
+- Traffic status transitions dynamically based on thresholds:
+  - $\text{Rate} < 2.0$: `NORMAL`
+  - $2.0 \le \text{Rate} < 4.0$: `BUSY`
+  - $\text{Rate} \ge 4.0$: `CONGESTED`
+- Congestion increases the step movement costs for that road cell on subsequent turns.
+
+### Scoring System
+[TeamScore](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/score/TeamScore.java) aggregates team achievements:
+- Tracks unique Udon noodle types collected.
+- Computes accumulated daily collected udons.
+- Tracks servings completed and records response time latency across requests.
 
 ---
 
 ## Testing
 
-*   **Testing Framework:** Dự án đã cấu hình thư viện JUnit 5, Mockito và ArchUnit (kiểm thử kiến trúc) trong file `pom.xml`.
-*   **Cách chạy kiểm thử:** Sử dụng lệnh `mvn test` trên terminal.
-*   **Các nhóm test hiện có:** Thư mục `src/test/java` hiện tại đang trống (chưa có lớp kiểm thử cụ thể nào được viết).
+The codebase includes an extensive testing package with **126 automated test cases**:
+- **Unit Tests**: Verify domains, coordinate transformations, and state updates (e.g., [AgentTest](file:///d:/Documents/GitHub/hexudon/server/src/test/java/com/naprock/hexudon/domain/model/agent/AgentTest.java), [CoordinateTest](file:///d:/Documents/GitHub/hexudon/server/src/test/java/com/naprock/hexudon/domain/model/geometry/CoordinateTest.java)).
+- **Integration Tests**: Verify adapter logic, API serialization, and configuration file parsing.
+- **Architectural Tests**: [ArchitectureTest](file:///d:/Documents/GitHub/hexudon/server/src/test/java/com/naprock/hexudon/ArchitectureTest.java) uses **ArchUnit** to enforce separation boundary rules between the domain core, application, and external adapter layers.
+
+To run the full test suite locally:
+```bash
+mvn test
+```
 
 ---
 
-## Development Notes
+## Known Limitations & Engine Bugs
 
-### Luồng xử lý chính (Main Processing Flow)
-1.  **Giai đoạn khởi chạy ứng dụng:** `MatchInitializerRunner` gọi UseCase `initializeMatch()`. Bản đồ lục giác được sinh ngẫu nhiên bởi `HexGridGenerator`, các chi phí di chuyển ban đầu và lưu lượng giao thông kề cạnh trên các ô ROAD được thiết lập bằng 0 trong `TrafficHistory`.
-2.  **Đăng ký đội chơi:** API `registerTeam` nhận tên đội, sinh ngẫu nhiên tọa độ xuất phát cách biệt cho các Agent thông qua `AgentSpawnService` và lưu thông tin đội chơi vào bộ nhớ.
-3.  **Bắt đầu trận đấu:** Khi trận đấu bắt đầu (`start`), trạng thái đổi sang `PLAYING`, toàn bộ Agent được nạp đầy xăng và cấp đầy đủ số bước đi tối đa cho lượt 1. Tồn kho Udon tại các Spot được khôi phục.
-4.  **Vòng lặp lượt chơi (Turn Loop):**
-    *   Các đội chơi gọi API `getMatchState` để xem hiện trạng, sau đó lập trình tính toán hành động và gửi lên qua API `submitActions`.
-    *   Khi lượt đi hoàn tất (kết thúc thời gian phản hồi hoặc kích hoạt chuyển lượt), `MatchState.finishTurn` sẽ chạy mô phỏng di chuyển của tất cả tác tử qua từng bước từ bước lớn nhất về bước 1.
-    *   Hệ thống kiểm tra tiếp nhiên liệu tự động (`autoRefuel`) khi PatrolAgent đứng chung tọa độ với RefuelAgent.
-    *   Thực hiện hành động di chuyển của Agent, tiêu hao tài nguyên (bước đi và nhiên liệu).
-    *   PatrolAgent thực hiện thu thập mì Udon tại các ô Spot chứa Udon hợp lệ (nếu chưa thu hoạch Spot đó trong ngày), cập nhật lượng mì thu hoạch được.
-    *   Cập nhật điểm số thu hoạch được vào `ScoreBoard`.
-    *   Cập nhật lịch sử giao thông (`TrafficHistory`) trên các ô ROAD dựa trên số lượng Agent đã đi qua hoặc đứng lại ở ô đó, từ đó tính toán lại chi phí di chuyển (bước đi) cho các lượt chơi tiếp theo.
-    *   Reset bước đi của các Agent, khôi phục tồn kho Udon tại các Spot và tăng số lượt chơi hiện tại (`currentTurn`). Khi vượt quá `maxTurns`, trạng thái đổi sang `FINISHED`.
+> [!WARNING]
+> The simulation engine contains major anomalies and bugs in its core physics and movement logic. These behaviors are verified by unit tests (e.g. `shouldFailDueToProductionFuelBug` and `shouldConsumeStepAndFailDueToProductionLogic`) and define the current engine behavior:
 
-### Những điểm cần lưu ý khi đọc mã nguồn
-*   **Vị trí kề cạnh trên lưới lục giác ngang Odd-R:** Cách xác định ô láng giềng kề cạnh phụ thuộc vào dòng chẵn hay dòng lẻ của ô hiện tại (`y % 2 != 0`). Việc tính toán được thực hiện chi tiết trong phương thức `isAdjacentTo` và `getNeighbor` của lớp `Coordinate`, và `getDx` / `getDy` của enum `Direction`.
-*   **Ràng buộc logic tại Action.java:** Hành động chờ (`ActionType.WAIT`) trong hàm kiểm tra hợp lệ `validate` của `Action` quy định `targetCoordinate` phải là `null`. Tuy nhiên, phương thức static factory khởi tạo hành động chờ là `Action.stay(Coordinate targetCoordinate)` lại truyền tọa độ đích (không null) vào constructor. Điều này có thể dẫn đến ngoại lệ `GameRuleViolationException` nếu sử dụng phương thức `stay` để khởi tạo hành động chờ.
-*   **Lưu lượng giao thông kẹt xe:** Chỉ có các ô có địa hình là `ROAD` mới được theo dõi lưu lượng giao thông. Việc tính toán lưu lượng giao thông ở một ô dựa trên tổng số lượt Agent dừng lại hoặc đi qua ô đó ở lượt hiện tại và lượt trước đó, chia cho tổng số đội chơi tối đa.
+1. **Walkable Cell Movement Inversion**:
+   In [Agent.java](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/agent/Agent.java#L188-L193), movement checks fail if a destination cell's `isWalkable()` returns `true` (meaning plain, road, and mountain terrain are inaccessible to move actions). Movements only proceed if the destination cell is **not** walkable (meaning `RefuelAgent` can only successfully move into `POND` coordinates).
+2. **PatrolAgent Fuel Consumption Failure**:
+   In [Agent.java](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/agent/Agent.java#L160-L169), the `consumeFuel` helper updates fuel values but returns `false` on success. In `PatrolAgent.executeAction`, this causes the agent's movement action to fail immediately whenever it successfully consumes fuel.
+3. **Empty Movement Costs Map**:
+   The `movementCosts` map on `GameMap` is never initialized or populated with map coordinates at startup. As a result, when an agent attempts to move, calling `movementCosts.get(destination)` returns `null` and triggers a `NullPointerException`. (Unit tests bypass this by manually writing values via reflection).
+4. **Action Order Ignored**:
+   The `order` field in [ActionRequest](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/dto/match/ActionRequest.java#L15) is ignored by [MatchMapper.toDomainMap](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/application/mapper/MatchMapper.java#L36). Agent actions are executed strictly in the order they are listed in the JSON array.
+5. **Empty Packages**:
+   The packages `websocket` (under `adapter/in`) and `publisher` (under `adapter/out`) contain no files. There is no WebSocket connectivity implemented; HTTP polling is used instead.
+6. **In-Memory Store Only**:
+   The `InMemoryMatchStateRepository` stores match records as a single singleton bean instance without database backing. All game data is reset when the server application restarts.
+7. **Action Validation STAY bug**:
+   In [Action.java](file:///d:/Documents/GitHub/hexudon/server/src/main/java/com/naprock/hexudon/domain/model/movement/Action.java#L29-L34), `stay(Coordinate)` initializes a `WAIT` action type while passing a non-null target coordinate. However, the constructor validation logic in `Action` throws a `GameRuleViolationException` if a `WAIT` action has a target coordinate that is not `null`.
+
+---
+
+## Contribution Guide
+
+To contribute:
+1. Ensure your local environment matches the [Technology Stack](#technology-stack).
+2. Code changes to the domain core should not introduce external dependencies.
+3. Write matching unit tests and verify layer architecture bounds using `mvn test`.

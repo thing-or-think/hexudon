@@ -4,6 +4,7 @@ import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
+import com.naprock.hexudon.application.dto.team.TeamResponse;
 import com.naprock.hexudon.application.port.in.GetMatchConfigUseCase;
 import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
 import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
@@ -35,10 +36,10 @@ public class MatchController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public void registerTeam(
+    public TeamResponse registerTeam(
             @Valid @RequestBody TeamRegisterRequest request
     ) {
-        registerTeamUseCase.registerTeam(request);
+        return registerTeamUseCase.registerTeam(request);
     }
 
     @GetMapping("/config")
