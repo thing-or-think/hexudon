@@ -2,33 +2,34 @@ package com.naprock.hexudon.domain.model.traffic;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
-
-import java.util.Objects;
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
 
 public class TrafficFlow {
 
     private final Coordinate coordinate;
-    private final int previousVehicleCount;
-    private final int currentVehicleCount;
-    private final double calculatedFlow;
-    private final TrafficLevel trafficLevel;
 
-    public TrafficFlow(Coordinate coordinate) {
+    private int previousStaySteps;
+    private int currentStaySteps;
+
+    private TrafficLevel trafficLevel;
+
+
+    public TrafficFlow(
+            Coordinate coordinate
+    ) {
         this(
                 coordinate,
                 0,
                 0,
-                0.0,
                 TrafficLevel.NORMAL
         );
     }
 
+
     public TrafficFlow(
             Coordinate coordinate,
-            int previousVehicleCount,
-            int currentVehicleCount,
-            double calculatedFlow,
+            int previousStaySteps,
+            int currentStaySteps,
             TrafficLevel trafficLevel
     ) {
 
@@ -39,24 +40,17 @@ public class TrafficFlow {
             );
         }
 
-        if (previousVehicleCount < 0) {
+        if (previousStaySteps < 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "Previous vehicle count must not be negative."
+                    "Previous stay steps must not be negative."
             );
         }
 
-        if (currentVehicleCount < 0) {
+        if (currentStaySteps < 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "Current vehicle count must not be negative."
-            );
-        }
-
-        if (calculatedFlow < 0.0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Calculated flow must be greater than or equal to 0."
+                    "Current stay steps must not be negative."
             );
         }
 
@@ -67,69 +61,63 @@ public class TrafficFlow {
             );
         }
 
+
         this.coordinate = coordinate;
-        this.previousVehicleCount = previousVehicleCount;
-        this.currentVehicleCount = currentVehicleCount;
-        this.calculatedFlow = calculatedFlow;
+        this.previousStaySteps = previousStaySteps;
+        this.currentStaySteps = currentStaySteps;
         this.trafficLevel = trafficLevel;
     }
 
-    public Coordinate getCoordinate() {
+
+    public void increaseCurrentStaySteps() {
+        this.currentStaySteps++;
+    }
+
+
+    public void moveCurrentToPrevious() {
+
+        this.previousStaySteps = this.currentStaySteps;
+        this.currentStaySteps = 0;
+    }
+
+
+    public void updateTrafficLevel(
+            TrafficLevel trafficLevel
+    ) {
+
+        if (trafficLevel == null) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Traffic level must not be null."
+            );
+        }
+
+        this.trafficLevel = trafficLevel;
+    }
+
+
+    public Coordinate coordinate() {
         return coordinate;
     }
 
-    public int getPreviousVehicleCount() {
-        return previousVehicleCount;
-    }
 
-    public int getCurrentVehicleCount() {
-        return currentVehicleCount;
-    }
-
-    public double getCalculatedFlow() {
-        return calculatedFlow;
+    public TrafficLevel trafficLevel() {
+        return trafficLevel;
     }
 
     public TrafficLevel getTrafficLevel() {
         return trafficLevel;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (!(o instanceof TrafficFlow that)) {
-            return false;
-        }
-
-        return previousVehicleCount == that.previousVehicleCount
-                && currentVehicleCount == that.currentVehicleCount
-                && Double.compare(that.calculatedFlow, calculatedFlow) == 0
-                && Objects.equals(coordinate, that.coordinate)
-                && trafficLevel == that.trafficLevel;
+    public int getCurrentStaySteps() {
+        return currentStaySteps;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(
-                coordinate,
-                previousVehicleCount,
-                currentVehicleCount,
-                calculatedFlow,
-                trafficLevel
-        );
+    public int getPreviousStaySteps() {
+        return previousStaySteps;
     }
 
-    @Override
-    public String toString() {
-        return "TrafficFlow{" +
-                "coordinate=" + coordinate +
-                ", previousVehicleCount=" + previousVehicleCount +
-                ", currentVehicleCount=" + currentVehicleCount +
-                ", calculatedFlow=" + calculatedFlow +
-                ", trafficLevel=" + trafficLevel +
-                '}';
+    public Coordinate getCoordinate() {
+        return coordinate;
     }
 }

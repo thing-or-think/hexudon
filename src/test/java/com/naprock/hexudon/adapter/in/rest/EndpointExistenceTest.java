@@ -38,7 +38,6 @@ class EndpointExistenceTest {
 
         boolean hasGetState = false;
         boolean hasPostRegister = false;
-        boolean hasPostStart = false;
         boolean hasPostActions = false;
 
         for (Method method : clazz.getDeclaredMethods()) {
@@ -70,14 +69,6 @@ class EndpointExistenceTest {
                 if (hasMapping(
                         mapping.value(),
                         mapping.path(),
-                        "/start"
-                )) {
-                    hasPostStart = true;
-                }
-
-                if (hasMapping(
-                        mapping.value(),
-                        mapping.path(),
                         "/actions"
                 )) {
                     hasPostActions = true;
@@ -87,7 +78,6 @@ class EndpointExistenceTest {
 
         final boolean finalHasGetState = hasGetState;
         final boolean finalHasPostRegister = hasPostRegister;
-        final boolean finalHasPostStart = hasPostStart;
         final boolean finalHasPostActions = hasPostActions;
 
         assertAll(
@@ -98,10 +88,6 @@ class EndpointExistenceTest {
                 () -> assertTrue(
                         finalHasPostRegister,
                         "MatchController must have POST mapping for /register"
-                ),
-                () -> assertTrue(
-                        finalHasPostStart,
-                        "MatchController must have POST mapping for /start"
                 ),
                 () -> assertTrue(
                         finalHasPostActions,

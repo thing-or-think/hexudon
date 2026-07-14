@@ -1,17 +1,13 @@
 package com.naprock.hexudon.domain.service;
 
-import com.naprock.hexudon.domain.model.entity.GameMap;
-import com.naprock.hexudon.domain.model.entity.Spot;
-import com.naprock.hexudon.domain.model.score.UdonType;
-import com.naprock.hexudon.domain.model.valueobject.Cell;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
-import com.naprock.hexudon.domain.valueobject.TerrainType;
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.map.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class HexGridGenerator {
-
-    private final Random random;
 
     private static final int PLAIN_RATE = 65;
     private static final int MOUNTAIN_RATE = 20;
@@ -21,36 +17,71 @@ public class HexGridGenerator {
     private static final int SPOT_RATE = 50;
     private static final int MIN_SPOT_DISTANCE = 3;
 
+    private final Random random;
+
 
     public HexGridGenerator() {
-        this.random = new Random();
+        this(new Random());
     }
 
+
     public HexGridGenerator(Random random) {
+
+        if (random == null) {
+            throw new IllegalArgumentException(
+                    "Random must not be null"
+            );
+        }
+
         this.random = random;
     }
 
-    public void generateMap(int width, int height, GameMap gameMap) {
 
-        if (width <= 0 || height <= 0) {
-            throw new IllegalArgumentException(
-                    "Map size must be positive"
-            );
-        }
+    public GeneratedMap generate(
+            int width,
+            int height,
+            List<String> teamNames,
+            int initialSpotUdonStock
+    ) {
 
-        if (gameMap == null) {
-            throw new IllegalArgumentException(
-                    "GameMap must not be null"
-            );
-        }
+        validateSize(width, height);
+
+        List<Cell> cells =
+                createCells(
+                        width,
+                        height
+                );
+
+
+        List<Spot> spots =
+                createSpots(
+                        width,
+                        height,
+                        cells,
+                        teamNames,
+                        initialSpotUdonStock
+                );
+
+
+        return new GeneratedMap(
+                cells,
+                spots
+        );
     }
 
 
-    private void createCells(int width, int height, GameMap gameMap) {
+    private List<Cell> createCells(
+            int width,
+            int height
+    ) {
+
+        List<Cell> cells = new ArrayList<>();
 
         for (int y = 0; y < height; y++) {
+
             for (int x = 0; x < width; x++) {
-                gameMap.addCell(
+
+                cells.add(
                         new Cell(
                                 new Coordinate(x, y),
                                 generateRandomTerrainType()
@@ -58,55 +89,99 @@ public class HexGridGenerator {
                 );
             }
         }
+
+        return cells;
     }
 
 
-    private void createSpots(
+    private List<Spot> createSpots(
             int width,
             int height,
-            GameMap gameMap
+            List<Cell> cells,
+            List<String> teamNames,
+            int initialSpotUdonStock
     ) {
 
-        int spotCount =
+        int required =
                 calculateSpotCount(
                         width,
                         height
                 );
 
-        int created = 0;
 
-        int maxAttempt = spotCount * 20;
+        List<Spot> spots = new ArrayList<>();
+
+        int maxAttempt = required * 30;
         int attempt = 0;
 
-        while (created < spotCount && attempt < maxAttempt) {
 
-            Coordinate coordinate = randomCoordinate(width, height);
-            Cell cell = gameMap.getCell(coordinate);
+        while (
+                spots.size() < required
+                        &&
+                        attempt < maxAttempt
+        ) {
 
-            if (isValidSpotCell(cell)
-                    && !hasSpotNear(
-                    coordinate,
-                    gameMap
-            )) {
-                gameMap.addSpot(
-                        new Spot(coordinate,UdonType.random(random))
+            Coordinate coordinate =
+                    randomCoordinate(
+                            width,
+                            height
+                    );
+
+
+            Cell cell =
+                    findCell(
+                            cells,
+                            coordinate
+                    );
+
+
+            if (
+                    isValidSpotCell(cell)
+                            &&
+                            !hasNearbySpot(
+                                    coordinate,
+                                    spots
+                            )
+            ) {
+
+                spots.add(
+                        new Spot(
+                                coordinate,
+                                UdonType.random(random),
+                                teamNames,
+                                initialSpotUdonStock
+                        )
                 );
-                created++;
             }
+
             attempt++;
         }
+
+
+        if (spots.size() < required) {
+
+            throw new IllegalStateException(
+                    String.format(
+                            "Cannot generate required spots. Expected %d but created %d",
+                            required,
+                            spots.size()
+                    )
+            );
+        }
+
+
+        return spots;
     }
+
 
     private int calculateSpotCount(
             int width,
             int height
     ) {
 
-        int area = width * height;
-
         return Math.max(
                 1,
-                area / SPOT_RATE
+                (width * height) / SPOT_RATE
         );
     }
 
@@ -123,6 +198,22 @@ public class HexGridGenerator {
     }
 
 
+    private Cell findCell(
+            List<Cell> cells,
+            Coordinate coordinate
+    ) {
+
+        return cells.stream()
+                .filter(
+                        cell ->
+                                cell.coordinate()
+                                        .equals(coordinate)
+                )
+                .findFirst()
+                .orElse(null);
+    }
+
+
     private boolean isValidSpotCell(
             Cell cell
     ) {
@@ -131,39 +222,67 @@ public class HexGridGenerator {
             return false;
         }
 
-
-        return cell.getTerrainType() != TerrainType.POND
-                && cell.getTerrainType() != TerrainType.MOUNTAIN;
+        return cell.terrainType() != TerrainType.POND
+                &&
+                cell.terrainType() != TerrainType.MOUNTAIN;
     }
 
 
-    private boolean hasSpotNear(
+    private boolean hasNearbySpot(
             Coordinate coordinate,
-            GameMap gameMap
+            List<Spot> spots
     ) {
 
-        return gameMap.getSpots()
-                .stream()
+        return spots.stream()
                 .anyMatch(
                         spot ->
-                                spot.getCoordinate().distanceTo(coordinate) < MIN_SPOT_DISTANCE
+                                spot.getCoordinate()
+                                        .distanceTo(coordinate)
+                                        < MIN_SPOT_DISTANCE
                 );
     }
+
 
     private TerrainType generateRandomTerrainType() {
 
         int value = random.nextInt(100);
+
+
         if (value < PLAIN_RATE) {
             return TerrainType.PLAIN;
         }
+
+
         value -= PLAIN_RATE;
+
+
         if (value < MOUNTAIN_RATE) {
             return TerrainType.MOUNTAIN;
         }
+
+
         value -= MOUNTAIN_RATE;
+
+
         if (value < ROAD_RATE) {
             return TerrainType.ROAD;
         }
+
+
         return TerrainType.POND;
+    }
+
+
+    private void validateSize(
+            int width,
+            int height
+    ) {
+
+        if (width <= 0 || height <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Map size must be positive"
+            );
+        }
     }
 }

@@ -8,28 +8,13 @@ import org.springframework.context.annotation.Configuration;
 public class DomainBeanConfig {
 
     @Bean
-    public TrafficCalculator trafficCalculator() {
-        return new TrafficCalculator();
-    }
+    public AgentSpawnService agentSpawnService() { return new AgentSpawnService(); }
 
     @Bean
-    public MovementCostCalculator movementCostCalculator() {
-        return new MovementCostCalculator();
-    }
+    public ActionValidator actionValidator() { return new ActionValidator(); }
 
     @Bean
-    public RankingService rankingService() {
-        return new RankingService();
-    }
-
-    @Bean
-    HexGridGenerator hexGridGenerator() {
+    public HexGridGenerator hexGridGenerator() {
         return new HexGridGenerator();
     }
-
-    @Bean
-    MatchSimulationService matchSimulationService() {
-        return new MatchSimulationService();
-    }
-
 }

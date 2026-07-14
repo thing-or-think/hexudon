@@ -1,9 +1,8 @@
 package com.naprock.hexudon.adapter.in.rest;
 
-import com.naprock.hexudon.application.mapper.MatchMapper;
+import com.naprock.hexudon.application.port.in.GetMatchConfigUseCase;
 import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
 import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
-import com.naprock.hexudon.application.port.in.StartMatchUseCase;
 import com.naprock.hexudon.application.port.in.SubmitActionsUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,17 +36,14 @@ class MatchControllerReflectionTest {
         boolean hasRegisterTeamUseCase =
                 parameterTypes.contains(RegisterTeamUseCase.class);
 
-        boolean hasStartMatchUseCase =
-                parameterTypes.contains(StartMatchUseCase.class);
+        boolean hasGetMatchConfigUseCase =
+                parameterTypes.contains(GetMatchConfigUseCase.class);
 
         boolean hasSubmitActionsUseCase =
                 parameterTypes.contains(SubmitActionsUseCase.class);
 
         boolean hasGetMatchStateUseCase =
                 parameterTypes.contains(GetMatchStateUseCase.class);
-
-        boolean hasActionMapper =
-                parameterTypes.contains(MatchMapper.class);
 
         boolean isRestController =
                 clazz.isAnnotationPresent(RestController.class);
@@ -86,8 +82,8 @@ class MatchControllerReflectionTest {
                         "MatchController must inject RegisterTeamUseCase"
                 ),
                 () -> assertTrue(
-                        hasStartMatchUseCase,
-                        "MatchController must inject StartMatchUseCase"
+                        hasGetMatchConfigUseCase,
+                        "MatchController must inject GetMatchConfigUseCase"
                 ),
                 () -> assertTrue(
                         hasSubmitActionsUseCase,
@@ -96,10 +92,6 @@ class MatchControllerReflectionTest {
                 () -> assertTrue(
                         hasGetMatchStateUseCase,
                         "MatchController must inject GetMatchStateUseCase"
-                ),
-                () -> assertTrue(
-                        hasActionMapper,
-                        "MatchController must inject ActionMapper"
                 ),
                 () -> assertTrue(
                         isRestController,

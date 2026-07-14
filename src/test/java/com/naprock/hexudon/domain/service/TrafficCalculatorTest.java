@@ -1,14 +1,15 @@
 package com.naprock.hexudon.domain.service;
 
+import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.movement.MoveResult;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
-import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
-import org.junit.jupiter.api.BeforeEach;
+import com.naprock.hexudon.domain.model.traffic.TrafficTracker;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,162 +17,58 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TrafficCalculatorTest {
 
-    private TrafficCalculator calculator;
-    private MatchConfig matchConfig;
+    @Test
+    void shouldResolveNormalTrafficLevel_WhenRateBelowTwo() {
+        Coordinate coordinate = new Coordinate(1, 1);
+        // Previous = 1, Current = 2, total teams = 2. Rate = (1+2)/2 = 1.5 (< 2.0) -> NORMAL
+        TrafficFlow flow = new TrafficFlow(coordinate, 1, 0, TrafficLevel.NORMAL);
+        TrafficTracker tracker = new TrafficTracker(1, Map.of(coordinate, flow));
 
-    @BeforeEach
-    void setUp() {
-        calculator = new TrafficCalculator();
+        List<MoveResult> moves = List.of(MoveResult.success(coordinate), MoveResult.success(coordinate));
+        Map<Coordinate, TrafficFlow> calculated = tracker.updateTraffic(moves, 2);
 
-        matchConfig = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-
-                .initialFuel(100)
-                .maxFuel(100)
-
-                .maxTurns(10)
-                .maxStepsPerTurn(5)
-
-                .maxTeams(2)
-                .agentsPerTeam(2)
-
-                .patrolAgents(1)
-                .refuelAgents(1)
-
-                .plainStepCost(1)
-                .plainFuelCost(10)
-
-                .roadNormalStepCost(1)
-                .roadBusyStepCost(2)
-                .roadCongestedStepCost(3)
-                .roadFuelCost(5)
-
-                .mountainStepCost(2)
-                .mountainFuelCost(20)
-
-                .initialSpotUdonStock(5)
-
-                .build();
+        assertThat(calculated.get(coordinate).getTrafficLevel()).isEqualTo(TrafficLevel.NORMAL);
     }
 
     @Test
-    void shouldCalculateTrafficRateWithNormalValues() {
-        // Act
-        double rate = calculator.calculateTrafficRate(2, 3, 2);
+    void shouldResolveBusyTrafficLevel_WhenRateBetweenTwoAndFour() {
+        Coordinate coordinate = new Coordinate(1, 1);
+        // Previous = 2, Current = 3, total teams = 2. Rate = (2+3)/2 = 2.5 (>= 2.0 and < 4.0) -> BUSY
+        TrafficFlow flow = new TrafficFlow(coordinate, 2, 0, TrafficLevel.NORMAL);
+        TrafficTracker tracker = new TrafficTracker(1, Map.of(coordinate, flow));
 
-        // Assert
-        assertThat(rate).isEqualTo(2.5);
+        List<MoveResult> moves = List.of(
+                MoveResult.success(coordinate),
+                MoveResult.success(coordinate),
+                MoveResult.success(coordinate)
+        );
+        Map<Coordinate, TrafficFlow> calculated = tracker.updateTraffic(moves, 2);
+
+        assertThat(calculated.get(coordinate).getTrafficLevel()).isEqualTo(TrafficLevel.BUSY);
     }
 
     @Test
-    void shouldCalculateTrafficRateWithZeroTeams() {
-        // Act
-        double rate = calculator.calculateTrafficRate(2, 3, 0);
+    void shouldResolveCongestedTrafficLevel_WhenRateAtLeastFour() {
+        Coordinate coordinate = new Coordinate(1, 1);
+        // Previous = 4, Current = 4, total teams = 2. Rate = (4+4)/2 = 4.0 (>= 4.0) -> CONGESTED
+        TrafficFlow flow = new TrafficFlow(coordinate, 4, 0, TrafficLevel.NORMAL);
+        TrafficTracker tracker = new TrafficTracker(1, Map.of(coordinate, flow));
 
-        // Assert
-        assertThat(rate).isZero();
+        List<MoveResult> moves = List.of(
+                MoveResult.success(coordinate),
+                MoveResult.success(coordinate),
+                MoveResult.success(coordinate),
+                MoveResult.success(coordinate)
+        );
+        Map<Coordinate, TrafficFlow> calculated = tracker.updateTraffic(moves, 2);
+
+        assertThat(calculated.get(coordinate).getTrafficLevel()).isEqualTo(TrafficLevel.CONGESTED);
     }
 
     @Test
-    void shouldCalculateTrafficRateWithZeroVehicles() {
-        // Act
-        double rate = calculator.calculateTrafficRate(0, 0, 4);
-
-        // Assert
-        assertThat(rate).isZero();
-    }
-
-    @Test
-    void shouldCalculateTrafficRateWithLargeValues() {
-        // Act
-        double rate = calculator.calculateTrafficRate(1000, 2000, 2);
-
-        // Assert
-        assertThat(rate).isEqualTo(1500.0);
-    }
-
-    @Test
-    void shouldThrowExceptionWhenPreviousVehicleCountIsNegative() {
-        // Act & Assert
-        assertThatThrownBy(() -> calculator.calculateTrafficRate(-1, 5, 2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("previousVehicleCount must not be negative");
-    }
-
-    @Test
-    void shouldThrowExceptionWhenCurrentVehicleCountIsNegative() {
-        // Act & Assert
-        assertThatThrownBy(() -> calculator.calculateTrafficRate(1, -5, 2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("currentVehicleCount must not be negative");
-    }
-
-    @Test
-    void shouldThrowExceptionWhenTotalTeamsIsNegative() {
-        // Act & Assert
-        assertThatThrownBy(() -> calculator.calculateTrafficRate(1, 5, -2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("totalTeams must not be negative");
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "0, 0, NORMAL",      // rate = 0.0 (< 2.0)
-            "1, 2, NORMAL",      // rate = 1.5 (< 2.0)
-            "3, 0, NORMAL",      // rate = 1.5 (< 2.0)
-            "1, 3, BUSY",        // rate = 2.0 (boundary, exactly 2.0 -> BUSY)
-            "2, 2, BUSY",        // rate = 2.0 (boundary, exactly 2.0 -> BUSY)
-            "3, 1, BUSY",        // rate = 2.0 (boundary, exactly 2.0 -> BUSY)
-            "2, 3, BUSY",        // rate = 2.5 (< 4.0)
-            "3, 4, BUSY",        // rate = 3.5 (< 4.0)
-            "4, 4, CONGESTED",   // rate = 4.0 (boundary, exactly 4.0 -> CONGESTED)
-            "5, 4, CONGESTED",   // rate = 4.5 (>= 4.0)
-            "10, 10, CONGESTED"  // rate = 10.0 (>= 4.0)
-    })
-    void shouldResolveTrafficLevelCorrectlyAroundThresholds(int prevVehicles, int currVehicles, TrafficLevel expectedLevel) {
-        // Arrange
-        // maxTeams is 2 in setup config
-        Coordinate coord = new Coordinate(1, 1);
-        TrafficFlow flow = new TrafficFlow(coord, prevVehicles, currVehicles, 0.0, TrafficLevel.NORMAL);
-        Map<Coordinate, TrafficFlow> flows = Map.of(coord, flow);
-
-        // Act
-        Map<Coordinate, TrafficFlow> results = calculator.calculateTraffic(flows, matchConfig);
-
-        // Assert
-        TrafficFlow resultFlow = results.get(coord);
-        assertThat(resultFlow).isNotNull();
-        assertThat(resultFlow.getTrafficLevel()).isEqualTo(expectedLevel);
-        
-        // Also verify vehicle count updates:
-        // previous becomes old current (currVehicles)
-        // current becomes 0
-        assertThat(resultFlow.getPreviousVehicleCount()).isEqualTo(currVehicles);
-        assertThat(resultFlow.getCurrentVehicleCount()).isZero();
-    }
-
-    @Test
-    void shouldCalculateTrafficForMultipleCoordinates() {
-        // Arrange
-        Coordinate coord1 = new Coordinate(1, 1);
-        Coordinate coord2 = new Coordinate(2, 2);
-        TrafficFlow flow1 = new TrafficFlow(coord1, 1, 3, 0.0, TrafficLevel.NORMAL); // rate = 2.0 -> BUSY
-        TrafficFlow flow2 = new TrafficFlow(coord2, 4, 4, 0.0, TrafficLevel.NORMAL); // rate = 4.0 -> CONGESTED
-
-        Map<Coordinate, TrafficFlow> flows = Map.of(coord1, flow1, coord2, flow2);
-
-        // Act
-        Map<Coordinate, TrafficFlow> results = calculator.calculateTraffic(flows, matchConfig);
-
-        // Assert
-        assertThat(results).hasSize(2);
-        assertThat(results.get(coord1).getTrafficLevel()).isEqualTo(TrafficLevel.BUSY);
-        assertThat(results.get(coord1).getPreviousVehicleCount()).isEqualTo(3);
-        assertThat(results.get(coord1).getCurrentVehicleCount()).isZero();
-
-        assertThat(results.get(coord2).getTrafficLevel()).isEqualTo(TrafficLevel.CONGESTED);
-        assertThat(results.get(coord2).getPreviousVehicleCount()).isEqualTo(4);
-        assertThat(results.get(coord2).getCurrentVehicleCount()).isZero();
+    void shouldThrowExceptionWhenUpdateTrafficWithNullMoves() {
+        TrafficTracker tracker = new TrafficTracker();
+        assertThatThrownBy(() -> tracker.updateTraffic(null, 2))
+                .isInstanceOf(NullPointerException.class);
     }
 }

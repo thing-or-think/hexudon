@@ -1,17 +1,8 @@
 package com.naprock.hexudon.application.port.in;
 
+import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 
-import com.naprock.hexudon.domain.model.aggregate.MatchState;
-
-/**
- * Inbound port for retrieving the current match state.
- */
 public interface GetMatchStateUseCase {
 
-    /**
-     * Retrieves the current match state.
-     *
-     * @return the current {@link MatchState}
-     */
-    MatchState getMatchState();
+    MatchStateResponse getMatchState(String teamName);
 }

@@ -1,7 +1,7 @@
 package com.naprock.hexudon.adapter.out.loader;
 
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
-import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.model.match.MatchConfig;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,9 +19,11 @@ class MatchConfigLoaderTest {
             () -> assertEquals(50, config.maxTurns()),
             () -> assertEquals(2, config.maxTeams()),
             () -> assertEquals(2, config.agentsPerTeam()),
-            () -> assertEquals(1, config.patrolAgents()),
-            () -> assertEquals(1, config.refuelAgents()),
-            () -> assertEquals(100, config.initialFuel())
+            () -> assertEquals(100, config.maxFuel()),
+            // default Builder value since not in file
+            // (turnTimeLimitMs is not in match_config.txt, default builder is 1000)
+            () -> assertEquals(1000, config.turnTimeLimitMs()),
+            () -> assertEquals(5, config.initialSpotUdonStock())
         );
     }
 

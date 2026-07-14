@@ -1,209 +1,62 @@
-//package com.naprock.hexudon.application.service;
-//
-//import com.naprock.hexudon.application.port.out.TrafficRepositoryPort;
-//import com.naprock.hexudon.domain.exception.business.MatchStateConflictException;
-//import com.naprock.hexudon.domain.model.aggregate.MatchState;
-//import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
-//import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
-//import com.naprock.hexudon.domain.model.traffic.TrafficSnapshot;
-//import com.naprock.hexudon.domain.model.valueobject.Cell;
-//import com.naprock.hexudon.domain.model.valueobject.Coordinate;
-//import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
-//import com.naprock.hexudon.domain.service.MovementCostCalculator;
-//import com.naprock.hexudon.domain.service.TrafficCalculator;
-//import com.naprock.hexudon.domain.valueobject.MatchStatus;
-//import com.naprock.hexudon.domain.valueobject.TerrainType;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.mockito.ArgumentCaptor;
-//
-//import java.util.Collections;
-//import java.util.Map;
-//
-//import static org.assertj.core.api.Assertions.assertThat;
-//import static org.assertj.core.api.Assertions.assertThatThrownBy;
-//import static org.mockito.Mockito.*;
-//
-//class TrafficServiceTest {
-//
-//    private TrafficRepositoryPort repositoryPort;
-//    private TrafficCalculator trafficCalculator;
-//    private MovementCostCalculator movementCostCalculator;
-//    private TurnEnvironmentService trafficService;
-//
-//    private MatchConfig matchConfig;
-//
-//    @BeforeEach
-//    void setUp() {
-//        repositoryPort = mock(TrafficRepositoryPort.class);
-//        trafficCalculator = mock(TrafficCalculator.class);
-//        movementCostCalculator = mock(MovementCostCalculator.class);
-//
-//        trafficService = new TurnEnvironmentService(repositoryPort, trafficCalculator, movementCostCalculator);
-//
-//        matchConfig = MatchConfig.builder()
-//                .maxTeams(2)
-//                .mapWidth(5)
-//                .mapHeight(5)
-//                .maxTurns(10)
-//                .agentsPerTeam(2)
-//                .patrolAgents(1)
-//                .refuelAgents(1)
-//                .initialFuel(100)
-//                .plainStepCost(1)
-//                .plainFuelCost(10)
-//                .roadNormalStepCost(1)
-//                .roadBusyStepCost(2)
-//                .roadCongestedStepCost(4)
-//                .roadFuelCost(5)
-//                .mountainStepCost(2)
-//                .mountainFuelCost(20)
-//                .maxFuel(100)
-//                .maxStepsPerTurn(5)
-//                .initialSpotUdonStock(5)
-//                .build();
-//    }
-//
-//    @Test
-//    void shouldInitializeTrafficOnlyForRoadCells() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//        state.setCurrentTurn(1);
-//        Coordinate roadCoord = new Coordinate(1, 1);
-//        Coordinate plainCoord = new Coordinate(2, 2);
-//        state.addCell(new Cell(roadCoord, TerrainType.ROAD));
-//        state.addCell(new Cell(plainCoord, TerrainType.PLAIN));
-//
-//        // Act
-//        trafficService.initializeTraffic(state);
-//
-//        // Assert
-//        ArgumentCaptor<TrafficSnapshot> snapshotCaptor = ArgumentCaptor.forClass(TrafficSnapshot.class);
-//        verify(repositoryPort, times(1)).save(snapshotCaptor.capture());
-//
-//        TrafficSnapshot savedSnapshot = snapshotCaptor.getValue();
-//        assertThat(savedSnapshot.getTurn()).isEqualTo(1);
-//        assertThat(savedSnapshot.getFlows()).hasSize(1);
-//        assertThat(savedSnapshot.getFlows().containsKey(roadCoord)).isTrue();
-//        assertThat(savedSnapshot.getFlows().containsKey(plainCoord)).isFalse();
-//
-//        TrafficFlow roadFlow = savedSnapshot.getFlows().get(roadCoord);
-//        assertThat(roadFlow.getCoordinate()).isEqualTo(roadCoord);
-//        assertThat(roadFlow.getPreviousVehicleCount()).isZero();
-//        assertThat(roadFlow.getCurrentVehicleCount()).isZero();
-//    }
-//
-//    @Test
-//    void shouldInitializeEmptyTrafficWhenNoCellsProvided() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//        state.setCurrentTurn(1);
-//
-//        // Act
-//        trafficService.initializeTraffic(state);
-//
-//        // Assert
-//        ArgumentCaptor<TrafficSnapshot> snapshotCaptor = ArgumentCaptor.forClass(TrafficSnapshot.class);
-//        verify(repositoryPort, times(1)).save(snapshotCaptor.capture());
-//
-//        TrafficSnapshot savedSnapshot = snapshotCaptor.getValue();
-//        assertThat(savedSnapshot.getTurn()).isEqualTo(1);
-//        assertThat(savedSnapshot.getFlows()).isEmpty();
-//    }
-//
-//    @Test
-//    void shouldThrowExceptionWhenInitializingTrafficWithNullState() {
-//        // Act & Assert
-//        assertThatThrownBy(() -> trafficService.initializeTraffic(null))
-//                .isInstanceOf(NullPointerException.class);
-//    }
-//
-//    @Test
-//    void shouldCalculateTrafficFlowForNextTurnSuccessful() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//        state.setStatus(MatchStatus.PLAYING);
-//        state.setCurrentTurn(2);
-//
-//        Coordinate coord = new Coordinate(1, 1);
-//        TrafficFlow flow = new TrafficFlow(coord, 1, 2, 1.5, TrafficLevel.NORMAL);
-//        TrafficSnapshot previousSnapshot = new TrafficSnapshot(1, Map.of(coord, flow));
-//
-//        when(repositoryPort.load()).thenReturn(previousSnapshot);
-//
-//        TrafficFlow updatedFlow = new TrafficFlow(coord, 2, 0, 1.5, TrafficLevel.BUSY);
-//        when(trafficCalculator.calculateTraffic(previousSnapshot.getFlows(), matchConfig))
-//                .thenReturn(Map.of(coord, updatedFlow));
-//
-//        // Act
-//        trafficService.calculate(state, matchConfig);
-//
-//        // Assert
-//        ArgumentCaptor<TrafficSnapshot> snapshotCaptor = ArgumentCaptor.forClass(TrafficSnapshot.class);
-//        verify(repositoryPort, times(1)).save(snapshotCaptor.capture());
-//
-//        TrafficSnapshot savedSnapshot = snapshotCaptor.getValue();
-//        assertThat(savedSnapshot.getTurn()).isEqualTo(2);
-//        assertThat(savedSnapshot.getFlows()).containsEntry(coord, updatedFlow);
-//    }
-//
-//    @Test
-//    void shouldNotCalculateOrSaveTrafficWhenStateIsNotPlaying() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//        state.setStatus(MatchStatus.WAITING);
-//        state.setCurrentTurn(1);
-//
-//        // Act & Assert
-//        assertThatThrownBy(() -> trafficService.calculate(state, matchConfig))
-//                .isInstanceOf(MatchStateConflictException.class);
-//
-//        verify(repositoryPort, never()).load();
-//        verify(repositoryPort, never()).save(any());
-//    }
-//
-//    @Test
-//    void shouldNotSaveTrafficWhenPreviousSnapshotTurnDoesNotMatchNextTurnMinusOne() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//        state.setStatus(MatchStatus.PLAYING);
-//        state.setCurrentTurn(3); // Expecting previous snapshot turn to be 2
-//
-//        TrafficSnapshot previousSnapshot = new TrafficSnapshot(1, Collections.emptyMap()); // turn is 1, not 2
-//        when(repositoryPort.load()).thenReturn(previousSnapshot);
-//
-//        // Act
-//        trafficService.calculate(state, matchConfig);
-//
-//        // Assert
-//        verify(repositoryPort, times(1)).load();
-//        verify(repositoryPort, never()).save(any());
-//        verifyNoInteractions(trafficCalculator);
-//    }
-//
-//    @Test
-//    void shouldThrowExceptionWhenCalculatingNextTurnTrafficWithNullState() {
-//        // Act & Assert
-//        assertThatThrownBy(() -> trafficService.calculate(null, matchConfig))
-//                .isInstanceOf(NullPointerException.class)
-//                .hasMessage("state must not be null");
-//    }
-//
-//    @Test
-//    void shouldThrowExceptionWhenCalculatingNextTurnTrafficWithNullConfig() {
-//        // Arrange
-//        MatchState state = new MatchState();
-//
-//        // Act & Assert
-//        assertThatThrownBy(() -> trafficService.calculate(state, null))
-//                .isInstanceOf(NullPointerException.class)
-//                .hasMessage("config must not be null");
-//    }
-//
-//    @Test
-//    void shouldExposeGettersForCollaborators() {
-//        // Act & Assert
-//        assertThat(trafficService.getTrafficCalculator()).isSameAs(trafficCalculator);
-//        assertThat(trafficService.getTrafficRepositoryPort()).isSameAs(repositoryPort);
-//    }
-//}
+package com.naprock.hexudon.application.service;
+
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.map.Cell;
+import com.naprock.hexudon.domain.model.map.TerrainType;
+import com.naprock.hexudon.domain.model.movement.MoveResult;
+import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
+import com.naprock.hexudon.domain.model.traffic.TrafficHistory;
+import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
+import com.naprock.hexudon.domain.model.traffic.TrafficTracker;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class TrafficServiceTest {
+
+    private TrafficHistory trafficHistory;
+    private Coordinate roadCoord;
+
+    @BeforeEach
+    void setUp() {
+        trafficHistory = new TrafficHistory();
+        roadCoord = new Coordinate(1, 1);
+        Cell cell = new Cell(roadCoord, TerrainType.ROAD);
+        trafficHistory.init(List.of(cell));
+    }
+
+    @Test
+    void shouldInitializeTrafficOnlyForRoadCells() {
+        TrafficTracker latest = trafficHistory.getLatestTracker();
+        assertThat(latest.turn()).isEqualTo(0);
+        assertThat(latest.flows()).hasSize(1);
+        assertThat(latest.flows().containsKey(roadCoord)).isTrue();
+
+        TrafficFlow roadFlow = latest.flows().get(roadCoord);
+        assertThat(roadFlow.getCoordinate()).isEqualTo(roadCoord);
+        assertThat(roadFlow.getPreviousStaySteps()).isZero();
+        assertThat(roadFlow.getCurrentStaySteps()).isZero();
+        assertThat(roadFlow.getTrafficLevel()).isEqualTo(TrafficLevel.NORMAL);
+    }
+
+    @Test
+    void shouldUpdateTrafficFlowForNextTurn() {
+        // Record 2 vehicle moves on turn 1
+        List<MoveResult> moves = List.of(MoveResult.success(roadCoord), MoveResult.success(roadCoord));
+        
+        trafficHistory.updateTraffic(moves, 2);
+
+        TrafficTracker latest = trafficHistory.getLatestTracker();
+        assertThat(latest.turn()).isEqualTo(1);
+        
+        TrafficFlow roadFlow = latest.flows().get(roadCoord);
+        // Previous stay steps should be updated to current stay steps recorded (2)
+        assertThat(roadFlow.getPreviousStaySteps()).isEqualTo(2);
+        assertThat(roadFlow.getCurrentStaySteps()).isZero();
+        // Traffic rate: (0 + 2)/2 = 1.0 (< 2.0) -> NORMAL
+        assertThat(roadFlow.getTrafficLevel()).isEqualTo(TrafficLevel.NORMAL);
+    }
+}

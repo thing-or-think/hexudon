@@ -2,7 +2,7 @@ package com.naprock.hexudon.domain.model.traffic;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,9 +20,8 @@ class TrafficFlowTest {
 
         // Assert
         assertThat(trafficFlow.getCoordinate()).isEqualTo(coordinate);
-        assertThat(trafficFlow.getPreviousVehicleCount()).isZero();
-        assertThat(trafficFlow.getCurrentVehicleCount()).isZero();
-        assertThat(trafficFlow.getCalculatedFlow()).isZero();
+        assertThat(trafficFlow.getPreviousStaySteps()).isZero();
+        assertThat(trafficFlow.getCurrentStaySteps()).isZero();
         assertThat(trafficFlow.getTrafficLevel()).isEqualTo(TrafficLevel.NORMAL);
     }
 
@@ -36,15 +35,13 @@ class TrafficFlowTest {
                 coordinate,
                 2,
                 5,
-                3.5,
                 TrafficLevel.BUSY
         );
 
         // Assert
         assertThat(trafficFlow.getCoordinate()).isEqualTo(coordinate);
-        assertThat(trafficFlow.getPreviousVehicleCount()).isEqualTo(2);
-        assertThat(trafficFlow.getCurrentVehicleCount()).isEqualTo(5);
-        assertThat(trafficFlow.getCalculatedFlow()).isEqualTo(3.5);
+        assertThat(trafficFlow.getPreviousStaySteps()).isEqualTo(2);
+        assertThat(trafficFlow.getCurrentStaySteps()).isEqualTo(5);
         assertThat(trafficFlow.getTrafficLevel()).isEqualTo(TrafficLevel.BUSY);
     }
 
@@ -55,7 +52,6 @@ class TrafficFlowTest {
                 null,
                 1,
                 1,
-                1.0,
                 TrafficLevel.NORMAL
         ))
                 .isInstanceOf(GameRuleViolationException.class)
@@ -65,7 +61,7 @@ class TrafficFlowTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenPreviousVehicleCountIsNegative() {
+    void shouldThrowExceptionWhenPreviousStayStepsIsNegative() {
         // Arrange
         Coordinate coordinate = new Coordinate(1, 1);
 
@@ -74,17 +70,16 @@ class TrafficFlowTest {
                 coordinate,
                 -1,
                 1,
-                1.0,
                 TrafficLevel.NORMAL
         ))
                 .isInstanceOf(GameRuleViolationException.class)
-                .hasMessage("Previous vehicle count must not be negative.")
+                .hasMessage("Previous stay steps must not be negative.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 
     @Test
-    void shouldThrowExceptionWhenCurrentVehicleCountIsNegative() {
+    void shouldThrowExceptionWhenCurrentStayStepsIsNegative() {
         // Arrange
         Coordinate coordinate = new Coordinate(1, 1);
 
@@ -93,30 +88,10 @@ class TrafficFlowTest {
                 coordinate,
                 1,
                 -1,
-                1.0,
                 TrafficLevel.NORMAL
         ))
                 .isInstanceOf(GameRuleViolationException.class)
-                .hasMessage("Current vehicle count must not be negative.")
-                .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
-                .isEqualTo(ErrorCode.VALIDATION_ERROR);
-    }
-
-    @Test
-    void shouldThrowExceptionWhenCalculatedFlowIsNegative() {
-        // Arrange
-        Coordinate coordinate = new Coordinate(1, 1);
-
-        // Act & Assert
-        assertThatThrownBy(() -> new TrafficFlow(
-                coordinate,
-                1,
-                1,
-                -0.1,
-                TrafficLevel.NORMAL
-        ))
-                .isInstanceOf(GameRuleViolationException.class)
-                .hasMessage("Calculated flow must be greater than or equal to 0.")
+                .hasMessage("Current stay steps must not be negative.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
@@ -131,7 +106,6 @@ class TrafficFlowTest {
                 coordinate,
                 1,
                 1,
-                1.0,
                 null
         ))
                 .isInstanceOf(GameRuleViolationException.class)
@@ -141,39 +115,28 @@ class TrafficFlowTest {
     }
 
     @Test
-    void shouldVerifyEqualityAndHashCodeContracts() {
-        // Arrange
-        Coordinate coord1 = new Coordinate(1, 1);
-        Coordinate coord2 = new Coordinate(1, 1);
-        Coordinate coord3 = new Coordinate(2, 2);
-
-        TrafficFlow flow1 = new TrafficFlow(coord1, 1, 2, 1.5, TrafficLevel.NORMAL);
-        TrafficFlow flow2 = new TrafficFlow(coord2, 1, 2, 1.5, TrafficLevel.NORMAL);
-        TrafficFlow flowDifferent = new TrafficFlow(coord3, 1, 2, 1.5, TrafficLevel.NORMAL);
-
-        // Assert
-        assertThat(flow1).isEqualTo(flow2);
-        assertThat(flow1.hashCode()).isEqualTo(flow2.hashCode());
-        assertThat(flow1).isNotEqualTo(flowDifferent);
-        assertThat(flow1).isNotEqualTo(null);
-        assertThat(flow1).isNotEqualTo("some string");
+    void shouldIncreaseCurrentStaySteps() {
+        TrafficFlow trafficFlow = new TrafficFlow(new Coordinate(1, 1));
+        trafficFlow.increaseCurrentStaySteps();
+        assertThat(trafficFlow.getCurrentStaySteps()).isEqualTo(1);
     }
 
     @Test
-    void shouldFormatToStringCorrectly() {
-        // Arrange
-        Coordinate coordinate = new Coordinate(5, 6);
-        TrafficFlow trafficFlow = new TrafficFlow(coordinate, 1, 2, 1.5, TrafficLevel.NORMAL);
+    void shouldMoveCurrentToPrevious() {
+        TrafficFlow trafficFlow = new TrafficFlow(new Coordinate(1, 1), 1, 3, TrafficLevel.NORMAL);
+        trafficFlow.moveCurrentToPrevious();
+        assertThat(trafficFlow.getPreviousStaySteps()).isEqualTo(3);
+        assertThat(trafficFlow.getCurrentStaySteps()).isZero();
+    }
 
-        // Act
-        String result = trafficFlow.toString();
+    @Test
+    void shouldUpdateTrafficLevel() {
+        TrafficFlow trafficFlow = new TrafficFlow(new Coordinate(1, 1));
+        trafficFlow.updateTrafficLevel(TrafficLevel.CONGESTED);
+        assertThat(trafficFlow.getTrafficLevel()).isEqualTo(TrafficLevel.CONGESTED);
 
-        // Assert
-        assertThat(result)
-                .contains("coordinate")
-                .contains("previousVehicleCount=1")
-                .contains("currentVehicleCount=2")
-                .contains("calculatedFlow=1.5")
-                .contains("trafficLevel=NORMAL");
+        assertThatThrownBy(() -> trafficFlow.updateTrafficLevel(null))
+                .isInstanceOf(GameRuleViolationException.class)
+                .hasMessage("Traffic level must not be null.");
     }
 }

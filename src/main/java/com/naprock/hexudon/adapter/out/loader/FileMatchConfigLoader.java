@@ -2,7 +2,7 @@ package com.naprock.hexudon.adapter.out.loader;
 
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.domain.exception.system.ConfigLoadException;
-import com.naprock.hexudon.domain.model.valueobject.MatchConfig;
+import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.infrastructure.util.FileUtils;
 import org.springframework.stereotype.Component;
 
@@ -120,9 +120,6 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
             case "mapHeight" ->
                     builder.mapHeight(number);
 
-            case "initialFuel" ->
-                    builder.initialFuel(number);
-
             case "maxFuel" ->
                     builder.maxFuel(number);
 
@@ -138,44 +135,8 @@ public class FileMatchConfigLoader implements MatchConfigLoaderPort {
             case "agentsPerTeam" ->
                     builder.agentsPerTeam(number);
 
-            case "patrolAgents" ->
-                    builder.patrolAgents(number);
-
-            case "refuelAgents" ->
-                    builder.refuelAgents(number);
-
             case "turnTimeLimitMs" ->
                     builder.turnTimeLimitMs(number);
-
-            case "maxRequestsPerSecond" ->
-                    builder.maxRequestsPerSecond(number);
-
-            case "maxSpamViolations" ->
-                    builder.maxSpamViolations(number);
-
-            case "roadFuelCost" ->
-                    builder.roadFuelCost(number);
-
-            case "roadNormalStepCost" ->
-                    builder.roadNormalStepCost(number);
-
-            case "roadBusyStepCost" ->
-                    builder.roadBusyStepCost(number);
-
-            case "roadCongestedStepCost" ->
-                    builder.roadCongestedStepCost(number);
-
-            case "plainFuelCost" ->
-                    builder.plainFuelCost(number);
-
-            case "plainStepCost" ->
-                    builder.plainStepCost(number);
-
-            case "mountainFuelCost" ->
-                    builder.mountainFuelCost(number);
-
-            case "mountainStepCost" ->
-                    builder.mountainStepCost(number);
 
             case "initialSpotUdonStock" ->
                     builder.initialSpotUdonStock(number);

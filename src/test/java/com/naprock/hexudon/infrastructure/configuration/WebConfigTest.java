@@ -1,6 +1,5 @@
 package com.naprock.hexudon.infrastructure.configuration;
 
-import com.naprock.hexudon.infrastructure.interceptor.RateLimiterInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -8,13 +7,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 
 class WebConfigTest {
 
     @Test
     void testWebConfigStructure() throws Exception {
-        Class<?> clazz = Class.forName("com.naprock.hexudon.infrastructure.configuration.WebConfig");
+        Class<?> clazz = WebConfig.class;
 
         boolean isAssignableFrom = WebMvcConfigurer.class.isAssignableFrom(clazz);
 
@@ -28,44 +26,16 @@ class WebConfigTest {
             }
         }
 
-        final boolean finalHasAddCorsMappings = hasAddCorsMappings;
-
-        assertAll(
-                () -> assertTrue(isAssignableFrom,
-                        "WebConfig must implement WebMvcConfigurer"),
-                () -> assertTrue(finalHasAddCorsMappings,
-                        "WebConfig must override addCorsMappings(CorsRegistry)")
-        );
+        assertTrue(isAssignableFrom, "WebConfig must implement WebMvcConfigurer");
+        assertTrue(hasAddCorsMappings, "WebConfig must override addCorsMappings(CorsRegistry)");
     }
 
     @Test
     void testWebConfigCorsExecution() {
-        RateLimiterInterceptor interceptor = mock(RateLimiterInterceptor.class);
-
-        WebConfig webConfig = new WebConfig(interceptor);
+        WebConfig webConfig = new WebConfig();
         CorsRegistry registry = new CorsRegistry();
 
         assertDoesNotThrow(() -> webConfig.addCorsMappings(registry),
                 "Calling addCorsMappings should not throw any exceptions");
-    }
-
-    @Test
-    void testWebConfigInterceptorExecution() {
-        RateLimiterInterceptor interceptor = mock(RateLimiterInterceptor.class);
-        WebConfig webConfig = new WebConfig(interceptor);
-
-        org.springframework.web.servlet.config.annotation.InterceptorRegistry registry =
-                mock(org.springframework.web.servlet.config.annotation.InterceptorRegistry.class);
-        org.springframework.web.servlet.config.annotation.InterceptorRegistration registration =
-                mock(org.springframework.web.servlet.config.annotation.InterceptorRegistration.class);
-
-        org.mockito.Mockito.when(registry.addInterceptor(interceptor)).thenReturn(registration);
-        org.mockito.Mockito.when(registration.addPathPatterns(org.mockito.Mockito.anyString())).thenReturn(registration);
-
-        assertDoesNotThrow(() -> webConfig.addInterceptors(registry),
-                "Calling addInterceptors should not throw any exceptions");
-
-        org.mockito.Mockito.verify(registry).addInterceptor(interceptor);
-        org.mockito.Mockito.verify(registration).addPathPatterns("/api/match/actions");
     }
 }

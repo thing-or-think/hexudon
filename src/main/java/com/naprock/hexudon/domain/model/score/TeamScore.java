@@ -2,6 +2,7 @@ package com.naprock.hexudon.domain.model.score;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
+import com.naprock.hexudon.domain.model.map.UdonType;
 
 import java.util.*;
 
@@ -10,7 +11,7 @@ import java.util.*;
  */
 public class TeamScore {
 
-    private final String teamId;
+    private final String teamName;
 
     private final Set<UdonType> collectedUdonTypes;
     private final Map<Integer, Set<UdonType>> dailyUdonTypesHistory;
@@ -20,10 +21,10 @@ public class TeamScore {
     private int requestCount;
 
 
-    public TeamScore(String teamId) {
-        validateTeamId(teamId);
+    public TeamScore(String teamName) {
+        validateTeamId(teamName);
 
-        this.teamId = teamId;
+        this.teamName = teamName;
         this.collectedUdonTypes = new HashSet<>();
         this.dailyUdonTypesHistory = new HashMap<>();
 
@@ -32,9 +33,8 @@ public class TeamScore {
         this.requestCount = 0;
     }
 
-
-    public String getTeamId() {
-        return teamId;
+    public String getTeamName() {
+        return teamName;
     }
 
     public Set<UdonType> getCollectedUdonTypes() {
@@ -106,7 +106,7 @@ public class TeamScore {
         if (teamId == null || teamId.isBlank()) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "teamId must not be null"
+                    "teamName must not be null"
             );
         }
     }

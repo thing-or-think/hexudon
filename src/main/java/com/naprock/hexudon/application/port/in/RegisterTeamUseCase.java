@@ -1,17 +1,9 @@
 package com.naprock.hexudon.application.port.in;
 
-import com.naprock.hexudon.domain.model.entity.Team;
+import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
+import com.naprock.hexudon.application.dto.team.TeamScoreResponse;
 
-/**
- * Inbound port for registering a new team.
- */
 public interface RegisterTeamUseCase {
 
-    /**
-     * Registers a new team.
-     *
-     * @param teamName the name of the team
-     * @return the registered {@link Team}
-     */
-    Team registerTeam(String teamName);
+    void registerTeam(TeamRegisterRequest request);
 }

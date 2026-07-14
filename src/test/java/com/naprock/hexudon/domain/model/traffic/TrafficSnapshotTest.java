@@ -2,10 +2,12 @@ package com.naprock.hexudon.domain.model.traffic;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.valueobject.Coordinate;
+import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.movement.MoveResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,56 +17,39 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TrafficSnapshotTest {
 
     @Test
-    void shouldCreateEmptySnapshotWithDefaultConstructor() {
+    void shouldCreateEmptyTrackerWithDefaultConstructor() {
         // Act
-        TrafficSnapshot snapshot = new TrafficSnapshot();
+        TrafficTracker tracker = new TrafficTracker();
 
         // Assert
-        assertThat(snapshot.getTurn()).isEqualTo(1);
-        assertThat(snapshot.getFlows()).isEmpty();
+        assertThat(tracker.turn()).isEqualTo(0);
+        assertThat(tracker.flows()).isEmpty();
     }
 
     @Test
-    void shouldCreateSnapshotWithTurnAndFlows() {
+    void shouldCreateTrackerWithTurnAndFlows() {
         // Arrange
         Coordinate coord = new Coordinate(1, 1);
         TrafficFlow flow = new TrafficFlow(coord);
         Map<Coordinate, TrafficFlow> flows = Map.of(coord, flow);
 
         // Act
-        TrafficSnapshot snapshot = new TrafficSnapshot(2, flows);
+        TrafficTracker tracker = new TrafficTracker(2, flows);
 
         // Assert
-        assertThat(snapshot.getTurn()).isEqualTo(2);
-        assertThat(snapshot.getFlows()).hasSize(1).containsEntry(coord, flow);
+        assertThat(tracker.turn()).isEqualTo(2);
+        assertThat(tracker.flows()).hasSize(1).containsEntry(coord, flow);
     }
 
     @Test
-    void shouldProvideDeepCopyOfFlowsMapToEnsureImmutability() {
+    void shouldProvideUnmodifiableFlowsMap() {
         // Arrange
         Coordinate coord = new Coordinate(1, 1);
         TrafficFlow flow = new TrafficFlow(coord);
-        Map<Coordinate, TrafficFlow> mutableMap = new HashMap<>();
-        mutableMap.put(coord, flow);
-
-        TrafficSnapshot snapshot = new TrafficSnapshot(2, mutableMap);
-
-        // Act - modify original map
-        mutableMap.put(new Coordinate(2, 2), new TrafficFlow(new Coordinate(2, 2)));
-
-        // Assert - snapshot map is unaffected
-        assertThat(snapshot.getFlows()).hasSize(1).containsEntry(coord, flow);
-    }
-
-    @Test
-    void shouldThrowExceptionWhenModifyingReturnedFlowsMap() {
-        // Arrange
-        Coordinate coord = new Coordinate(1, 1);
-        TrafficFlow flow = new TrafficFlow(coord);
-        TrafficSnapshot snapshot = new TrafficSnapshot(2, Map.of(coord, flow));
+        TrafficTracker tracker = new TrafficTracker(2, Map.of(coord, flow));
 
         // Act & Assert
-        Map<Coordinate, TrafficFlow> flowsMap = snapshot.getFlows();
+        Map<Coordinate, TrafficFlow> flowsMap = tracker.flows();
         assertThatThrownBy(() -> flowsMap.put(new Coordinate(2, 2), new TrafficFlow(new Coordinate(2, 2))))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
@@ -72,7 +57,7 @@ class TrafficSnapshotTest {
     @Test
     void shouldThrowExceptionWhenTurnIsNegative() {
         // Act & Assert
-        assertThatThrownBy(() -> new TrafficSnapshot(-1, new HashMap<>()))
+        assertThatThrownBy(() -> new TrafficTracker(-1, new HashMap<>()))
                 .isInstanceOf(GameRuleViolationException.class)
                 .hasMessage("Turn must be greater than or equal to zero.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
@@ -82,7 +67,7 @@ class TrafficSnapshotTest {
     @Test
     void shouldThrowExceptionWhenFlowsMapIsNull() {
         // Act & Assert
-        assertThatThrownBy(() -> new TrafficSnapshot(1, null))
+        assertThatThrownBy(() -> new TrafficTracker(1, null))
                 .isInstanceOf(GameRuleViolationException.class)
                 .hasMessage("Traffic flow map must not be null.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
@@ -96,9 +81,9 @@ class TrafficSnapshotTest {
         flows.put(null, new TrafficFlow(new Coordinate(1, 1)));
 
         // Act & Assert
-        assertThatThrownBy(() -> new TrafficSnapshot(1, flows))
+        assertThatThrownBy(() -> new TrafficTracker(1, flows))
                 .isInstanceOf(GameRuleViolationException.class)
-                .hasMessage("Traffic snapshot contains null coordinate.")
+                .hasMessage("Traffic tracker contains null coordinate.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
@@ -106,91 +91,36 @@ class TrafficSnapshotTest {
     @Test
     void shouldThrowExceptionWhenFlowsMapContainsNullValue() {
         // Arrange
-        Coordinate coord = new Coordinate(1, 1);
         Map<Coordinate, TrafficFlow> flows = new HashMap<>();
-        flows.put(coord, null);
+        flows.put(new Coordinate(1, 1), null);
 
         // Act & Assert
-        assertThatThrownBy(() -> new TrafficSnapshot(1, flows))
+        assertThatThrownBy(() -> new TrafficTracker(1, flows))
                 .isInstanceOf(GameRuleViolationException.class)
-                .hasMessage("Traffic snapshot contains null traffic flow.")
+                .hasMessage("Traffic tracker contains null traffic flow.")
                 .extracting(e -> ((GameRuleViolationException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_ERROR);
     }
 
     @Test
-    void shouldGetFlowAtCoordinateIfExists() {
-        // Arrange
-        Coordinate coord = new Coordinate(1, 1);
-        TrafficFlow flow = new TrafficFlow(coord);
-        TrafficSnapshot snapshot = new TrafficSnapshot(2, Map.of(coord, flow));
+    void shouldUpdateTrafficCorrectly() {
+        Coordinate coordinate = new Coordinate(1, 1);
+        TrafficFlow flow = new TrafficFlow(coordinate, 1, 0, TrafficLevel.NORMAL);
+        TrafficTracker tracker = new TrafficTracker(1, Map.of(coordinate, flow));
 
-        // Act
-        Optional<TrafficFlow> result = snapshot.getFlowAt(coord);
+        // Let's record a movement stay step at this coordinate
+        List<MoveResult> moves = List.of(MoveResult.success(coordinate), MoveResult.success(coordinate));
 
-        // Assert
-        assertThat(result).isPresent().contains(flow);
-    }
+        // Update traffic with 2 teams max
+        Map<Coordinate, TrafficFlow> calculated = tracker.updateTraffic(moves, 2);
 
-    @Test
-    void shouldReturnEmptyOptionalWhenGettingFlowAtMissingCoordinate() {
-        // Arrange
-        Coordinate coord = new Coordinate(1, 1);
-        TrafficSnapshot snapshot = new TrafficSnapshot(2, Map.of());
-
-        // Act
-        Optional<TrafficFlow> result = snapshot.getFlowAt(coord);
-
-        // Assert
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void shouldThrowExceptionWhenGettingFlowAtNullCoordinate() {
-        // Arrange
-        TrafficSnapshot snapshot = new TrafficSnapshot();
-
-        // Act & Assert
-        assertThatThrownBy(() -> snapshot.getFlowAt(null))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("Coordinate must not be null.");
-    }
-
-    @Test
-    void shouldVerifyEqualityAndHashCodeContracts() {
-        // Arrange
-        Coordinate coord1 = new Coordinate(1, 1);
-        TrafficFlow flow1 = new TrafficFlow(coord1);
-
-        Coordinate coord2 = new Coordinate(1, 1);
-        TrafficFlow flow2 = new TrafficFlow(coord2);
-
-        TrafficSnapshot snapshot1 = new TrafficSnapshot(2, Map.of(coord1, flow1));
-        TrafficSnapshot snapshot2 = new TrafficSnapshot(2, Map.of(coord2, flow2));
-        TrafficSnapshot snapshotDifferentTurn = new TrafficSnapshot(3, Map.of(coord1, flow1));
-
-        // Assert
-        assertThat(snapshot1).isEqualTo(snapshot2);
-        assertThat(snapshot1.hashCode()).isEqualTo(snapshot2.hashCode());
-        assertThat(snapshot1).isNotEqualTo(snapshotDifferentTurn);
-        assertThat(snapshot1).isNotEqualTo(null);
-        assertThat(snapshot1).isNotEqualTo("another type");
-    }
-
-    @Test
-    void shouldFormatToStringCorrectly() {
-        // Arrange
-        Coordinate coord = new Coordinate(1, 1);
-        TrafficFlow flow = new TrafficFlow(coord);
-        TrafficSnapshot snapshot = new TrafficSnapshot(5, Map.of(coord, flow));
-
-        // Act
-        String result = snapshot.toString();
-
-        // Assert
-        assertThat(result)
-                .contains("TrafficSnapshot")
-                .contains("turn=5")
-                .contains("flows=");
+        TrafficFlow updated = calculated.get(coordinate);
+        assertThat(updated).isNotNull();
+        // Previous stay steps should be updated to current stay steps recorded (2)
+        assertThat(updated.getPreviousStaySteps()).isEqualTo(2);
+        // Current stay steps reset to 0
+        assertThat(updated.getCurrentStaySteps()).isZero();
+        // Traffic rate: (previous (1) + current (2)) / 2 = 1.5. < 2.0 busy threshold so NORMAL
+        assertThat(updated.getTrafficLevel()).isEqualTo(TrafficLevel.NORMAL);
     }
 }

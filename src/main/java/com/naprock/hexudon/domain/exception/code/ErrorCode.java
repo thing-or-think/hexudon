@@ -80,7 +80,7 @@ public enum ErrorCode {
     // =========================
     DAY_MISMATCH(
             "DAY_MISMATCH",
-            "Submitted day does not match current match day."
+            "Submitted turn does not match current match turn."
     ),
     DUPLICATE_AGENT_PLAN(
             "DUPLICATE_AGENT_PLAN",
