@@ -13,8 +13,8 @@ class MovementCostCalculatorTest {
     @Test
     void testMovementCostCreation() {
         MovementCost cost = new MovementCost(10, 2);
-        assertThat(cost.getFuelNeeded()).isEqualTo(10);
-        assertThat(cost.getStepsNeeded()).isEqualTo(2);
+        assertThat(cost.fuelNeeded()).isEqualTo(10);
+        assertThat(cost.stepsNeeded()).isEqualTo(2);
     }
 
     @Test

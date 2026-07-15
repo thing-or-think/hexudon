@@ -8,6 +8,8 @@ import com.naprock.hexudon.domain.model.map.GameMap;
 import com.naprock.hexudon.domain.model.map.TerrainType;
 import com.naprock.hexudon.domain.model.map.Spot;
 import com.naprock.hexudon.domain.model.map.UdonType;
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.movement.Action;
 import com.naprock.hexudon.domain.model.movement.ActionType;
@@ -16,6 +18,7 @@ import com.naprock.hexudon.domain.model.movement.MovementCost;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,23 +32,34 @@ class AgentTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        config = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-                .maxTurns(10)
-                .maxTeams(2)
-                .agentsPerTeam(2)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
-                .initialSpotUdonStock(5)
-                .build();
+        config = new MatchConfig(
+                1000L,
+                Collections.nCopies(10, 5),
+                Collections.nCopies(10, 50),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
 
         gameMap = new GameMap();
-        gameMap.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
-        gameMap.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
-        gameMap.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
-        gameMap.addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
-        gameMap.addCell(new Cell(new Coordinate(2, 0), TerrainType.POND));
+        List<List<Integer>> mapCells = List.of(
+                List.of(0, 0, 3, 0, 0),
+                List.of(1, 2, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0)
+        );
+        gameMap.init(new MapConfig(5, 5, mapCells), List.of(new SpotConfig(1, 1, 5)));
 
         Map<Coordinate, MovementCost> movementCosts = new HashMap<>();
         movementCosts.put(new Coordinate(0, 0), new MovementCost(10, 1));
@@ -119,15 +133,15 @@ class AgentTest {
         agent.resetSteps(5);
         agent.setFuel(100);
 
-        Action action = new Action(ActionType.MOVE, new Coordinate(1, 0));
+        Action action = new Action(ActionType.MOVE, com.naprock.hexudon.domain.model.geometry.Direction.EAST);
         agent.setActions(List.of(action));
 
         MoveResult result = agent.executeAction(gameMap.getCellIndex(), gameMap.getMovementCosts());
 
-        assertFalse(result.success());
-        assertEquals(new Coordinate(0, 0), result.position());
+        assertTrue(result.success());
+        assertEquals(new Coordinate(1, 0), result.position());
         assertEquals(4, agent.getRemainingSteps());
-        assertEquals(100, agent.getFuel());
+        assertEquals(90, agent.getFuel());
     }
 
     @Test
@@ -136,30 +150,31 @@ class AgentTest {
         agent.resetSteps(5);
         agent.setFuel(100);
 
-        Action action = new Action(ActionType.MOVE, new Coordinate(2, 0));
+        Action action = new Action(ActionType.MOVE, com.naprock.hexudon.domain.model.geometry.Direction.EAST);
         agent.setActions(List.of(action));
 
         MoveResult result = agent.executeAction(gameMap.getCellIndex(), gameMap.getMovementCosts());
 
         assertFalse(result.success());
         assertEquals(new Coordinate(1, 0), result.position());
-        assertEquals(5, agent.getRemainingSteps());
-        assertEquals(90, agent.getFuel());
+        assertEquals(4, agent.getRemainingSteps());
+        assertEquals(100, agent.getFuel());
     }
 
     @Test
     void testPatrolAgent_collectUdon() {
         PatrolAgent agent = new PatrolAgent(new Coordinate(0, 0));
 
-        Spot spot = new Spot(new Coordinate(0, 0), UdonType.TANUKI, List.of("Alpha"), 5);
+        Spot spot = new Spot(1, new Coordinate(0, 0), 5);
+        spot.registerTeam(1);
         Map<Coordinate, Spot> spots = Map.of(spot.getCoordinate(), spot);
 
-        com.naprock.hexudon.domain.model.team.CollectResult result1 = agent.collectUdon("Alpha", spots);
+        com.naprock.hexudon.domain.model.team.CollectResult result1 = agent.collectUdon(1, spots);
         assertTrue(result1.success());
-        assertEquals(4, spot.getUdonStock("Alpha"));
+        assertEquals(4, spot.getStock(1));
 
-        com.naprock.hexudon.domain.model.team.CollectResult result2 = agent.collectUdon("Alpha", spots);
+        com.naprock.hexudon.domain.model.team.CollectResult result2 = agent.collectUdon(1, spots);
         assertFalse(result2.success());
-        assertEquals(4, spot.getUdonStock("Alpha"));
+        assertEquals(4, spot.getStock(1));
     }
 }

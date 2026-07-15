@@ -101,7 +101,7 @@ public class TrafficHistory {
         return latest;
     }
 
-    public Collection<TrafficFlow> getLatestTrafficLevels() {
+    public Collection<TrafficFlow> getLatestTrafficFlows() {
         return getLatestTracker().trafficFlows();
     }
 

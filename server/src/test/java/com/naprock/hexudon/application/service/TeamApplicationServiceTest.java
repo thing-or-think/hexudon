@@ -4,19 +4,17 @@ import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
 import com.naprock.hexudon.application.port.out.MatchStateStorePort;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.match.MatchState;
 import com.naprock.hexudon.domain.model.team.Team;
 import com.naprock.hexudon.domain.service.ActionValidator;
-import com.naprock.hexudon.domain.service.AgentSpawnService;
-import com.naprock.hexudon.domain.service.HexGridGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,9 +24,7 @@ class TeamApplicationServiceTest {
 
     private MatchStateStorePort stateStorePort;
     private MatchConfigLoaderPort configLoaderPort;
-    private AgentSpawnService agentSpawnService;
     private ActionValidator actionValidator;
-    private HexGridGenerator hexGridGenerator;
     private MatchApplicationService service;
 
     private MatchConfig config;
@@ -38,28 +34,32 @@ class TeamApplicationServiceTest {
     void setUp() {
         stateStorePort = mock(MatchStateStorePort.class);
         configLoaderPort = mock(MatchConfigLoaderPort.class);
-        agentSpawnService = mock(AgentSpawnService.class);
         actionValidator = mock(ActionValidator.class);
-        hexGridGenerator = mock(HexGridGenerator.class);
 
         service = new MatchApplicationService(
                 stateStorePort,
                 configLoaderPort,
-                agentSpawnService,
-                actionValidator,
-                hexGridGenerator
+                actionValidator
         );
 
-        config = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-                .maxTurns(10)
-                .maxTeams(2)
-                .agentsPerTeam(2)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
-                .initialSpotUdonStock(5)
-                .build();
+        config = new MatchConfig(
+                1000L,
+                Collections.nCopies(10, 5),
+                Collections.nCopies(10, 50),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
 
         state = new MatchState();
 
@@ -69,9 +69,7 @@ class TeamApplicationServiceTest {
 
     @Test
     void testRegisterTeam_success() {
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", 1, 1);
-        when(agentSpawnService.generateSpawnPositions(any(), eq(2)))
-                .thenReturn(List.of(new Coordinate(0, 0), new Coordinate(1, 1)));
+        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
 
         assertDoesNotThrow(() -> service.registerTeam(request));
 
@@ -84,8 +82,8 @@ class TeamApplicationServiceTest {
 
     @Test
     void testRegisterTeam_throwsExceptionWhenAgentCountMismatch() {
-        // config says agentsPerTeam = 2, but we request 1 patrol + 0 refuel = 1
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", 1, 0);
+        // config says agents size = 2, but we request list of size 1
+        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0));
 
         GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
                 () -> service.registerTeam(request));
@@ -96,7 +94,7 @@ class TeamApplicationServiceTest {
     @Test
     void testRegisterTeam_throwsExceptionWhenStateNotFound() {
         when(stateStorePort.loadState()).thenReturn(null);
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", 1, 1);
+        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
 
         assertThrows(NullPointerException.class, () -> service.registerTeam(request));
     }

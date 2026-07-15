@@ -11,8 +11,6 @@ class SchedulerConfigTest {
     void testDomainBeanConfigCreation() {
         DomainBeanConfig config = new DomainBeanConfig();
 
-        assertNotNull(config.agentSpawnService());
         assertNotNull(config.actionValidator());
-        assertNotNull(config.hexGridGenerator());
     }
 }

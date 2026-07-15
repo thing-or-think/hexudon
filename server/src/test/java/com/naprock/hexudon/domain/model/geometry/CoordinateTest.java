@@ -19,11 +19,11 @@ class CoordinateTest {
     void testConstructor_shouldThrowExceptionWhenNegative() {
         GameRuleViolationException exceptionX = assertThrows(GameRuleViolationException.class, () -> new Coordinate(-1, 3));
         assertEquals(ErrorCode.VALIDATION_ERROR, exceptionX.getErrorCode());
-        assertTrue(exceptionX.getMessage().contains("Coordinate cannot be negative"));
+        assertTrue(exceptionX.getMessage().contains("must be greater than or equal to 0."));
 
         GameRuleViolationException exceptionY = assertThrows(GameRuleViolationException.class, () -> new Coordinate(2, -1));
         assertEquals(ErrorCode.VALIDATION_ERROR, exceptionY.getErrorCode());
-        assertTrue(exceptionY.getMessage().contains("Coordinate cannot be negative"));
+        assertTrue(exceptionY.getMessage().contains("must be greater than or equal to 0."));
     }
 
     @Test

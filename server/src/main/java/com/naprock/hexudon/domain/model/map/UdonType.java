@@ -6,44 +6,41 @@ import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import java.util.List;
 import java.util.Random;
 
-public record UdonType(String typeName) {
+public enum UdonType {
 
-    public static final UdonType TANUKI =
-            new UdonType("TANUKI");
-    public static final UdonType KITSUNE =
-            new UdonType("KITSUNE");
-    public static final UdonType TEMPURA =
-            new UdonType("TEMPURA");
-    public static final UdonType BEEF =
-            new UdonType("BEEF");
-    private static final List<UdonType> AVAILABLE_TYPES =
-            List.of(
-                    TANUKI,
-                    KITSUNE,
-                    TEMPURA,
-                    BEEF
-            );
+    TANUKI(0),
+    KITSUNE(1),
+    TEMPURA(2),
+    BEEF(3);
 
-    public UdonType {
-        validateTypeName(typeName);
+    private final int value;
+
+    private static final List<UdonType> AVAILABLE_TYPES = List.of(values());
+
+    UdonType(int value) {
+        this.value = value;
+    }
+
+    public int value() {
+        return value;
+    }
+
+    public static UdonType fromValue(int value) {
+        for (UdonType type : values()) {
+            if (type.value == value) {
+                return type;
+            }
+        }
+
+        throw new GameRuleViolationException(
+                ErrorCode.VALIDATION_ERROR,
+                "Invalid udon type value: " + value
+        );
     }
 
     public static UdonType random(Random random) {
         return AVAILABLE_TYPES.get(
-                random.nextInt(
-                        AVAILABLE_TYPES.size()
-                )
+                random.nextInt(AVAILABLE_TYPES.size())
         );
-    }
-
-    private static void validateTypeName(String typeName) {
-
-        if (typeName == null || typeName.isBlank()) {
-
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "typeName must not be null."
-            );
-        }
     }
 }

@@ -7,4 +7,8 @@ public class RefuelAgent extends Agent{
     public RefuelAgent(Coordinate coordinate) {
         super(coordinate, AgentType.REFUEL);
     }
+
+    @Override
+    public void prepareNewTurn() {
+    }
 }

@@ -1,37 +1,56 @@
 package com.naprock.hexudon.domain.model.team;
 
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
-import com.naprock.hexudon.domain.model.map.UdonType;
 
-import java.util.Objects;
+import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 public record CollectResult(
         boolean success,
-        String teamName,
+        int teamId,
         Coordinate coordinate,
-        UdonType type
+        Integer type
 ) {
 
     public CollectResult {
-        Objects.requireNonNull(teamName, "teamName must not be null");
-        Objects.requireNonNull(coordinate, "coordinate must not be null");
+
+        requireNonNegative(teamId, "teamId");
+        requireNonNull(coordinate, "coordinate");
+
         if (success) {
-            Objects.requireNonNull(type, "type must not be null");
+            requireNonNull(type, "type");
+            requireTrue(
+                    type >= 0 && type <= 3,
+                    "type must be between 0 and 3"
+            );
+        } else if (type != null) {
+            throw new IllegalArgumentException(
+                    "type must be null when collect failed"
+            );
         }
     }
 
     public static CollectResult success(
-            String agentId,
+            int teamId,
             Coordinate coordinate,
-            UdonType type
+            int type
     ) {
-        return new CollectResult(true, agentId, coordinate, type);
+        return new CollectResult(
+                true,
+                teamId,
+                coordinate,
+                type
+        );
     }
 
     public static CollectResult failed(
-            String agentId,
+            int teamId,
             Coordinate coordinate
     ) {
-        return new CollectResult(false, agentId, coordinate, null);
+        return new CollectResult(
+                false,
+                teamId,
+                coordinate,
+                null
+        );
     }
 }

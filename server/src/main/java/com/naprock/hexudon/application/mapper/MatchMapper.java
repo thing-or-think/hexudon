@@ -4,52 +4,48 @@ import com.naprock.hexudon.application.dto.agent.AgentResponse;
 import com.naprock.hexudon.application.dto.match.*;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
 import com.naprock.hexudon.application.dto.team.TeamResponse;
-import com.naprock.hexudon.application.dto.team.TeamScoreResponse;
-import com.naprock.hexudon.application.model.match.MatchStateData;
+import com.naprock.hexudon.application.model.match.SubmitActionsCommand;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.agent.Agent;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
-import com.naprock.hexudon.domain.model.map.Cell;
-import com.naprock.hexudon.domain.model.map.GameMap;
-import com.naprock.hexudon.domain.model.map.Spot;
+import com.naprock.hexudon.domain.model.map.*;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
+import com.naprock.hexudon.domain.model.match.MatchState;
 import com.naprock.hexudon.domain.model.movement.Action;
-import com.naprock.hexudon.domain.model.score.TeamScore;
 import com.naprock.hexudon.domain.model.team.Team;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public final class MatchMapper {
 
 
-    public static TeamResponse toTeamResponse(Team team) {
+    public static TeamResponse toTeamResponse(Team team, int mapWidth) {
         return new TeamResponse(
-                team.getTeamName(),
-                team.getAgents().stream().map(MatchMapper::toAgentResponse).toList());
-    }
-
-    public static Map<String, List<Action>> toDomainMap(SubmitActionRequest request) {
-        return request.actions()
-                .stream()
-                .collect(Collectors.groupingBy(
-                        ActionRequest::agentId,
-                        Collectors.mapping(
-                                MatchMapper::toAction,
-                                Collectors.toList()
-                        )
-                ));
-    }
-
-    public static Action toAction(ActionRequest request) {
-        return new Action(
-                request.actionType(),
-                toCoordinate(request.coordinate())
+                team.getTeamId(),
+                team.getAgents()
+                        .stream()
+                        .map(agent -> toAgentResponse(agent, mapWidth))
+                        .toList()
         );
+    }
+
+    public static SubmitActionsCommand toDomainMap(SubmitActionRequest request) {
+        return new SubmitActionsCommand(
+                request.day(),
+                request.actions()
+                        .stream()
+                        .map(actions -> actions.stream()
+                                .flatMap(value -> MatchMapper.toActions(value).stream())
+                                .toList())
+                        .toList()
+        );
+    }
+
+    public static List<Action> toActions(Integer value) {
+        return Action.fromApiValue(value);
     }
 
     public static Coordinate toCoordinate(CoordinateRequest request) {
@@ -64,55 +60,62 @@ public final class MatchMapper {
     ) {
         return new TeamRegistrationData(
                 request.teamName(),
-                request.amountPatrol(),
-                request.amountRefuel()
+                request.types()
         );
     }
 
-    public static MatchStateResponse toMatchStateResponse(MatchStateData stateData) {
-        if (stateData == null) {
+    public static MatchStateResponse toMatchStateResponse(
+            MatchState state,
+            String teamName,
+            int width
+    ) {
+        if (state == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "stateData must not be null."
+                    "state must not be null."
             );
         }
 
+        if (teamName == null || teamName.isBlank()) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "teamName must not be blank."
+            );
+        }
+
+        if (width <= 0) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "width must be positive."
+            );
+        }
+
+        Team currentTeam = state.requireTeam(teamName);
+
         return new MatchStateResponse(
-                stateData.status(),
-                stateData.turn(),
-                stateData.agents().stream()
-                        .map(MatchMapper::toAgentResponse)
+                state.getTurnEndTime(),
+                state.getCurrentTurn(),
+
+                currentTeam.getAgents()
+                        .stream()
+                        .map(agent -> toAgentResponse(agent, width))
                         .toList(),
-                stateData.trafficFlows().stream()
-                        .map(MatchMapper::toTrafficResponse)
+
+                state.getTeams()
+                        .stream()
+                        .filter(team -> !team.equals(currentTeam))
+                        .map(team -> toTeamResponse(team, width))
                         .toList(),
-                stateData.spots().stream()
-                        .map(MatchMapper::toSpotResponse)
-                        .toList(),
-                stateData.teamScores().stream()
-                        .map(MatchMapper::toTeamScoreResponse)
+
+                state.getTrafficHistory()
+                        .getLatestTrafficFlows()
+                        .stream()
+                        .map(trafficFlow -> toTrafficResponse(trafficFlow, width))
                         .toList()
         );
     }
 
-    public static TeamScoreResponse toTeamScoreResponse(TeamScore teamScore) {
-        if (teamScore == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "teamScore must not be null."
-            );
-        }
-
-        return new TeamScoreResponse(
-                teamScore.getTeamName(),
-                teamScore.getUniqueUdonTypesCount(),
-                teamScore.getAccumulatedDailyUdonTypes(),
-                teamScore.getTotalServings(),
-                teamScore.getTotalResponseTimeMs()
-        );
-    }
-
-    public static AgentResponse toAgentResponse(Agent agent) {
+    public static AgentResponse toAgentResponse(Agent agent, int mapWidth) {
         if (agent == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -121,15 +124,13 @@ public final class MatchMapper {
         }
 
         return new AgentResponse(
-                agent.getId(),
-                toCoordinateResponse(agent.getPosition()),
-                agent.getAgentType(),
-                agent.getFuel(),
-                agent.getRemainingSteps()
+                agent.getAgentType().getValue(),
+                agent.getPosition().toIndex(mapWidth),
+                agent.getFuel()
         );
     }
 
-    public static TrafficResponse toTrafficResponse(TrafficFlow trafficFlow) {
+    public static TrafficResponse toTrafficResponse(TrafficFlow trafficFlow, int mapWidth) {
         if (trafficFlow == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -138,19 +139,12 @@ public final class MatchMapper {
         }
 
         return new TrafficResponse(
-                toCoordinateResponse(trafficFlow.getCoordinate()),
-                trafficFlow.trafficLevel()
+                trafficFlow.getCoordinate().toIndex(mapWidth),
+                trafficFlow.trafficLevel().order()
         );
     }
 
-    public static MatchConfigResponse toMatchConfigResponse(GameMap gameMap, MatchConfig config) {
-
-        if (gameMap == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "gameMap must not be null."
-            );
-        }
+    public static MatchConfigResponse toMatchConfigResponse(MatchConfig config) {
 
         if (config == null) {
             throw new GameRuleViolationException(
@@ -160,18 +154,28 @@ public final class MatchMapper {
         }
 
         return new MatchConfigResponse(
-                config.mapWidth(),
-                config.mapHeight(),
-                gameMap.getCells().stream().map(MatchMapper::toCellResponse).toList(),
-                gameMap.getSpots().stream().map(MatchMapper::toSpotResponse).toList(),
-                config.agentsPerTeam(),
-                config.maxFuel(),
-                config.maxStepsPerTurn(),
-                config.maxTurns()
+                config.startsAt(),
+                config.daySeconds(),
+                config.daySteps(),
+                toMapResponse(config.map()),
+                config.spots().stream().map(MatchMapper::toSpotResponse).toList(),
+                config.agents(),
+                config.fuelLimits(),
+                config.players(),
+                config.busyThreshold(),
+                config.jammedThreshold()
         );
     }
 
-    public static SpotResponse toSpotResponse(Spot spot) {
+    public static MapResponse toMapResponse(MapConfig map) {
+        return new MapResponse(
+                map.height(),
+                map.width(),
+                map.cells()
+        );
+    }
+
+    public static SpotResponse toSpotResponse(SpotConfig spot) {
         if (spot == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -180,37 +184,9 @@ public final class MatchMapper {
         }
 
         return new SpotResponse(
-                toCoordinateResponse(spot.getCoordinate()),
-                spot.getUdonType(),
-                spot.getUdonAmount()
-        );
-    }
-
-    public static CellResponse toCellResponse(Cell cell) {
-        if (cell == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "cell must not be null."
-            );
-        }
-
-        return new CellResponse(
-                toCoordinateResponse(cell.coordinate()),
-                cell.terrainType()
-        );
-    }
-
-    public static CoordinateResponse toCoordinateResponse(Coordinate coordinate) {
-        if (coordinate == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "coordinate must not be null."
-            );
-        }
-
-        return new CoordinateResponse(
-                coordinate.x(),
-                coordinate.y()
+                spot.brand(),
+                spot.pos(),
+                spot.stocks()
         );
     }
 }

@@ -1,31 +1,40 @@
 package com.naprock.hexudon.domain.model.team;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.agent.Agent;
 import com.naprock.hexudon.domain.model.agent.PatrolAgent;
 import com.naprock.hexudon.domain.model.agent.RefuelAgent;
 import com.naprock.hexudon.domain.model.map.GameMap;
-import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.movement.MoveResult;
+import com.naprock.hexudon.domain.validation.DomainValidator;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Team {
+
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger(0);
+
+    private final int teamId;
 
     private final String teamName;
     private final List<Agent> agents;
 
     public Team(String teamName, List<Agent> agents) {
-        validateNotNull(teamName, "teamName");
-        validateNotNull(agents, "agents");
+        DomainValidator.requireNotBlank(teamName, "teamName");
+        DomainValidator.requireNonNull(agents, "agents");
 
+        this.teamId = ID_GENERATOR.incrementAndGet();
         this.teamName = teamName;
         this.agents = agents;
+    }
+
+    public int getTeamId() {
+        return teamId;
     }
 
     public void executeStep(
@@ -46,7 +55,7 @@ public class Team {
 
             moves.add(result);
 
-            collects.add(agent.collectUdon(teamName, gameMap.getSpotIndex()));
+            collects.add(agent.collectUdon(teamId, gameMap.getSpotIndex()));
         }
     }
 
@@ -58,33 +67,15 @@ public class Team {
         return Collections.unmodifiableList(agents);
     }
 
-    public Agent findAgentById(String id) {
-        for (Agent agent : agents) {
-            if (Objects.equals(agent.getId(), id)) {
-                return agent;
-            }
+    public Agent findAgentByIndex(int index) {
+        if (index < 0 || index >= agents.size()) {
+            return null;
         }
-
-        return null;
+        return agents.get(index);
     }
 
-    public Agent requireAgent(String id) {
-        validateNotNull(id, "Agent ID");
-
-        Agent agent = findAgentById(id);
-
-        if (agent == null) {
-            throw new ResourceNotFoundException(
-                    ErrorCode.AGENT_NOT_FOUND,
-                    "Agent not found with ID: " + id
-            );
-        }
-
-        return agent;
-    }
-
-    public void prepareNewTurn(MatchConfig config) {
-        resetSteps(config.maxStepsPerTurn());
+    public void prepareNewTurn(int steps) {
+        resetSteps(steps);
         for (Agent agent : agents)
             agent.prepareNewTurn();
     }
@@ -158,17 +149,6 @@ public class Team {
 
             }
 
-        }
-    }
-
-    private void validateNotNull(Object value,
-                                 String fieldName) {
-
-        if (Objects.isNull(value)) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    fieldName + " must not be null."
-            );
         }
     }
 

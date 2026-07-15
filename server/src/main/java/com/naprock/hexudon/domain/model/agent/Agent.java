@@ -10,18 +10,21 @@ import com.naprock.hexudon.domain.model.movement.ActionType;
 import com.naprock.hexudon.domain.model.movement.MoveResult;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
 import com.naprock.hexudon.domain.model.team.CollectResult;
+import com.naprock.hexudon.domain.validation.DomainValidator;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract base class for all agents.
  */
 public abstract class Agent {
 
-    private static int nextId = 1;
+    private static final AtomicInteger NEXT_ID =
+            new AtomicInteger(1);
 
     private final AgentType agentType;
-    private final String id;
+    private final int id;
     protected Coordinate position;
     protected int fuel;
     protected int remainingSteps;
@@ -32,10 +35,10 @@ public abstract class Agent {
             AgentType agentType
     ) {
 
-        validateNotNull(position, "position");
-        validateNotNull(agentType, "agenType");
+        DomainValidator.requireNonNull(position, "position");
+        DomainValidator.requireNonNull(agentType, "agentType");
         this.agentType = agentType;
-        this.id = "A" + nextId++;
+        this.id = NEXT_ID.getAndIncrement();
         this.position = position;
         this.fuel = 0;
         this.remainingSteps = 0;
@@ -46,18 +49,17 @@ public abstract class Agent {
         return actions.isEmpty();
     }
 
-    public void prepareNewTurn() {
-    }
+    public abstract void prepareNewTurn();
 
     public CollectResult collectUdon(
-            String teamName,
+            int teamId,
             Map<Coordinate, Spot> spots) {
-        return CollectResult.failed(id, position);
+        return CollectResult.failed(teamId, position);
     }
 
     protected Action consumeNextAction() {
-        if (actions == null || actions.isEmpty()) {
-            return Action.stay(position);
+        if (actions.isEmpty()) {
+            return Action.stay();
         }
 
         return actions.removeFirst();
@@ -71,7 +73,7 @@ public abstract class Agent {
         return agentType;
     }
 
-    public String getId() {
+    public int getId() {
         return id;
     }
 
@@ -146,7 +148,7 @@ public abstract class Agent {
      */
     protected boolean consumeStep(int cost) {
 
-        if (cost < 0 || cost > remainingSteps) {
+        if (cost <= 0 || cost > remainingSteps) {
             return false;
         }
 
@@ -165,53 +167,39 @@ public abstract class Agent {
 
         fuel -= cost;
 
-        return false;
+        return true;
     }
 
     public MoveResult executeAction(
             Map<Coordinate, Cell> cells,
             Map<Coordinate, MovementCost> movementCosts) {
 
-        validateNotNull(cells, "cells");
-        validateNotNull(movementCosts, "movementCosts");
+        DomainValidator.requireNonNull(cells, "cells");
+        DomainValidator.requireNonNull(movementCosts, "movementCosts");
 
         Action action = consumeNextAction();
 
-        if (action == null || action.actionType() == ActionType.WAIT) {
+        if (action.actionType() == ActionType.WAIT) {
             consumeStep(1);
             return MoveResult.success(position);
         }
 
-        Coordinate destination = action.targetCoordinate();
+        Coordinate destination = position.getNeighbor(action.direction());
         Cell cell = cells.get(destination);
 
-        if (cell == null
-                || !position.isAdjacentTo(destination)
-                || cell.isWalkable()) {
+        if (cell == null || !cell.isWalkable()) {
             consumeStep(1);
             return MoveResult.failed(position);
         }
 
         MovementCost movementCost = movementCosts.get(destination);
-        if (!consumeStep(movementCost.getStepsNeeded())) {
+        if (!consumeStep(movementCost.stepsNeeded())) {
             return MoveResult.failed(position);
         }
 
         position = destination;
 
         return MoveResult.success(position);
-    }
-
-
-    private void validateNotNull(Object value,
-                                 String fieldName) {
-
-        if (Objects.isNull(value)) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    fieldName + " must not be null."
-            );
-        }
     }
 
     @Override
@@ -225,12 +213,7 @@ public abstract class Agent {
             return false;
         }
 
-        return id.equals(other.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return id.hashCode();
+        return id == other.id;
     }
 
 

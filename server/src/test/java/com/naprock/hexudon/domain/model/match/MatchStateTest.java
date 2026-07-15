@@ -4,15 +4,12 @@ import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.business.MatchStateConflictException;
 import com.naprock.hexudon.domain.exception.business.ResourceNotFoundException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.agent.Agent;
 import com.naprock.hexudon.domain.model.agent.PatrolAgent;
 import com.naprock.hexudon.domain.model.agent.RefuelAgent;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
-import com.naprock.hexudon.domain.model.map.Cell;
 import com.naprock.hexudon.domain.model.map.GameMap;
-import com.naprock.hexudon.domain.model.map.Spot;
-import com.naprock.hexudon.domain.model.map.TerrainType;
-import com.naprock.hexudon.domain.model.map.UdonType;
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.movement.Action;
 import com.naprock.hexudon.domain.model.movement.ActionType;
 import com.naprock.hexudon.domain.model.movement.MovementCost;
@@ -21,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,24 +32,35 @@ class MatchStateTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        config = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-                .maxTurns(3)
-                .maxTeams(2)
-                .agentsPerTeam(2)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
-                .initialSpotUdonStock(5)
-                .build();
+        config = new MatchConfig(
+                1000L,
+                Collections.nCopies(3, 5),
+                Collections.nCopies(3, 50),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
 
         state = new MatchState();
         GameMap map = state.getGameMap();
-        map.addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN));
-        map.addCell(new Cell(new Coordinate(1, 0), TerrainType.PLAIN));
-        map.addCell(new Cell(new Coordinate(0, 1), TerrainType.ROAD));
-        map.addCell(new Cell(new Coordinate(1, 1), TerrainType.MOUNTAIN));
-        map.addCell(new Cell(new Coordinate(2, 0), TerrainType.POND));
+        List<List<Integer>> mapCells = List.of(
+                List.of(0, 0, 3, 0, 0),
+                List.of(1, 2, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0),
+                List.of(0, 0, 0, 0, 0)
+        );
+        map.init(new MapConfig(5, 5, mapCells), List.of());
 
         // Initialize movement costs in map using reflection
         Map<Coordinate, MovementCost> costs = new HashMap<>();
@@ -73,9 +82,9 @@ class MatchStateTest {
     void testInitialState() {
         assertEquals(MatchStatus.WAITING, state.getStatus());
         assertEquals(0, state.getCurrentTurn());
-        assertEquals(0L, state.getTurnStartTime());
+        assertEquals(0L, state.getTurnEndTime());
         assertTrue(state.getTeams().isEmpty());
-        assertEquals(5, state.getGameMap().getCells().size());
+        assertEquals(25, state.getGameMap().getCells().size());
         assertTrue(state.getGameMap().getSpots().isEmpty());
     }
 
@@ -125,22 +134,7 @@ class MatchStateTest {
         assertThrows(ResourceNotFoundException.class, () -> state.requireTeam("Beta"));
     }
 
-    @Test
-    void testAddCell_duplicateThrowsException() {
-        GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
-                () -> state.getGameMap().addCell(new Cell(new Coordinate(0, 0), TerrainType.PLAIN)));
-        assertEquals(ErrorCode.DUPLICATE_RESOURCE, ex.getErrorCode());
-    }
 
-    @Test
-    void testAddSpot_duplicateThrowsException() {
-        Spot spot1 = new Spot(new Coordinate(0, 0), UdonType.TANUKI, List.of("Alpha"), 5);
-        state.getGameMap().addSpot(spot1);
-
-        GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
-                () -> state.getGameMap().addSpot(spot1));
-        assertEquals(ErrorCode.DUPLICATE_RESOURCE, ex.getErrorCode());
-    }
 
     @Test
     void testStartMatch_successAndFails() {
@@ -156,7 +150,7 @@ class MatchStateTest {
 
         assertEquals(MatchStatus.PLAYING, state.getStatus());
         assertEquals(1, state.getCurrentTurn());
-        assertTrue(state.getTurnStartTime() > 0);
+        assertTrue(state.getTurnEndTime() > 0);
 
         // Try start again should fail
         MatchStateConflictException exAlreadyStarted = assertThrows(MatchStateConflictException.class,
@@ -186,7 +180,7 @@ class MatchStateTest {
         assertEquals(3, state.getCurrentTurn());
 
         state.finishTurn(config);
-        assertEquals(4, state.getCurrentTurn());
+        assertEquals(3, state.getCurrentTurn());
         assertEquals(MatchStatus.FINISHED, state.getStatus());
     }
 
@@ -202,7 +196,7 @@ class MatchStateTest {
         // Submit action plans
         // Patrol agent moves from (1,0) to POND (2,0) which is allowed and succeeds
         patrol.setActions(List.of(
-                new Action(ActionType.MOVE, new Coordinate(2, 0)),
+                new Action(ActionType.MOVE, com.naprock.hexudon.domain.model.geometry.Direction.EAST),
                 new Action(ActionType.WAIT, null),
                 new Action(ActionType.WAIT, null),
                 new Action(ActionType.WAIT, null),
@@ -220,8 +214,8 @@ class MatchStateTest {
         // Finish the turn to simulate execution
         state.finishTurn(config);
 
-        // Since PatrolAgent's movement fails due to the production fuel bug, it stays at (1, 0) and gets no refuel
-        assertEquals(90, patrol.getFuel());
+        // Since PatrolAgent's movement fails due to destination being a POND (non-walkable), it stays at (1, 0) and gets no refuel, consuming no fuel
+        assertEquals(100, patrol.getFuel());
         assertEquals(new Coordinate(1, 0), patrol.getPosition());
     }
 }

@@ -16,6 +16,36 @@ public enum Direction {
     NORTHEAST;
 
     /**
+     * Converts an API direction value to a Direction.
+     *
+     * <pre>
+     * 0 -> NORTHWEST
+     * 1 -> NORTHEAST
+     * 2 -> EAST
+     * 3 -> SOUTHEAST
+     * 4 -> SOUTHWEST
+     * 5 -> WEST
+     * </pre>
+     *
+     * @param value API direction value
+     * @return corresponding direction
+     */
+    public static Direction fromValue(int value) {
+        return switch (value) {
+            case 0 -> NORTHWEST;
+            case 1 -> NORTHEAST;
+            case 2 -> EAST;
+            case 3 -> SOUTHEAST;
+            case 4 -> SOUTHWEST;
+            case 5 -> WEST;
+            default -> throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    String.format("Invalid direction value: %d", value)
+            );
+        };
+    }
+
+    /**
      * Returns the column offset for this direction.
      *
      * @param row current row

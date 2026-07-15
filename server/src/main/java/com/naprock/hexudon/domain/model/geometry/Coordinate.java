@@ -1,7 +1,8 @@
 package com.naprock.hexudon.domain.model.geometry;
 
-import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.code.ErrorCode;
+import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNegative;
+import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNull;
+import static com.naprock.hexudon.domain.validation.DomainValidator.requirePositive;
 
 public record Coordinate(
         int x,
@@ -9,62 +10,89 @@ public record Coordinate(
 ) {
 
     public Coordinate {
-        validateCoordinate(x, y);
+        requireNonNegative(x, "x");
+        requireNonNegative(y, "y");
     }
 
     /**
-     * Checks whether another position is adjacent.
+     * Converts this coordinate to a row-major index.
+     */
+    public int toIndex(int width) {
+        requirePositive(width, "width");
+        return y * width + x;
+    }
+
+    /**
+     * Creates a coordinate from a row-major index.
+     */
+    public static Coordinate create(int index, int width) {
+        requireNonNegative(index, "index");
+        requirePositive(width, "width");
+
+        return new Coordinate(
+                index % width,
+                index / width
+        );
+    }
+
+    /**
+     * Returns whether the specified coordinate is adjacent on an odd-r offset
+     * hexagonal grid.
      */
     public boolean isAdjacentTo(Coordinate other) {
-        validateOther(other);
 
-        int dx = other.x - this.x;
-        int dy = other.y - this.y;
+        requireNonNull(other, "other");
 
-        if (dx == 0 && dy == 0) {
+        int deltaX = other.x - x;
+        int deltaY = other.y - y;
+
+        if (deltaX == 0 && deltaY == 0) {
             return false;
         }
 
-        if (this.y % 2 != 0) {
-            return switch (dy) {
-                case -1 -> dx == 0 || dx == 1;
-                case 0 -> dx == -1 || dx == 1;
-                case 1 -> dx == 0 || dx == 1;
-                default -> false;
-            };
-        } else {
-            return switch (dy) {
-                case -1 -> dx == -1 || dx == 0;
-                case 0 -> dx == -1 || dx == 1;
-                case 1 -> dx == -1 || dx == 0;
+        if ((y & 1) == 1) {
+            return switch (deltaY) {
+                case -1 -> deltaX == 0 || deltaX == 1;
+                case 0 -> deltaX == -1 || deltaX == 1;
+                case 1 -> deltaX == 0 || deltaX == 1;
                 default -> false;
             };
         }
+
+        return switch (deltaY) {
+            case -1 -> deltaX == -1 || deltaX == 0;
+            case 0 -> deltaX == -1 || deltaX == 1;
+            case 1 -> deltaX == -1 || deltaX == 0;
+            default -> false;
+        };
     }
 
-
+    /**
+     * Calculates the hex distance to another coordinate.
+     */
     public int distanceTo(Coordinate other) {
-        validateOther(other);
 
-        CubeCoordinate a = toCube();
-        CubeCoordinate b = other.toCube();
+        requireNonNull(other, "other");
 
-        int dx = Math.abs(a.x() - b.x());
-        int dy = Math.abs(a.y() - b.y());
-        int dz = Math.abs(a.z() - b.z());
+        CubeCoordinate source = toCubeCoordinate();
+        CubeCoordinate target = other.toCubeCoordinate();
 
-        return Math.max(dx, Math.max(dy, dz));
+        int deltaX = Math.abs(source.x() - target.x());
+        int deltaY = Math.abs(source.y() - target.y());
+        int deltaZ = Math.abs(source.z() - target.z());
+
+        return Math.max(
+                deltaX,
+                Math.max(deltaY, deltaZ)
+        );
     }
 
-
+    /**
+     * Returns the neighboring coordinate in the specified direction.
+     */
     public Coordinate getNeighbor(Direction direction) {
 
-        if (direction == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Direction cannot be null"
-            );
-        }
+        requireNonNull(direction, "direction");
 
         return new Coordinate(
                 x + direction.getDx(y),
@@ -72,8 +100,10 @@ public record Coordinate(
         );
     }
 
-
-    private CubeCoordinate toCube() {
+    /**
+     * Converts this odd-r offset coordinate to cube coordinates.
+     */
+    private CubeCoordinate toCubeCoordinate() {
 
         int cubeX = x - (y - (y & 1)) / 2;
         int cubeZ = y;
@@ -86,32 +116,13 @@ public record Coordinate(
         );
     }
 
-
-    private static void validateCoordinate(int x, int y) {
-
-        if (x < 0 || y < 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Coordinate cannot be negative"
-            );
-        }
-    }
-
-
-    private static void validateOther(Coordinate other) {
-
-        if (other == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Coordinate cannot be null"
-            );
-        }
-    }
-
-
+    /**
+     * Cube coordinate representation for hex distance calculations.
+     */
     private record CubeCoordinate(
             int x,
             int y,
             int z
-    ) {}
+    ) {
+    }
 }

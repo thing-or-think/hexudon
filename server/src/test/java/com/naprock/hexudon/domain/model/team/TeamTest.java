@@ -7,10 +7,13 @@ import com.naprock.hexudon.domain.model.agent.Agent;
 import com.naprock.hexudon.domain.model.agent.PatrolAgent;
 import com.naprock.hexudon.domain.model.agent.RefuelAgent;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,16 +24,24 @@ class TeamTest {
 
     @BeforeEach
     void setUp() {
-        config = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-                .maxTurns(10)
-                .maxTeams(2)
-                .agentsPerTeam(2)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
-                .initialSpotUdonStock(5)
-                .build();
+        config = new MatchConfig(
+                1000L,
+                Collections.nCopies(10, 5),
+                Collections.nCopies(10, 50),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
     }
 
     @Test
@@ -51,7 +62,7 @@ class TeamTest {
         Agent refuel = new RefuelAgent(new Coordinate(0, 0));
         Team team = new Team("Beta", List.of(patrol, refuel));
 
-        team.prepareNewTurn(config);
+        team.prepareNewTurn(5);
 
         assertEquals(5, patrol.getRemainingSteps());
         assertEquals(5, refuel.getRemainingSteps());
@@ -82,16 +93,15 @@ class TeamTest {
     }
 
     @Test
-    void testRequireAgent() {
+    void testFindAgentByIndex() {
         Agent patrol = new PatrolAgent(new Coordinate(0, 0));
         Team team = new Team("Alpha", List.of(patrol));
 
-        Agent found = team.requireAgent(patrol.getId());
+        Agent found = team.findAgentByIndex(0);
         assertEquals(patrol, found);
 
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, 
-                () -> team.requireAgent("invalid-id"));
-        assertEquals(ErrorCode.AGENT_NOT_FOUND, exception.getErrorCode());
+        assertNull(team.findAgentByIndex(1));
+        assertNull(team.findAgentByIndex(-1));
     }
 
     @Test

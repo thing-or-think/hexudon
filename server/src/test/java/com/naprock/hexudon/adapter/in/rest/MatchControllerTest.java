@@ -1,17 +1,16 @@
 package com.naprock.hexudon.adapter.in.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.naprock.hexudon.application.dto.match.ActionRequest;
+import com.naprock.hexudon.application.dto.match.MapResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
+import com.naprock.hexudon.application.dto.match.SpotResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
 import com.naprock.hexudon.application.port.in.GetMatchConfigUseCase;
 import com.naprock.hexudon.application.port.in.GetMatchStateUseCase;
 import com.naprock.hexudon.application.port.in.RegisterTeamUseCase;
 import com.naprock.hexudon.application.port.in.SubmitActionsUseCase;
-import com.naprock.hexudon.domain.model.match.MatchStatus;
-import com.naprock.hexudon.domain.model.movement.ActionType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -51,7 +50,7 @@ class MatchControllerTest {
 
     @Test
     void registerTeam_shouldReturnCreatedStatus() throws Exception {
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", 1, 1);
+        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
 
         mockMvc.perform(post("/api/match/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -64,24 +63,32 @@ class MatchControllerTest {
     @Test
     void getMatchConfig_shouldReturnConfig() throws Exception {
         MatchConfigResponse configResponse = new MatchConfigResponse(
-                5, 5, Collections.emptyList(), Collections.emptyList(),
-                2, 100, 5, 10
+                1000L,
+                List.of(5),
+                List.of(50),
+                new MapResponse(5, 5, Collections.nCopies(5, Collections.nCopies(5, 0))),
+                List.of(new SpotResponse(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
         );
 
         when(getMatchConfigUseCase.getMatchConfig()).thenReturn(configResponse);
 
         mockMvc.perform(get("/api/match/config"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mapWidth").value(5))
-                .andExpect(jsonPath("$.mapHeight").value(5))
-                .andExpect(jsonPath("$.agentsPerTeam").value(2));
+                .andExpect(jsonPath("$.startsAt").value(1000))
+                .andExpect(jsonPath("$.fuelLimits").value(100))
+                .andExpect(jsonPath("$.players").value(2));
     }
 
     @Test
     void getMatchState_shouldReturnMatchStateResponse() throws Exception {
         MatchStateResponse stateResponse = new MatchStateResponse(
-                MatchStatus.PLAYING, 1, Collections.emptyList(),
-                Collections.emptyList(), Collections.emptyList(), Collections.emptyList()
+                2000L, 1, Collections.emptyList(),
+                Collections.emptyList(), Collections.emptyList()
         );
 
         when(getMatchStateUseCase.getMatchState("Alpha")).thenReturn(stateResponse);
@@ -89,14 +96,13 @@ class MatchControllerTest {
         mockMvc.perform(get("/api/match/state")
                         .header("X-Team-Name", "Alpha"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PLAYING"))
-                .andExpect(jsonPath("$.turn").value(1));
+                .andExpect(jsonPath("$.endsAt").value(2000))
+                .andExpect(jsonPath("$.day").value(1));
     }
 
     @Test
     void submitActions_shouldReturnAccepted() throws Exception {
-        ActionRequest actionRequest = new ActionRequest("A1", 1, ActionType.WAIT, null);
-        SubmitActionRequest request = new SubmitActionRequest(List.of(actionRequest));
+        SubmitActionRequest request = new SubmitActionRequest(1, List.of(List.of(1, -2)));
 
         mockMvc.perform(post("/api/match/actions")
                         .header("X-Team-Name", "Alpha")

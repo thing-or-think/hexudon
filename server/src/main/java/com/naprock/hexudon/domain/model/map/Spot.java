@@ -4,115 +4,91 @@ import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 public class Spot {
 
+    private final int type;
     private final Coordinate coordinate;
-    private final UdonType udonType;
-    private final Map<String, Integer> teamUdonStocks;
-    private final int udonAmount;
+    private final int initialStocks;
+    private final Map<Integer, Integer> teamStocks;
 
     public Spot(
+            int type,
             Coordinate coordinate,
-            UdonType udonType,
-            List<String> teamNames,
-            int udonAmount) {
-        validateNotNull(coordinate, "coordinate");
-        validateNotNull(udonType, "udonType");
-        validateNotNull(teamNames, "teamNames");
+            int initialStocks
+    ) {
 
-        if (udonAmount < 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "udonAmount must not be negative."
-            );
-        }
+        requireNonNegative(type, "type");
+        requireNonNull(coordinate, "coordinate");
+        requirePositive(initialStocks, "initialStocks");
 
+        this.type = type;
         this.coordinate = coordinate;
-        this.udonType = udonType;
-        this.teamUdonStocks = new HashMap<>();
-        for (String teamName : teamNames) {
-            validateNotNull(teamName, "teamName");
-            this.teamUdonStocks.put(teamName, udonAmount);
-        }
-        this.udonAmount = udonAmount;
+        this.initialStocks = initialStocks;
+        this.teamStocks = new HashMap<>();
     }
 
-    public void registerTeam(String teamName) {
-        validateNotNull(teamName, "teamName");
-        if (!this.teamUdonStocks.containsKey(teamName)) {
-            this.teamUdonStocks.put(teamName, this.udonAmount);
-        }
+    public void registerTeam(int teamId) {
+        teamStocks.putIfAbsent(teamId, initialStocks);
     }
 
     public Coordinate getCoordinate() {
         return coordinate;
     }
 
-    public UdonType getUdonType() {
-        return udonType;
+    public int getType() {
+        return type;
     }
 
-    public int getUdonAmount() {
-        return udonAmount;
+    public int getInitialStocks() {
+        return initialStocks;
     }
 
-    public int getUdonStock(String teamName) {
-        validateNotNull(teamName, "teamName");
-
-        return teamUdonStocks.getOrDefault(teamName, 0);
+    public int getStock(int teamId) {
+        return teamStocks.getOrDefault(teamId, 0);
     }
 
-    public void decrementUdonStock(String teamName) {
-        validateNotNull(teamName, "teamName");
+    public void decrementStock(int teamId) {
 
-        if (!teamUdonStocks.containsKey(teamName)) {
-            throw new GameRuleViolationException(
-                    ErrorCode.CELL_OUT_OF_BOUNDS,
-                    "No Udon stock is registered for team: " + teamName
-            );
-        }
+        Integer stock = teamStocks.get(teamId);
 
-        int currentStock = teamUdonStocks.get(teamName);
-
-        if (currentStock <= 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.INVALID_TARGET_TERRAIN,
-                    "No Udon remaining for team: " + teamName
-            );
-        }
-
-        teamUdonStocks.put(teamName, currentStock - 1);
-    }
-
-    public void resetUdonStocks() {
-
-        for (String teamName : teamUdonStocks.keySet()) {
-            teamUdonStocks.put(teamName, udonAmount);
-        }
-    }
-
-    private void validateNotNull(Object value,
-                                 String fieldName) {
-
-        if (Objects.isNull(value)) {
+        if (stock == null) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    fieldName + " must not be null."
+                    "Team is not registered: " + teamId
             );
         }
+
+        if (stock <= 0) {
+            throw new GameRuleViolationException(
+                    ErrorCode.INVALID_TARGET_TERRAIN,
+                    "No stock remaining for team: " + teamId
+            );
+        }
+
+        teamStocks.put(teamId, stock - 1);
+    }
+
+    public void resetStocks() {
+        teamStocks.replaceAll((teamId, stock) -> initialStocks);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object object) {
+        if (this == object) {
             return true;
         }
-        if (!(o instanceof Spot other)) {
+
+        if (!(object instanceof Spot other)) {
             return false;
         }
-        return Objects.equals(coordinate, other.coordinate);
+
+        return coordinate.equals(other.coordinate);
     }
 
     @Override

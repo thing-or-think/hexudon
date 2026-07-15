@@ -1,5 +1,7 @@
 package com.naprock.hexudon.application.service;
 
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.match.MatchState;
 import com.naprock.hexudon.domain.model.match.MatchStatus;
@@ -10,6 +12,7 @@ import com.naprock.hexudon.domain.model.geometry.Coordinate;
 import com.naprock.hexudon.domain.model.map.Cell;
 import com.naprock.hexudon.domain.model.map.TerrainType;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,16 +21,24 @@ class MatchTurnSchedulerServiceTest {
 
     @Test
     void testTurnProgressionAndFinishMatch() {
-        MatchConfig config = MatchConfig.builder()
-                .mapWidth(5)
-                .mapHeight(5)
-                .maxTurns(2)
-                .maxTeams(2)
-                .agentsPerTeam(2)
-                .maxFuel(100)
-                .maxStepsPerTurn(5)
-                .initialSpotUdonStock(5)
-                .build();
+        MatchConfig config = new MatchConfig(
+                1000L,
+                List.of(5, 5),
+                List.of(50, 100),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
 
         MatchState state = new MatchState();
         state.getTrafficHistory().init(List.of(new Cell(new Coordinate(0, 0), TerrainType.PLAIN)));
@@ -44,7 +55,7 @@ class MatchTurnSchedulerServiceTest {
 
         // Second turn finish -> Exceeds maxTurns (2) -> FINISHED
         state.finishTurn(config);
-        assertEquals(3, state.getCurrentTurn());
+        assertEquals(2, state.getCurrentTurn());
         assertEquals(MatchStatus.FINISHED, state.getStatus());
     }
 }

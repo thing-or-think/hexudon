@@ -6,15 +6,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DomainBeanConfig {
-
-    @Bean
-    public AgentSpawnService agentSpawnService() { return new AgentSpawnService(); }
-
     @Bean
     public ActionValidator actionValidator() { return new ActionValidator(); }
-
-    @Bean
-    public HexGridGenerator hexGridGenerator() {
-        return new HexGridGenerator();
-    }
 }

@@ -5,37 +5,45 @@ import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.agent.Agent;
 import com.naprock.hexudon.domain.model.agent.RefuelAgent;
 import com.naprock.hexudon.domain.model.map.GameMap;
+import com.naprock.hexudon.domain.model.match.MatchState;
 import com.naprock.hexudon.domain.model.movement.Action;
 import com.naprock.hexudon.domain.model.team.Team;
 
 import java.util.List;
-import java.util.Map;
 
 public class ActionValidator {
 
     public void validate(
-            GameMap gameMap,
-            Map<String, List<Action>> teamActions,
-            Team team
+            MatchState state,
+            Team team,
+            int turn,
+            List<List<Action>> teamActions
     ) {
+        GameMap gameMap = state.getGameMap();
 
-        for (Map.Entry<String, List<Action>> entry : teamActions.entrySet()) {
+        if (teamActions.size() != team.getAgents().size()) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Invalid number of agent actions"
+            );
+        }
 
-            Agent agent = team.requireAgent(entry.getKey());
+        for (int i = 0; i < team.getAgents().size(); i++) {
+
+            Agent agent = team.findAgentByIndex(i);
 
             RefuelAgent simulationAgent =
                     new RefuelAgent(agent.getPosition());
 
-            simulationAgent.setActions(entry.getValue());
+            simulationAgent.setActions(teamActions.get(i));
             simulationAgent.resetSteps(agent.getRemainingSteps());
 
             simulate(gameMap, simulationAgent);
+
         }
 
-        for (Map.Entry<String, List<Action>> entry : teamActions.entrySet()) {
-
-            Agent agent = team.requireAgent(entry.getKey());
-            agent.setActions(entry.getValue());
+        for (int i = 0; i < team.getAgents().size(); i++) {
+            team.findAgentByIndex(i).setActions(teamActions.get(i));
         }
     }
 

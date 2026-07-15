@@ -11,13 +11,16 @@ import com.naprock.hexudon.domain.model.team.CollectResult;
 import com.naprock.hexudon.domain.model.team.Team;
 import com.naprock.hexudon.domain.model.traffic.TrafficHistory;
 
+import java.time.Instant;
 import java.util.*;
+
+import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNull;
 
 public class MatchState {
 
     private MatchStatus status;
     private int currentTurn;
-    private long turnStartTime;
+    private long turnEndTime;
     private final List<Team> teams;
 
     private final GameMap gameMap;
@@ -27,11 +30,34 @@ public class MatchState {
     public MatchState() {
         this.status = MatchStatus.WAITING;
         this.currentTurn = 0;
-        this.turnStartTime = 0L;
+        this.turnEndTime = 0L;
         this.teams = new ArrayList<>();
         this.gameMap = new GameMap();
         this.trafficHistory = new TrafficHistory();
         this.scoreBoard = new ScoreBoard();
+    }
+
+    public void init(MatchConfig config) {
+        gameMap.init(config.map(), config.spots());
+        trafficHistory.init(gameMap.getCells().stream().toList());
+        turnEndTime = config.startsAt();
+    }
+
+    public boolean canStart() {
+        return !teams.isEmpty()
+                && status == MatchStatus.WAITING;
+    }
+
+    public boolean isTurnFinished(long now) {
+        if (status != MatchStatus.PLAYING) {
+            return false;
+        }
+
+        return now >= turnEndTime;
+    }
+
+    public boolean isWaiting() {
+        return status == MatchStatus.WAITING;
     }
 
     public boolean isPlaying() {
@@ -39,43 +65,51 @@ public class MatchState {
     }
 
     public void finishTurn(MatchConfig config) {
-
-        validateNotNull(config, "config");
+        requireNonNull(config, "config");
         ensurePlaying();
+
+        int currentTurnIndex = currentTurn - 1;
+        int currentDaySteps = config.daySteps().get(currentTurnIndex);
 
         List<CollectResult> collects = new ArrayList<>();
         List<MoveResult> moves = new ArrayList<>();
 
-        for (int step = config.maxStepsPerTurn(); step >= 1; step--) {
+        // Simulate all steps of the current turn
+        for (int step = currentDaySteps; step >= 1; step--) {
             for (Team team : teams) {
-
-                team.autoRefuel(step, config.maxFuel());
-
+                team.autoRefuel(step, config.fuelLimits());
                 team.executeStep(step, gameMap, collects, moves);
             }
         }
 
+        // Update match result
         scoreBoard.apply(collects, currentTurn);
-        trafficHistory.updateTraffic(moves, config.maxTeams());
+        trafficHistory.updateTraffic(moves, config.players());
 
-        currentTurn++;
-
-        if (currentTurn > config.maxTurns()) {
+        // Check whether the match has ended
+        int nextTurn = currentTurn + 1;
+        if (nextTurn > config.daySteps().size()) {
             status = MatchStatus.FINISHED;
             return;
         }
 
-        teams.forEach(team -> team.prepareNewTurn(config));
+        // Prepare for the next turn
+        teams.forEach(team ->
+                team.prepareNewTurn(config.daySteps().get(nextTurn - 1))
+        );
+
+        turnEndTime = Instant.now().getEpochSecond()
+                + config.daySeconds().get(nextTurn - 1);
 
         gameMap.resetTurnResources();
 
         if (!trafficHistory.isEmpty()) {
             gameMap.updateMovementCosts(
-                    trafficHistory.getLatestTrafficLevels().stream().toList()
+                    trafficHistory.getLatestTrafficFlows().stream().toList()
             );
         }
 
-        turnStartTime = System.currentTimeMillis();
+        currentTurn = nextTurn;
     }
 
     public void registerTeam(Team team, int maxTeams) {
@@ -92,8 +126,8 @@ public class MatchState {
             throw new MatchStateConflictException(ErrorCode.MAX_TEAMS_REACHED, "Maximum teams reached");
         }
         teams.add(team);
-        gameMap.registerTeam(team.getTeamName());
-        scoreBoard.registerTeam(team.getTeamName());
+        gameMap.registerTeam(team.getTeamId());
+        scoreBoard.registerTeam(team.getTeamId());
     }
 
     public Team requireTeam(String teamName) {
@@ -122,14 +156,14 @@ public class MatchState {
 
         this.status = MatchStatus.PLAYING;
         this.currentTurn = 1;
-        this.turnStartTime = System.currentTimeMillis();
+        this.turnEndTime = Instant.now().getEpochSecond() + config.daySeconds().getFirst();
 
         teams.forEach(team -> {
-            team.refuelAgents(config.maxFuel());
-            team.resetSteps(config.maxStepsPerTurn());
+            team.refuelAgents(config.fuelLimits());
+            team.resetSteps(config.daySteps().getFirst());
         });
 
-        gameMap.getSpotIndex().values().forEach(spot -> spot.resetUdonStocks());
+        gameMap.resetTurnResources();
     }
 
     public void ensurePlaying() {
@@ -148,8 +182,8 @@ public class MatchState {
         return currentTurn;
     }
 
-    public long getTurnStartTime() {
-        return turnStartTime;
+    public long getTurnEndTime() {
+        return turnEndTime;
     }
 
     public List<Team> getTeams() {
@@ -162,17 +196,6 @@ public class MatchState {
 
     public ScoreBoard getScoreBoard() {
         return scoreBoard;
-    }
-
-    private void validateNotNull(Object value,
-                                 String fieldName) {
-
-        if (Objects.isNull(value)) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    fieldName + " must not be null."
-            );
-        }
     }
 
     @Override

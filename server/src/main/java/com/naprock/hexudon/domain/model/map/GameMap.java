@@ -9,6 +9,8 @@ import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import java.util.*;
 
 public class GameMap {
+    private int width;
+    private int height;
     private final Map<Coordinate, Cell> cells;
     private final Map<Coordinate, Spot> spots;
     private final Map<Coordinate, MovementCost> movementCosts;
@@ -19,38 +21,43 @@ public class GameMap {
         this.movementCosts = new HashMap<>();
     }
 
-    public void registerTeam(String teamName) {
-        spots.values().forEach(spot -> spot.registerTeam(teamName));
+    public void registerTeam(int teamId) {
+        spots.values().forEach(spot -> spot.registerTeam(teamId));
     }
 
     public void resetTurnResources() {
-        spots.values().forEach(Spot::resetUdonStocks);
+        spots.values().forEach(Spot::resetStocks);
     }
 
-    public void addCell(Cell cell) {
-        if (cell == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "cell must not be null"
+    public void init(MapConfig mapConfig, List<SpotConfig> spotConfigs) {
+        width = mapConfig.width();
+        height = mapConfig.height();
+
+        List<List<Integer>> cellConfig = mapConfig.cells();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Coordinate coordinate = new Coordinate(x, y);
+                TerrainType terrainType = TerrainType.fromValue(cellConfig.get(y).get(x));
+                Cell cell = new Cell(
+                        new Coordinate(x, y),
+                        terrainType
+                );
+                cells.put(coordinate, cell);
+                movementCosts.put(coordinate, new MovementCost(terrainType));
+            }
+        }
+
+        for (SpotConfig spot : spotConfigs) {
+            Coordinate coordinate = Coordinate.create(spot.pos(), width);
+            Spot spot1 = new Spot(
+                    spot.brand(),
+                    Coordinate.create(spot.pos(), width),
+                    spot.stocks()
             );
+            spots.put(coordinate, spot1);
         }
 
-        if (cells.containsKey(cell.coordinate())) {
-            throw new GameRuleViolationException(
-                    ErrorCode.DUPLICATE_RESOURCE,
-                    "Cell already exists: " + cell.coordinate()
-            );
-        }
-
-        cells.put(cell.coordinate(), cell);
-    }
-
-    public void addSpot(Spot spot) {
-        if (spot == null) throw new GameRuleViolationException(ErrorCode.VALIDATION_ERROR, "Spot must not be null");
-        if (spots.containsKey(spot.getCoordinate())) {
-            throw new GameRuleViolationException(ErrorCode.DUPLICATE_RESOURCE, "Spot already exists: " + spot.getCoordinate());
-        }
-        spots.put(spot.getCoordinate(), spot);
     }
 
     public Cell getCell(Coordinate coordinate) {
@@ -77,8 +84,8 @@ public class GameMap {
             movementCosts.put(
                     coordinate,
                     new MovementCost(
-                            flow.getTrafficLevel().value(),
-                            currentCost.getStepsNeeded()
+                            flow.getTrafficLevel().cost(),
+                            currentCost.stepsNeeded()
                     )
             );
         }

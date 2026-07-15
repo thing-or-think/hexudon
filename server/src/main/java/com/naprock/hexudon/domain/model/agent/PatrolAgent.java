@@ -41,22 +41,20 @@ public class PatrolAgent extends Agent {
             return MoveResult.success(position);
         }
 
-        Coordinate destination = action.targetCoordinate();
+        Coordinate destination = position.getNeighbor(action.direction());
         Cell cell = cells.get(destination);
 
-        if (cell == null
-                || !position.isAdjacentTo(destination)
-                || cell.isWalkable()) {
+        if (cell == null || !cell.isWalkable()) {
             consumeStep(1);
             return MoveResult.failed(position);
         }
 
         MovementCost movementCost = movementCosts.get(destination);
-        if (!consumeFuel(movementCost.getFuelNeeded())) {
+        if (!consumeFuel(movementCost.fuelNeeded())) {
             return MoveResult.failed(position);
         }
 
-        consumeStep(movementCost.getStepsNeeded());
+        consumeStep(movementCost.stepsNeeded());
 
         position = destination;
 
@@ -65,20 +63,20 @@ public class PatrolAgent extends Agent {
 
     @Override
     public CollectResult collectUdon(
-            String teamName,
+            int teamId,
             Map<Coordinate, Spot> spots) {
 
         validateNotNull(spots, "spots");
 
         Spot spot = spots.get(position);
-        if (spot == null || visitedSpotsToday.contains(spot.getCoordinate()) || spot.getUdonStock(teamName) <= 0) {
-            return CollectResult.failed(getId(), position);
+        if (spot == null || visitedSpotsToday.contains(spot.getCoordinate()) || spot.getStock(teamId) <= 0) {
+            return CollectResult.failed(teamId, position);
         }
 
-        spot.decrementUdonStock(teamName);
+        spot.decrementStock(teamId);
 
         visitedSpotsToday.add(spot.getCoordinate());
-        return CollectResult.success(getId(), position, spot.getUdonType());
+        return CollectResult.success(teamId, position, spot.getType());
     }
 
     private void validateNotNull(Object value,

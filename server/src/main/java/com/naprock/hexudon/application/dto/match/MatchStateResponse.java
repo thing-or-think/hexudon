@@ -1,32 +1,27 @@
 package com.naprock.hexudon.application.dto.match;
 
 import com.naprock.hexudon.application.dto.agent.AgentResponse;
-import com.naprock.hexudon.application.dto.team.TeamScoreResponse;
-import com.naprock.hexudon.domain.model.match.MatchStatus;
+import com.naprock.hexudon.application.dto.team.TeamResponse;
 
 import java.util.List;
 import java.util.Objects;
 
 public record MatchStateResponse(
-        MatchStatus status,
-        int turn,
+        long endsAt,
+        int day,
         List<AgentResponse> agents,
-        List<TrafficResponse> traffic,
-        List<SpotResponse> spots,
-        List<TeamScoreResponse> teamScores
+        List<TeamResponse> others,
+        List<TrafficResponse> traffics
 ) {
 
     public MatchStateResponse {
-        Objects.requireNonNull(status, "status must not be null");
-
-        if (turn < 0) {
-            throw new IllegalArgumentException("turn must not be negative");
+        if (day < 0) {
+            throw new IllegalArgumentException("day must not be negative");
         }
 
         agents = copyImmutableList(agents, "agents");
-        traffic = copyImmutableList(traffic, "traffic");
-        spots = copyImmutableList(spots, "spots");
-        teamScores = copyImmutableList(teamScores, "teamScores");
+        others = copyImmutableList(others, "others");
+        traffics = copyImmutableList(traffics, "traffics");
     }
 
     private static <T> List<T> copyImmutableList(

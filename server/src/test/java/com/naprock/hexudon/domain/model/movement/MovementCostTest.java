@@ -16,8 +16,8 @@ class MovementCostTest {
 
         MovementCost movementCost = new MovementCost(fuel, steps);
 
-        assertThat(movementCost.getFuelNeeded()).isEqualTo(0);
-        assertThat(movementCost.getStepsNeeded()).isEqualTo(0);
+        assertThat(movementCost.fuelNeeded()).isEqualTo(0);
+        assertThat(movementCost.stepsNeeded()).isEqualTo(0);
     }
 
     @Test
@@ -27,8 +27,8 @@ class MovementCostTest {
 
         MovementCost movementCost = new MovementCost(fuel, steps);
 
-        assertThat(movementCost.getFuelNeeded()).isEqualTo(5);
-        assertThat(movementCost.getStepsNeeded()).isEqualTo(10);
+        assertThat(movementCost.fuelNeeded()).isEqualTo(5);
+        assertThat(movementCost.stepsNeeded()).isEqualTo(10);
     }
 
     @Test
@@ -63,7 +63,7 @@ class MovementCostTest {
     void getFuelNeeded_ShouldReturnCorrectFuelNeeded_WhenObjectIsInitialized() {
         MovementCost movementCost = new MovementCost(4, 7);
 
-        int fuel = movementCost.getFuelNeeded();
+        int fuel = movementCost.fuelNeeded();
 
         assertThat(fuel).isEqualTo(4);
     }
@@ -72,7 +72,7 @@ class MovementCostTest {
     void getStepsNeeded_ShouldReturnCorrectStepsNeeded_WhenObjectIsInitialized() {
         MovementCost movementCost = new MovementCost(4, 7);
 
-        int steps = movementCost.getStepsNeeded();
+        int steps = movementCost.stepsNeeded();
 
         assertThat(steps).isEqualTo(7);
     }
@@ -163,6 +163,6 @@ class MovementCostTest {
 
         String result = movementCost.toString();
 
-        assertThat(result).isEqualTo("MovementCost{fuelNeeded=3, stepsNeeded=6}");
+        assertThat(result).isEqualTo("MovementCost[fuelNeeded=3, stepsNeeded=6]");
     }
 }

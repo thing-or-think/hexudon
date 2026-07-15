@@ -4,48 +4,78 @@ import java.util.List;
 import java.util.Objects;
 
 public record MatchConfigResponse(
-        int mapWidth,
-        int mapHeight,
-        List<CellResponse> cells,
+        long startsAt,
+        List<Integer> daySeconds,
+        List<Integer> daySteps,
+        MapResponse map,
         List<SpotResponse> spots,
-        int agentsPerTeam,
-        int maxFuel,
-        int maxStepsPerTurn,
-        int maxTurn
+        List<Integer> agents,
+        int fuelLimits,
+        int players,
+        double busyThreshold,
+        double jammedThreshold
 ) {
 
     public MatchConfigResponse {
 
-        cells = List.copyOf(
-                Objects.requireNonNull(cells, "cells must not be null")
+        if (startsAt <= 0) {
+            throw new IllegalArgumentException("startsAt must be positive");
+        }
+
+        daySeconds = List.copyOf(
+                Objects.requireNonNull(daySeconds, "daySeconds must not be null")
         );
+
+        daySteps = List.copyOf(
+                Objects.requireNonNull(daySteps, "daySteps must not be null")
+        );
+
+        map = Objects.requireNonNull(map, "map must not be null");
 
         spots = List.copyOf(
                 Objects.requireNonNull(spots, "spots must not be null")
         );
 
-        if (mapWidth <= 0) {
-            throw new IllegalArgumentException("mapWidth must be positive");
+        agents = List.copyOf(
+                Objects.requireNonNull(agents, "agents must not be null")
+        );
+
+        if (daySeconds.isEmpty()) {
+            throw new IllegalArgumentException("daySeconds must not be empty");
         }
 
-        if (mapHeight <= 0) {
-            throw new IllegalArgumentException("mapHeight must be positive");
+        if (daySteps.isEmpty()) {
+            throw new IllegalArgumentException("daySteps must not be empty");
         }
 
-        if (agentsPerTeam <= 0) {
-            throw new IllegalArgumentException("agentsPerTeam must be positive");
+        if (agents.isEmpty()) {
+            throw new IllegalArgumentException("agents must not be empty");
         }
 
-        if (maxFuel <= 0) {
-            throw new IllegalArgumentException("maxFuel must be positive");
+        if (daySeconds.size() != daySteps.size()) {
+            throw new IllegalArgumentException(
+                    "daySeconds and daySteps must have the same size"
+            );
         }
 
-        if (maxStepsPerTurn <= 0) {
-            throw new IllegalArgumentException("maxStepsPerTurn must be positive");
+        if (fuelLimits <= 0) {
+            throw new IllegalArgumentException("fuelLimits must be positive");
         }
 
-        if (maxTurn <= 0) {
-            throw new IllegalArgumentException("maxTurn must be positive");
+        if (players <= 0) {
+            throw new IllegalArgumentException("players must be positive");
+        }
+
+        if (busyThreshold <= 0) {
+            throw new IllegalArgumentException(
+                    "busyThreshold must be greater than 0"
+            );
+        }
+
+        if (jammedThreshold <= busyThreshold) {
+            throw new IllegalArgumentException(
+                    "jammedThreshold must be greater than busyThreshold"
+            );
         }
     }
 }

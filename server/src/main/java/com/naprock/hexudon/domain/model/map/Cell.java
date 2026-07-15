@@ -6,14 +6,16 @@ import com.naprock.hexudon.domain.model.geometry.Coordinate;
 
 import java.util.Objects;
 
+import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNull;
+
 public record Cell(
         Coordinate coordinate,
         TerrainType terrainType
 ) {
 
     public Cell {
-        validateNotNull(coordinate, "coordinate");
-        validateNotNull(terrainType, "terrainType");
+        requireNonNull(coordinate, "coordinate");
+        requireNonNull(terrainType, "terrainType");
     }
 
     /**
@@ -21,17 +23,5 @@ public record Cell(
      */
     public boolean isWalkable() {
         return terrainType != TerrainType.POND;
-    }
-
-    private static void validateNotNull(
-            Object value,
-            String fieldName
-    ) {
-        if (Objects.isNull(value)) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    fieldName + " must not be null."
-            );
-        }
     }
 }

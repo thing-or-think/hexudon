@@ -1,48 +1,58 @@
 package com.naprock.hexudon.domain.model.score;
 
-import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.map.UdonType;
-
 import java.util.*;
+
+import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNegative;
+import static com.naprock.hexudon.domain.validation.DomainValidator.requirePositive;
 
 /**
  * Entity responsible for tracking a team's score and performance statistics.
  */
 public class TeamScore {
 
-    private final String teamName;
+    private final int teamId;
 
-    private final Set<UdonType> collectedUdonTypes;
-    private final Map<Integer, Set<UdonType>> dailyUdonTypesHistory;
+    /**
+     * Unique Udon type IDs collected throughout the entire match.
+     */
+    private final Set<Integer> collectedUdonTypes;
+
+    /**
+     * Udon type IDs collected for each turn.
+     * Key: turn
+     * Value: unique Udon type IDs collected during that turn.
+     */
+    private final Map<Integer, Set<Integer>> dailyUdonTypesHistory;
 
     private int totalServings;
     private long totalResponseTimeMs;
     private int requestCount;
 
+    public TeamScore(int teamId) {
 
-    public TeamScore(String teamName) {
-        validateTeamId(teamName);
+        requireNonNegative(teamId, "teamId");
 
-        this.teamName = teamName;
+        this.teamId = teamId;
         this.collectedUdonTypes = new HashSet<>();
         this.dailyUdonTypesHistory = new HashMap<>();
-
-        this.totalServings = 0;
-        this.totalResponseTimeMs = 0;
-        this.requestCount = 0;
     }
 
-    public String getTeamName() {
-        return teamName;
+    public int getTeamId() {
+        return teamId;
     }
 
-    public Set<UdonType> getCollectedUdonTypes() {
+    public Set<Integer> getCollectedUdonTypes() {
         return Collections.unmodifiableSet(collectedUdonTypes);
     }
 
-    public Map<Integer, Set<UdonType>> getDailyUdonTypesHistory() {
-        return Collections.unmodifiableMap(dailyUdonTypesHistory);
+    public Map<Integer, Set<Integer>> getDailyUdonTypesHistory() {
+
+        Map<Integer, Set<Integer>> history = new HashMap<>();
+
+        dailyUdonTypesHistory.forEach((turn, udonTypes) ->
+                history.put(turn, Collections.unmodifiableSet(udonTypes)));
+
+        return Collections.unmodifiableMap(history);
     }
 
     public int getTotalServings() {
@@ -57,12 +67,16 @@ public class TeamScore {
         return requestCount;
     }
 
-
+    /**
+     * Returns the number of unique Udon types collected during the match.
+     */
     public int getUniqueUdonTypesCount() {
         return collectedUdonTypes.size();
     }
 
-
+    /**
+     * Returns the accumulated number of unique Udon types collected across all turns.
+     */
     public int getAccumulatedDailyUdonTypes() {
         return dailyUdonTypesHistory.values()
                 .stream()
@@ -70,54 +84,48 @@ public class TeamScore {
                 .sum();
     }
 
-
+    /**
+     * Increments the number of completed servings.
+     */
     public void incrementServings() {
         totalServings++;
     }
 
+    /**
+     * Records a collected Udon type for the specified turn.
+     */
+    public void addUdonCollection(
+            int turn,
+            int udonType
+    ) {
 
-    public void addUdonCollection(int turn, UdonType udonType) {
-        validateTurn(turn);
-
-        Objects.requireNonNull(udonType, "udonType");
+        requirePositive(turn, "turn");
+        requireNonNegative(udonType, "udonType");
 
         collectedUdonTypes.add(udonType);
 
         dailyUdonTypesHistory
-                .computeIfAbsent(turn, key -> new HashSet<>())
+                .computeIfAbsent(turn, ignored -> new HashSet<>())
                 .add(udonType);
     }
 
-
+    /**
+     * Adds a response time measurement.
+     */
     public void addResponseTime(long durationMs) {
-        if (durationMs < 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "durationMs must not be negative"
-            );
-        }
+
+        requireNonNegative(durationMs, "durationMs");
 
         totalResponseTimeMs += durationMs;
         requestCount++;
     }
 
-
-    private void validateTeamId(String teamId) {
-        if (teamId == null || teamId.isBlank()) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "teamName must not be null"
-            );
-        }
-    }
-
-
-    private void validateTurn(int turn) {
-        if (turn <= 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "turn not be negative"
-            );
-        }
+    /**
+     * Returns the average response time in milliseconds.
+     */
+    public double getAverageResponseTimeMs() {
+        return requestCount == 0
+                ? 0.0
+                : (double) totalResponseTimeMs / requestCount;
     }
 }

@@ -1,121 +1,93 @@
 package com.naprock.hexudon.domain.model.match;
 
+import com.naprock.hexudon.domain.model.map.MapConfig;
+import com.naprock.hexudon.domain.model.map.SpotConfig;
+
+import java.util.List;
+
+import static com.naprock.hexudon.domain.validation.DomainValidator.*;
+
 public record MatchConfig(
 
-        int mapWidth,
-        int mapHeight,
-
-        int maxFuel,
-        int maxTurns,
-        int maxStepsPerTurn,
-
-        int maxTeams,
-        int agentsPerTeam,
-
-        int turnTimeLimitMs,
-
-        int initialSpotUdonStock
+        long startsAt,
+        List<Integer> daySeconds,
+        List<Integer> daySteps,
+        MapConfig map,
+        List<SpotConfig> spots,
+        List<Integer> agents,
+        int fuelLimits,
+        int players,
+        double busyThreshold,
+        double jammedThreshold
 
 ) {
 
     public MatchConfig {
-        validatePositive(mapWidth, "mapWidth");
-        validatePositive(mapHeight, "mapHeight");
-        validatePositive(maxFuel, "maxFuel");
-        validatePositive(maxTurns, "maxTurns");
-        validatePositive(maxStepsPerTurn, "maxStepsPerTurn");
-        validatePositive(maxTeams, "maxTeams");
-        validatePositive(agentsPerTeam, "agentsPerTeam");
-        validatePositive(turnTimeLimitMs, "turnTimeLimitMs");
-        validatePositive(initialSpotUdonStock, "initialSpotUdonStock");
+
+        requirePositive(startsAt, "startsAt");
+
+        requireNonNull(daySeconds, "daySeconds");
+        requireNonNull(daySteps, "daySteps");
+        requireNonNull(map, "map");
+        requireNonNull(spots, "spots");
+        requireNonNull(agents, "agents");
+
+        requirePositive(fuelLimits, "fuelLimits");
+        requirePositive(players, "players");
+
+        requireTrue(
+                !daySeconds.isEmpty(),
+                "daySeconds must not be empty."
+        );
+
+        requireTrue(
+                !daySteps.isEmpty(),
+                "daySteps must not be empty."
+        );
+
+        requireTrue(
+                !spots.isEmpty(),
+                "spots must not be empty."
+        );
+
+        requireTrue(
+                !agents.isEmpty(),
+                "agents must not be empty."
+        );
+
+        requireTrue(
+                daySeconds.size() == daySteps.size(),
+                "daySeconds and daySteps must have the same size."
+        );
+
+        requireTrue(
+                busyThreshold > 0,
+                "busyThreshold must be greater than 0."
+        );
+
+        requireTrue(
+                jammedThreshold > busyThreshold,
+                "jammedThreshold must be greater than busyThreshold."
+        );
+
+        daySeconds = List.copyOf(daySeconds);
+        daySteps = List.copyOf(daySteps);
+        spots = List.copyOf(spots);
+        agents = List.copyOf(agents);
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-
-        private int mapWidth = 20;
-        private int mapHeight = 15;
-
-        private int maxFuel = 100;
-        private int maxTurns = 1;
-        private int maxStepsPerTurn = 5;
-
-        private int maxTeams = 2;
-        private int agentsPerTeam = 3;
-
-        private int turnTimeLimitMs = 1000;
-
-        private int initialSpotUdonStock = 5;
-
-        public Builder mapWidth(int value) {
-            this.mapWidth = value;
-            return this;
-        }
-
-        public Builder mapHeight(int value) {
-            this.mapHeight = value;
-            return this;
-        }
-
-        public Builder maxFuel(int value) {
-            this.maxFuel = value;
-            return this;
-        }
-
-        public Builder maxTurns(int value) {
-            this.maxTurns = value;
-            return this;
-        }
-
-        public Builder maxStepsPerTurn(int value) {
-            this.maxStepsPerTurn = value;
-            return this;
-        }
-
-        public Builder maxTeams(int value) {
-            this.maxTeams = value;
-            return this;
-        }
-
-        public Builder agentsPerTeam(int value) {
-            this.agentsPerTeam = value;
-            return this;
-        }
-
-        public Builder turnTimeLimitMs(int value) {
-            this.turnTimeLimitMs = value;
-            return this;
-        }
-
-        public Builder initialSpotUdonStock(int value) {
-            this.initialSpotUdonStock = value;
-            return this;
-        }
-
-        public MatchConfig build() {
-            return new MatchConfig(
-                    mapWidth,
-                    mapHeight,
-                    maxFuel,
-                    maxTurns,
-                    maxStepsPerTurn,
-                    maxTeams,
-                    agentsPerTeam,
-                    turnTimeLimitMs,
-                    initialSpotUdonStock
-            );
-        }
-    }
-
-    private static void validatePositive(
-            int value,
-            String field
-    ) {
-        if (value <= 0) {
-            throw new IllegalArgumentException(field + " must be positive");
-        }
+    public MatchConfig withStartsAt(long startsAt) {
+        return new MatchConfig(
+                startsAt,
+                daySeconds,
+                daySteps,
+                map,
+                spots,
+                agents,
+                fuelLimits,
+                players,
+                busyThreshold,
+                jammedThreshold
+        );
     }
 }

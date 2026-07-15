@@ -10,6 +10,7 @@ import com.naprock.hexudon.domain.model.traffic.TrafficHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.naprock.hexudon.domain.model.map.MapConfig;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,9 +28,13 @@ class TrafficPersistenceAdapterTest {
     void shouldSaveAndLoadMatchStateWithTrafficHistory() {
         MatchState state = new MatchState();
         Coordinate coordinate = new Coordinate(1, 1);
-        Cell cell = new Cell(coordinate, TerrainType.ROAD);
         
-        state.getGameMap().addCell(cell);
+        List<List<Integer>> cells = List.of(
+                List.of(0, 0),
+                List.of(0, 1)
+        );
+        state.getGameMap().init(new MapConfig(2, 2, cells), List.of());
+        Cell cell = state.getGameMap().getCell(coordinate);
         
         TrafficHistory history = state.getTrafficHistory();
         history.init(List.of(cell));

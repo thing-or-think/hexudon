@@ -1,16 +1,21 @@
 package com.naprock.hexudon.application.dto.match;
 
-import com.naprock.hexudon.domain.model.traffic.TrafficLevel;
-
-import java.util.Objects;
-
 public record TrafficResponse(
-        CoordinateResponse coordinate,
-        TrafficLevel trafficLevel
+        int pos,
+        int status
 ) {
 
     public TrafficResponse {
-        Objects.requireNonNull(coordinate, "coordinate must not be null");
-        Objects.requireNonNull(trafficLevel, "trafficLevel must not be null");
+        if (pos < 0) {
+            throw new IllegalArgumentException(
+                    "pos must not be negative"
+            );
+        }
+
+        if (status < 0 || status > 2) {
+            throw new IllegalArgumentException(
+                    "status must be between 0 and 2"
+            );
+        }
     }
 }

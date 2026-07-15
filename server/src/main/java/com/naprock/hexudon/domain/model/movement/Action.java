@@ -2,40 +2,58 @@ package com.naprock.hexudon.domain.model.movement;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.geometry.Coordinate;
+import com.naprock.hexudon.domain.model.geometry.Direction;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public record Action(
         ActionType actionType,
-        Coordinate targetCoordinate
+        Direction direction
 ) {
 
     public Action {
-        validate(actionType, targetCoordinate);
+        validate(actionType, direction);
+    }
+
+    public static List<Action> fromApiValue(int value) {
+
+        if (value >= 0) {
+            return List.of(move(Direction.fromValue(value)));
+        }
+
+        List<Action> actions = new ArrayList<>(-value);
+
+        for (int i = 0; i < -value; i++) {
+            actions.add(stay());
+        }
+
+        return actions;
     }
 
     /**
      * Creates MOVE action.
      */
-    public static Action move(Coordinate targetCoordinate) {
+    public static Action move(Direction direction) {
         return new Action(
                 ActionType.MOVE,
-                targetCoordinate
+                direction
         );
     }
 
     /**
-     * Creates STAY action.
+     * Creates WAIT action.
      */
-    public static Action stay(Coordinate targetCoordinate) {
+    public static Action stay() {
         return new Action(
                 ActionType.WAIT,
-                targetCoordinate
+                null
         );
     }
 
     private static void validate(
             ActionType actionType,
-            Coordinate targetCoordinate
+            Direction direction
     ) {
 
         if (actionType == null) {
@@ -46,20 +64,20 @@ public record Action(
         }
 
         if (actionType == ActionType.MOVE
-                && targetCoordinate == null) {
+                && direction == null) {
 
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "MOVE action requires target position"
+                    "MOVE action requires direction"
             );
         }
 
         if (actionType == ActionType.WAIT
-                && targetCoordinate != null) {
+                && direction != null) {
 
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "WAIT action cannot have target position"
+                    "WAIT action cannot have direction"
             );
         }
     }
