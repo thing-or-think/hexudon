@@ -1,13 +1,9 @@
 package com.naprock.hexudon.domain.model.agent;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
-import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
-import com.naprock.hexudon.domain.model.map.Cell;
 import com.naprock.hexudon.domain.model.map.GameMap;
-import com.naprock.hexudon.domain.model.map.TerrainType;
 import com.naprock.hexudon.domain.model.map.Spot;
-import com.naprock.hexudon.domain.model.map.UdonType;
 import com.naprock.hexudon.domain.model.map.MapConfig;
 import com.naprock.hexudon.domain.model.map.SpotConfig;
 import com.naprock.hexudon.domain.model.match.MatchConfig;

@@ -1,7 +1,5 @@
 package com.naprock.hexudon.application.dto.match;
 
-import com.naprock.hexudon.domain.model.map.UdonType;
-
 public record SpotResponse(
         int brand,
         int pos,
@@ -9,7 +7,9 @@ public record SpotResponse(
 ) {
 
     public SpotResponse {
-        UdonType.fromValue(brand);
+        if (brand < 0) {
+            throw new IllegalArgumentException("brand must not be negative");
+        }
 
         if (pos < 0) {
             throw new IllegalArgumentException("pos must not be negative");
