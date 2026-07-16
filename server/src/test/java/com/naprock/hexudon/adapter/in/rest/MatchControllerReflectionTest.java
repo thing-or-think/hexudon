@@ -58,7 +58,7 @@ class MatchControllerReflectionTest {
                     clazz.getAnnotation(RequestMapping.class);
 
             for (String value : requestMapping.value()) {
-                if ("/api/match".equals(value)) {
+                if ("/api/game".equals(value)) {
                     hasCorrectPath = true;
                     break;
                 }
@@ -66,7 +66,7 @@ class MatchControllerReflectionTest {
 
             if (!hasCorrectPath) {
                 for (String path : requestMapping.path()) {
-                    if ("/api/match".equals(path)) {
+                    if ("/api/game".equals(path)) {
                         hasCorrectPath = true;
                         break;
                     }
@@ -103,7 +103,7 @@ class MatchControllerReflectionTest {
                 ),
                 () -> assertTrue(
                         finalHasCorrectPath,
-                        "RequestMapping path/value must be '/api/match'"
+                        "RequestMapping path/value must be '/api/game'"
                 )
         );
     }

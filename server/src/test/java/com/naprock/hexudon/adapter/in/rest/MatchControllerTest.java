@@ -52,7 +52,7 @@ class MatchControllerTest {
     void registerTeam_shouldReturnCreatedStatus() throws Exception {
         TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
 
-        mockMvc.perform(post("/api/match/register")
+        mockMvc.perform(post("/api/game/agent-types")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
@@ -77,7 +77,7 @@ class MatchControllerTest {
 
         when(getMatchConfigUseCase.getMatchConfig()).thenReturn(configResponse);
 
-        mockMvc.perform(get("/api/match/config"))
+        mockMvc.perform(get("/api/game/config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.startsAt").value(1000))
                 .andExpect(jsonPath("$.fuelLimits").value(100))
@@ -93,7 +93,7 @@ class MatchControllerTest {
 
         when(getMatchStateUseCase.getMatchState("Alpha")).thenReturn(stateResponse);
 
-        mockMvc.perform(get("/api/match/state")
+        mockMvc.perform(get("/api/game/state")
                         .header("X-Team-Name", "Alpha"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.endsAt").value(2000))
@@ -104,7 +104,7 @@ class MatchControllerTest {
     void submitActions_shouldReturnAccepted() throws Exception {
         SubmitActionRequest request = new SubmitActionRequest(1, List.of(List.of(1, -2)));
 
-        mockMvc.perform(post("/api/match/actions")
+        mockMvc.perform(post("/api/game/actions")
                         .header("X-Team-Name", "Alpha")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

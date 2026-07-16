@@ -21,6 +21,15 @@ import java.util.List;
 
 public final class MatchMapper {
 
+    public static BoardConfigResponse toBoardConfigResponse(MatchConfig config) {
+        return new BoardConfigResponse(
+                toMapResponse(config.map()),
+                config.spots().stream().map(MatchMapper::toSpotResponse).toList(),
+                config.daySteps(),
+                config.busyThreshold(),
+                config.jammedThreshold()
+        );
+    }
 
     public static TeamResponse toTeamResponse(Team team, int mapWidth) {
         return new TeamResponse(

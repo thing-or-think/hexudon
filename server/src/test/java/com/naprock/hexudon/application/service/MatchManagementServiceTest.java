@@ -1,5 +1,6 @@
 package com.naprock.hexudon.application.service;
 
+import com.naprock.hexudon.application.dto.match.BoardConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
@@ -93,5 +94,16 @@ class MatchManagementServiceTest {
         MatchStateResponse response = service.getMatchState("Alpha");
         assertNotNull(response);
         assertEquals("Alpha", state.getTeams().get(0).getTeamName());
+    }
+
+    @Test
+    void testGetBoardConfig() {
+        BoardConfigResponse response = service.getBoardConfig();
+        assertNotNull(response);
+        assertEquals(5, response.map().width());
+        assertEquals(5, response.map().height());
+        assertEquals(1, response.spots().size());
+        assertEquals(2.0, response.busyThreshold());
+        assertEquals(4.0, response.jammedThreshold());
     }
 }

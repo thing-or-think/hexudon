@@ -1,5 +1,6 @@
 package com.naprock.hexudon.application.service;
 
+import com.naprock.hexudon.application.dto.match.BoardConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
@@ -32,6 +33,7 @@ public class MatchApplicationService implements
         InitializeMatchUseCase,
         GetMatchConfigUseCase,
         GetMatchStateUseCase,
+        GetBoardConfigUseCase,
         RegisterTeamUseCase,
         SubmitActionsUseCase {
 
@@ -46,6 +48,12 @@ public class MatchApplicationService implements
         this.stateStorePort = stateStorePort;
         this.configLoaderPort = configLoaderPort;
         this.actionValidator = actionValidator;
+    }
+
+    @Override
+    public BoardConfigResponse getBoardConfig() {
+        MatchConfig config = configLoaderPort.loadConfig();
+        return MatchMapper.toBoardConfigResponse(config);
     }
 
     @Override

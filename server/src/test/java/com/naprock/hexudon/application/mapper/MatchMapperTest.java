@@ -168,4 +168,37 @@ class MatchMapperTest {
         assertNotNull(response);
         assertEquals(1, response.day());
     }
+
+    @Test
+    void testToBoardConfigResponse() {
+        MatchConfig config = new MatchConfig(
+                1000L,
+                List.of(5),
+                List.of(50),
+                new MapConfig(5, 5, List.of(
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0),
+                        List.of(0, 0, 0, 0, 0)
+                )),
+                List.of(new SpotConfig(1, 1, 5)),
+                List.of(0, 1),
+                100,
+                2,
+                2.0,
+                4.0
+        );
+
+        BoardConfigResponse response = MatchMapper.toBoardConfigResponse(config);
+        assertNotNull(response);
+        assertEquals(5, response.map().width());
+        assertEquals(5, response.map().height());
+        assertEquals(1, response.spots().size());
+        assertEquals(1, response.spots().get(0).brand());
+        assertEquals(1, response.spots().get(0).pos());
+        assertEquals(5, response.spots().get(0).stocks());
+        assertEquals(2.0, response.busyThreshold());
+        assertEquals(4.0, response.jammedThreshold());
+    }
 }

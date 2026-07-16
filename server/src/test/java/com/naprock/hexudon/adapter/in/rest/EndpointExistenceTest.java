@@ -26,9 +26,9 @@ class EndpointExistenceTest {
                 hasMapping(
                         mapping.value(),
                         mapping.path(),
-                        "/api/match"
+                        "/api/game"
                 ),
-                "MatchController must have base path /api/match"
+                "MatchController must have base path /api/game"
         );
     }
 
@@ -61,7 +61,7 @@ class EndpointExistenceTest {
                 if (hasMapping(
                         mapping.value(),
                         mapping.path(),
-                        "/register"
+                        "/agent-types"
                 )) {
                     hasPostRegister = true;
                 }
@@ -87,7 +87,7 @@ class EndpointExistenceTest {
                 ),
                 () -> assertTrue(
                         finalHasPostRegister,
-                        "MatchController must have POST mapping for /register"
+                        "MatchController must have POST mapping for /agent-types"
                 ),
                 () -> assertTrue(
                         finalHasPostActions,

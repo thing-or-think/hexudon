@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/match")
+@RequestMapping("/api/game")
 public class MatchController {
     private final RegisterTeamUseCase registerTeamUseCase;
     private final SubmitActionsUseCase submitActionsUseCase;
@@ -34,7 +34,7 @@ public class MatchController {
         this.getMatchStateUseCase = getMatchStateUseCase;
     }
 
-    @PostMapping("/register")
+    @PostMapping("/agent-types")
     @ResponseStatus(HttpStatus.CREATED)
     public TeamResponse registerTeam(
             @Valid @RequestBody TeamRegisterRequest request
@@ -46,6 +46,8 @@ public class MatchController {
     public MatchConfigResponse getMatchConfig() {
         return getMatchConfigUseCase.getMatchConfig();
     }
+
+
 
     @GetMapping("/state")
     public MatchStateResponse getMatchState(
