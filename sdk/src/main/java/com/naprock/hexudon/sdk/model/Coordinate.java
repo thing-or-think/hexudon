@@ -3,29 +3,60 @@ package com.naprock.hexudon.sdk.model;
 import java.util.Objects;
 
 /**
- * Represents a coordinate on an Odd-R offset hexagonal grid.
+ * Immutable coordinate on an Odd-R offset hexagonal grid.
  *
- * @param pos linear index of the cell
- * @param x column coordinate
- * @param y row coordinate
+ * @param pos linear position
+ * @param x   column index
+ * @param y   row index
  */
-public record Coordinate(int pos, int x, int y) {
+public record Coordinate(
+        int pos,
+        int x,
+        int y
+) {
+
+    /**
+     * Creates a coordinate.
+     *
+     * @param pos linear position
+     * @param x   column
+     * @param y   row
+     */
+    public Coordinate {
+        if (pos < 0) {
+            throw new IllegalArgumentException("pos must be >= 0");
+        }
+        if (x < 0) {
+            throw new IllegalArgumentException("x must be >= 0");
+        }
+        if (y < 0) {
+            throw new IllegalArgumentException("y must be >= 0");
+        }
+    }
 
     /**
      * Creates a coordinate from a linear position.
      *
-     * @param pos linear position
+     * @param pos   linear position
      * @param width board width
      */
     public Coordinate(int pos, int width) {
-        this(pos, pos % width, pos / width);
+        this(
+                pos,
+                pos % width,
+                pos / width
+        );
+
+        if (width <= 0) {
+            throw new IllegalArgumentException("width must be greater than 0");
+        }
     }
 
     /**
-     * Returns the hex distance to another coordinate.
+     * Calculates the minimum hex distance.
      *
-     * @param other target coordinate
-     * @return minimum number of hex moves
+     * @param other destination coordinate
+     * @return minimum number of steps
      */
     public int getDistance(Coordinate other) {
         Objects.requireNonNull(other, "other must not be null");
@@ -33,54 +64,62 @@ public record Coordinate(int pos, int x, int y) {
         Cube a = toCube(this);
         Cube b = toCube(other);
 
-        return (Math.abs(a.x - b.x)
-                + Math.abs(a.y - b.y)
-                + Math.abs(a.z - b.z)) / 2;
+        return (
+                Math.abs(a.x - b.x)
+                        + Math.abs(a.y - b.y)
+                        + Math.abs(a.z - b.z)
+        ) / 2;
     }
 
     /**
-     * Returns the neighboring coordinate in the specified direction.
+     * Returns the neighboring coordinate in the given direction.
      *
      * @param direction movement direction
-     * @param width board width
+     * @param width     board width
      * @return neighboring coordinate
      */
     public Coordinate getNeighbor(Direction direction, int width) {
         Objects.requireNonNull(direction, "direction must not be null");
+
+        if (width <= 0) {
+            throw new IllegalArgumentException("width must be greater than 0");
+        }
 
         boolean oddRow = (y & 1) == 1;
 
         int nextX = x;
         int nextY = y;
 
-        if (oddRow) {
-            switch (direction) {
-                case UP_RIGHT -> {
-                    nextX = x + 1;
-                    nextY = y - 1;
+        switch (direction) {
+            case UP_RIGHT -> {
+                nextY--;
+                if (oddRow) {
+                    nextX++;
                 }
-                case RIGHT -> nextX = x + 1;
-                case DOWN_RIGHT -> {
-                    nextX = x + 1;
-                    nextY = y + 1;
-                }
-                case DOWN_LEFT -> nextY = y + 1;
-                case LEFT -> nextX = x - 1;
-                case UP_LEFT -> nextY = y - 1;
             }
-        } else {
-            switch (direction) {
-                case UP_RIGHT -> nextY = y - 1;
-                case RIGHT -> nextX = x + 1;
-                case DOWN_RIGHT -> nextY = y + 1;
-                case DOWN_LEFT -> {
-                    nextX = x - 1;
-                    nextY = y + 1;
+
+            case RIGHT -> nextX++;
+
+            case DOWN_RIGHT -> {
+                nextY++;
+                if (oddRow) {
+                    nextX++;
                 }
-                case LEFT -> nextX = x - 1;
-                case UP_LEFT -> {
-                    nextX = x - 1;
-                    nextY = y - 1;
+            }
+
+            case DOWN_LEFT -> {
+                nextY++;
+                if (!oddRow) {
+                    nextX--;
+                }
+            }
+
+            case LEFT -> nextX--;
+
+            case UP_LEFT -> {
+                nextY--;
+                if (!oddRow) {
+                    nextX--;
                 }
             }
         }
@@ -91,10 +130,12 @@ public record Coordinate(int pos, int x, int y) {
     }
 
     /**
-     * Converts an Odd-R coordinate to cube coordinates.
+     * Converts an Odd-R coordinate into Cube coordinates.
      */
     private static Cube toCube(Coordinate coordinate) {
-        int cubeX = coordinate.x - (coordinate.y - (coordinate.y & 1)) / 2;
+        int cubeX =
+                coordinate.x - (coordinate.y - (coordinate.y & 1)) / 2;
+
         int cubeZ = coordinate.y;
         int cubeY = -cubeX - cubeZ;
 
@@ -104,6 +145,10 @@ public record Coordinate(int pos, int x, int y) {
     /**
      * Internal cube coordinate representation.
      */
-    private record Cube(int x, int y, int z) {
+    private record Cube(
+            int x,
+            int y,
+            int z
+    ) {
     }
 }

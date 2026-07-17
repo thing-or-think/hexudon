@@ -1,40 +1,31 @@
 package com.naprock.hexudon.sdk.config;
 
 /**
- * Builder for creating {@link HexudonConfig}.
- *
- * <p>
- * Provides a fluent API for SDK configuration setup.
+ * Builder for creating immutable {@link HexudonConfig} instances.
  */
 public final class HexudonConfigBuilder {
 
+    private static final String DEFAULT_BASE_URL = "http://localhost:8080";
+
     private String baseUrl;
-
-    private String gameId;
-
     private String teamId;
-
     private String token;
-
     private boolean practice;
-
     private HttpClientConfig httpClientConfig;
-
     private RetryConfig retryConfig;
-
     private boolean enableLogging = true;
 
     /**
-     * Creates a new configuration builder.
+     * Creates an empty builder.
      */
     public HexudonConfigBuilder() {
     }
 
     /**
-     * Sets server base URL.
+     * Sets the game server base URL.
      *
      * @param baseUrl server base URL
-     * @return current builder instance
+     * @return this builder
      */
     public HexudonConfigBuilder baseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
@@ -42,21 +33,10 @@ public final class HexudonConfigBuilder {
     }
 
     /**
-     * Sets game identifier.
-     *
-     * @param gameId game identifier
-     * @return current builder instance
-     */
-    public HexudonConfigBuilder gameId(String gameId) {
-        this.gameId = gameId;
-        return this;
-    }
-
-    /**
-     * Sets team identifier.
+     * Sets the team identifier.
      *
      * @param teamId team identifier
-     * @return current builder instance
+     * @return this builder
      */
     public HexudonConfigBuilder teamId(String teamId) {
         this.teamId = teamId;
@@ -64,10 +44,10 @@ public final class HexudonConfigBuilder {
     }
 
     /**
-     * Sets authentication token.
+     * Sets the authentication token.
      *
-     * @param token bearer token
-     * @return current builder instance
+     * @param token authentication token
+     * @return this builder
      */
     public HexudonConfigBuilder token(String token) {
         this.token = token;
@@ -77,8 +57,8 @@ public final class HexudonConfigBuilder {
     /**
      * Enables or disables practice mode.
      *
-     * @param practice practice mode flag
-     * @return current builder instance
+     * @param practice practice mode
+     * @return this builder
      */
     public HexudonConfigBuilder practice(boolean practice) {
         this.practice = practice;
@@ -89,7 +69,7 @@ public final class HexudonConfigBuilder {
      * Sets HTTP client configuration.
      *
      * @param httpClientConfig HTTP configuration
-     * @return current builder instance
+     * @return this builder
      */
     public HexudonConfigBuilder httpClientConfig(HttpClientConfig httpClientConfig) {
         this.httpClientConfig = httpClientConfig;
@@ -100,7 +80,7 @@ public final class HexudonConfigBuilder {
      * Sets retry configuration.
      *
      * @param retryConfig retry configuration
-     * @return current builder instance
+     * @return this builder
      */
     public HexudonConfigBuilder retryConfig(RetryConfig retryConfig) {
         this.retryConfig = retryConfig;
@@ -111,7 +91,7 @@ public final class HexudonConfigBuilder {
      * Enables or disables HTTP logging.
      *
      * @param enableLogging logging flag
-     * @return current builder instance
+     * @return this builder
      */
     public HexudonConfigBuilder enableLogging(boolean enableLogging) {
         this.enableLogging = enableLogging;
@@ -121,15 +101,15 @@ public final class HexudonConfigBuilder {
     /**
      * Builds an immutable {@link HexudonConfig}.
      *
-     * @return validated SDK configuration
+     * @return configuration instance
+     * @throws IllegalArgumentException if configuration is invalid
      */
     public HexudonConfig build() {
-
         String resolvedBaseUrl = resolveBaseUrl();
 
         validateBaseUrl(resolvedBaseUrl);
-        validateRequired("teamId", teamId);
-        validateRequired("token", token);
+        validateRequired(teamId, "teamId");
+        validateRequired(token, "token");
 
         HttpClientConfig resolvedHttpConfig =
                 httpClientConfig != null
@@ -143,7 +123,6 @@ public final class HexudonConfigBuilder {
 
         return new HexudonConfig(
                 resolvedBaseUrl,
-                gameId,
                 teamId,
                 token,
                 practice,
@@ -153,47 +132,52 @@ public final class HexudonConfigBuilder {
         );
     }
 
+    /**
+     * Resolves the effective base URL.
+     *
+     * <ol>
+     *     <li>Explicitly configured value.</li>
+     *     <li>Environment variable HEXUDON_BASE_URL.</li>
+     *     <li>Default localhost URL.</li>
+     * </ol>
+     *
+     * @return resolved base URL
+     */
     private String resolveBaseUrl() {
-
         if (baseUrl != null && !baseUrl.isBlank()) {
             return baseUrl;
         }
 
         String env = System.getenv("HEXUDON_BASE_URL");
-
         if (env != null && !env.isBlank()) {
             return env;
         }
 
-        return "http://localhost:8080";
+        return DEFAULT_BASE_URL;
     }
 
-    private void validateBaseUrl(String baseUrl) {
-
-        if (baseUrl == null || baseUrl.isBlank()) {
-            throw new IllegalArgumentException(
-                    "baseUrl must not be blank"
-            );
-        }
-
-        if (!baseUrl.startsWith("http://")
-                && !baseUrl.startsWith("https://")) {
-
+    /**
+     * Validates the URL protocol.
+     *
+     * @param url URL to validate
+     */
+    private void validateBaseUrl(String url) {
+        if (!(url.startsWith("http://") || url.startsWith("https://"))) {
             throw new IllegalArgumentException(
                     "baseUrl must start with http:// or https://"
             );
         }
     }
 
-    private void validateRequired(
-            String field,
-            String value
-    ) {
-
+    /**
+     * Validates a required string.
+     *
+     * @param value field value
+     * @param fieldName field name
+     */
+    private void validateRequired(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(
-                    field + " must not be blank"
-            );
+            throw new IllegalArgumentException(fieldName + " must not be blank");
         }
     }
 }

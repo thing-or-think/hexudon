@@ -176,16 +176,15 @@ Dưới đây là một chương trình Java hoàn chỉnh mô tả vòng lặp 
 ```java
 import com.naprock.hexudon.sdk.api.HexudonClient;
 import com.naprock.hexudon.sdk.api.GameApi;
-import com.naprock.hexudon.sdk.config.HexudonConfig;
 import com.naprock.hexudon.sdk.exception.HexudonException;
 import com.naprock.hexudon.sdk.exception.HexudonValidationException;
 import com.naprock.hexudon.sdk.model.AgentType;
 import com.naprock.hexudon.sdk.model.Direction;
 import com.naprock.hexudon.sdk.model.MatchStatus;
-import com.naprock.hexudon.sdk.model.request.SubmitActionRequest;
-import com.naprock.hexudon.sdk.model.request.TeamRegisterRequest;
-import com.naprock.hexudon.sdk.model.response.MatchConfigResponse;
-import com.naprock.hexudon.sdk.model.response.MatchStateResponse;
+import com.naprock.hexudon.sdk.internal.dto.request.SubmitActionRequest;
+import com.naprock.hexudon.sdk.internal.dto.request.TeamRegisterRequest;
+import com.naprock.hexudon.sdk.internal.dto.response.MatchConfigResponse;
+import com.naprock.hexudon.sdk.internal.dto.response.MatchStateResponse;
 
 import java.util.List;
 
@@ -256,10 +255,10 @@ public class HexudonBotApp {
                         );
 
                         SubmitActionRequest actionRequest = new SubmitActionRequest(currentDay, agentActions);
-                        
+
                         System.out.println("Đang gửi hành động của các Agent...");
                         gameApi.submitActions(actionRequest);
-                        
+
                         lastSubmittedDay = currentDay;
                         System.out.printf("Gửi hành động thành công cho ngày %d!%n", currentDay);
                     }

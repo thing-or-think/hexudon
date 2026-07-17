@@ -4,67 +4,79 @@ import com.naprock.hexudon.sdk.exception.HexudonAuthenticationException;
 import com.naprock.hexudon.sdk.exception.HexudonNetworkException;
 import com.naprock.hexudon.sdk.exception.HexudonServerException;
 import com.naprock.hexudon.sdk.exception.HexudonValidationException;
-import com.naprock.hexudon.sdk.model.request.SubmitActionRequest;
-import com.naprock.hexudon.sdk.model.request.TeamRegisterRequest;
-import com.naprock.hexudon.sdk.model.response.MatchConfigResponse;
-import com.naprock.hexudon.sdk.model.response.MatchStateResponse;
+import com.naprock.hexudon.sdk.model.MatchConfig;
+import com.naprock.hexudon.sdk.model.MatchState;
+import com.naprock.hexudon.sdk.model.SubmitActions;
+import com.naprock.hexudon.sdk.model.TeamRegistration;
 
 /**
- * Defines the operations for interacting with the official Hexudon game.
- * <p>
- * Implementations communicate with the Hexudon game server to register teams,
- * retrieve match information, and submit agent actions.
+ * Provides operations for participating in an official Hexudon match.
+ *
+ * <p>This interface allows applications to:
+ * <ul>
+ *   <li>Register a team.</li>
+ *   <li>Retrieve match configuration.</li>
+ *   <li>Retrieve the current match state.</li>
+ *   <li>Submit agent actions for each game day.</li>
+ * </ul>
+ *
+ * <p>Only public SDK domain models are exposed. Network requests,
+ * response DTOs, and transport details remain internal to the SDK.
  */
 public interface GameApi {
 
     /**
-     * Registers a team and its agent types.
+     * Registers a team for the specified official match.
      *
-     * @param request the team registration request
-     * @throws NullPointerException if {@code request} is {@code null}
-     * @throws HexudonValidationException if the request is invalid
+     * @param gameId the unique match identifier
+     * @param registration the team registration information
+     * @throws NullPointerException if {@code gameId} or {@code registration} is {@code null}
+     * @throws IllegalArgumentException if {@code gameId} is blank
+     * @throws HexudonValidationException if the registration request is invalid
      * @throws HexudonAuthenticationException if authentication fails
      * @throws HexudonNetworkException if a network error occurs
-     * @throws HexudonServerException if the server returns an error
+     * @throws HexudonServerException if the server returns an unexpected server error
      */
-    void registerTeam(TeamRegisterRequest request);
+    void registerTeam(String gameId, TeamRegistration registration);
 
     /**
-     * Retrieves the static configuration of a match.
+     * Returns the static configuration of the specified match.
      *
-     * @param gameId the match identifier
+     * @param gameId the unique match identifier
      * @return the match configuration
      * @throws NullPointerException if {@code gameId} is {@code null}
      * @throws IllegalArgumentException if {@code gameId} is blank
      * @throws HexudonValidationException if the request is invalid
      * @throws HexudonNetworkException if a network error occurs
-     * @throws HexudonServerException if the server returns an error
+     * @throws HexudonServerException if the server returns an unexpected server error
      */
-    MatchConfigResponse getMatchConfig(String gameId);
+    MatchConfig getMatchConfig(String gameId);
 
     /**
-     * Retrieves the current state of a match.
+     * Returns the current state of the specified match.
      *
-     * @param gameId the match identifier
+     * @param gameId the unique match identifier
      * @return the current match state
      * @throws NullPointerException if {@code gameId} is {@code null}
      * @throws IllegalArgumentException if {@code gameId} is blank
      * @throws HexudonValidationException if the request is invalid
      * @throws HexudonAuthenticationException if authentication fails
      * @throws HexudonNetworkException if a network error occurs
-     * @throws HexudonServerException if the server returns an error
+     * @throws HexudonServerException if the server returns an unexpected server error
      */
-    MatchStateResponse getMatchState(String gameId);
+    MatchState getMatchState(String gameId);
 
     /**
-     * Submits the planned actions for the current match day.
+     * Submits the actions for the specified match.
      *
-     * @param request the action submission request
-     * @throws NullPointerException if {@code request} is {@code null}
-     * @throws HexudonValidationException if the request is invalid
+     * @param gameId the unique match identifier
+     * @param actions the actions to submit
+     * @throws NullPointerException if {@code gameId} or {@code actions} is {@code null}
+     * @throws IllegalArgumentException if {@code gameId} is blank
+     * @throws HexudonValidationException if the submitted actions are invalid
      * @throws HexudonAuthenticationException if authentication fails
      * @throws HexudonNetworkException if a network error occurs
-     * @throws HexudonServerException if the server returns an error
+     * @throws HexudonServerException if the server returns an unexpected server error
      */
-    void submitActions(SubmitActionRequest request);
+    void submitActions(String gameId, SubmitActions actions);
 }

@@ -1,186 +1,124 @@
 package com.naprock.hexudon.sdk.api;
 
-import com.naprock.hexudon.sdk.client.DefaultHexudonClient;
 import com.naprock.hexudon.sdk.config.HexudonConfig;
 import com.naprock.hexudon.sdk.config.HexudonConfigBuilder;
-import com.naprock.hexudon.sdk.http.okhttp.OkHttpExecutor;
+import com.naprock.hexudon.sdk.internal.client.InternalClientFactory;
 
 import java.util.Objects;
 
 /**
- * Builder for creating {@link HexudonClient}.
+ * Builds {@link HexudonClient} instances.
  *
- * <p>
- * This class provides a fluent API for configuring and creating
- * a Hexudon client instance.
+ * <p>A builder can be configured either by supplying a complete
+ * {@link HexudonConfig} or by using the fluent configuration methods.
  *
- * <p>
- * Configuration can be supplied either by:
- * <ul>
- *     <li>Providing an existing {@link HexudonConfig}</li>
- *     <li>Setting individual configuration fields</li>
- * </ul>
- *
- * @since 1.0
+ * <p>The actual client implementation is created internally and is not
+ * exposed through the public API.
  */
-public class HexudonClientBuilder {
+public final class HexudonClientBuilder {
 
     private HexudonConfig config;
 
     private String baseUrl;
     private String token;
     private String teamId;
-
-    private boolean practice = false;
+    private boolean practice;
     private boolean enableLogging = true;
 
-
     /**
-     * Creates an empty builder.
-     *
-     * <p>
-     * Configuration must be provided before calling {@link #build()}.
+     * Creates a new builder.
      */
     public HexudonClientBuilder() {
     }
 
-
     /**
-     * Uses an existing {@link HexudonConfig}.
+     * Uses the specified SDK configuration.
      *
-     * <p>
-     * When this method is used, individual configuration values
-     * configured through other methods will be ignored.
-     *
-     * @param config existing configuration
-     * @return current builder instance
+     * @param config the SDK configuration
+     * @return this builder
+     * @throws NullPointerException if {@code config} is {@code null}
      */
-    public HexudonClientBuilder config(
-            HexudonConfig config
-    ) {
-        this.config = Objects.requireNonNull(
-                config,
-                "config must not be null"
-        );
-
+    public HexudonClientBuilder config(HexudonConfig config) {
+        this.config = Objects.requireNonNull(config, "config must not be null");
         return this;
     }
 
-
     /**
-     * Sets game server URL.
+     * Sets the game server base URL.
      *
-     * @param baseUrl server base URL
-     * @return current builder instance
+     * @param baseUrl the server base URL
+     * @return this builder
      */
-    public HexudonClientBuilder baseUrl(
-            String baseUrl
-    ) {
+    public HexudonClientBuilder baseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
-
         return this;
     }
 
-
     /**
-     * Sets authentication token.
+     * Sets the authentication token.
      *
-     * @param token bearer token
-     * @return current builder instance
+     * @param token the authentication token
+     * @return this builder
      */
-    public HexudonClientBuilder token(
-            String token
-    ) {
+    public HexudonClientBuilder token(String token) {
         this.token = token;
-
         return this;
     }
-
 
     /**
-     * Sets team identifier.
+     * Sets the team identifier.
      *
-     * @param teamId team id
-     * @return current builder instance
+     * @param teamId the team identifier
+     * @return this builder
      */
-    public HexudonClientBuilder teamId(
-            String teamId
-    ) {
+    public HexudonClientBuilder teamId(String teamId) {
         this.teamId = teamId;
-
         return this;
     }
-
 
     /**
      * Enables or disables practice mode.
      *
-     * @param practice practice mode flag
-     * @return current builder instance
+     * @param practice {@code true} to enable practice mode
+     * @return this builder
      */
-    public HexudonClientBuilder practice(
-            boolean practice
-    ) {
+    public HexudonClientBuilder practice(boolean practice) {
         this.practice = practice;
-
         return this;
     }
-
 
     /**
      * Enables or disables HTTP logging.
      *
-     * @param enableLogging logging flag
-     * @return current builder instance
+     * @param enableLogging {@code true} to enable logging
+     * @return this builder
      */
-    public HexudonClientBuilder enableLogging(
-            boolean enableLogging
-    ) {
+    public HexudonClientBuilder enableLogging(boolean enableLogging) {
         this.enableLogging = enableLogging;
-
         return this;
     }
 
-
     /**
-     * Builds a configured {@link HexudonClient}.
+     * Builds a new {@link HexudonClient}.
      *
-     * <p>
-     * If an explicit {@link HexudonConfig} was supplied,
-     * it will be used directly.
-     * Otherwise a new configuration will be created
-     * from individual builder fields.
+     * <p>If a complete {@link HexudonConfig} has been provided through
+     * {@link #config(HexudonConfig)}, it is used directly. Otherwise,
+     * a configuration is created from the individual builder settings.
      *
-     * @return configured Hexudon client
+     * @return a new {@link HexudonClient}
+     * @throws IllegalArgumentException if the resolved configuration is invalid
      */
     public HexudonClient build() {
-
-        HexudonConfig finalConfig = resolveConfig();
-
-        OkHttpExecutor executor =
-                new OkHttpExecutor(finalConfig);
-
-
-        return new DefaultHexudonClient(
-                finalConfig,
-                executor
-        );
-    }
-
-
-    private HexudonConfig resolveConfig() {
-
-        if (config != null) {
-            return config;
-        }
-
-
-        return new HexudonConfigBuilder()
+        HexudonConfig resolvedConfig = (config != null)
+                ? config
+                : new HexudonConfigBuilder()
                 .baseUrl(baseUrl)
                 .token(token)
                 .teamId(teamId)
                 .practice(practice)
                 .enableLogging(enableLogging)
                 .build();
+
+        return InternalClientFactory.create(resolvedConfig);
     }
 }

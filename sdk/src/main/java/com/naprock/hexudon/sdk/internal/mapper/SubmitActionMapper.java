@@ -1,0 +1,51 @@
+package com.naprock.hexudon.sdk.internal.mapper;
+
+import com.naprock.hexudon.sdk.internal.dto.request.SubmitActionRequest;
+import com.naprock.hexudon.sdk.model.Direction;
+import com.naprock.hexudon.sdk.model.SubmitActions;
+
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Utility class for mapping submitted actions.
+ *
+ * <p>Visibility: package-private.</p>
+ */
+public final class SubmitActionMapper {
+
+    private SubmitActionMapper() {
+        throw new UnsupportedOperationException(
+                "Utility class cannot be instantiated"
+        );
+    }
+
+    /**
+     * Converts domain SubmitActions into SubmitActionRequest DTO.
+     *
+     * @param actions submitted actions
+     * @return mapped request DTO
+     */
+    public static SubmitActionRequest toDto(
+            SubmitActions actions
+    ) {
+        Objects.requireNonNull(
+                actions,
+                "Submit actions must not be null"
+        );
+
+        List<List<Integer>> actionsCode =
+                actions.actions()
+                        .stream()
+                        .map(list -> list.stream()
+                                .map(Direction::ordinal)
+                                .toList()
+                        )
+                        .toList();
+
+        return new SubmitActionRequest(
+                actions.day(),
+                actionsCode
+        );
+    }
+}

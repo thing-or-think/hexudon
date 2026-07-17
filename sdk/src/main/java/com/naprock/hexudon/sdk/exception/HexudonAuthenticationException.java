@@ -2,28 +2,24 @@ package com.naprock.hexudon.sdk.exception;
 
 /**
  * Exception thrown when authentication or authorization fails.
- *
  * <p>
- * Represents HTTP 401 Unauthorized and HTTP 403 Forbidden responses.
- * This exception indicates that the provided authentication token
- * or team identity is invalid.
- *
+ * This exception is typically raised when the server responds with:
+ * <ul>
+ *     <li>HTTP 401 Unauthorized</li>
+ *     <li>HTTP 403 Forbidden</li>
+ * </ul>
  * <p>
- * Bot applications should catch this exception and verify their
- * authentication configuration before continuing execution.
+ * Client applications may catch this exception to stop execution,
+ * prompt for a new authentication token, or notify the user.
  */
-public final class HexudonAuthenticationException
-        extends HexudonException {
-
+public class HexudonAuthenticationException extends HexudonException {
 
     /**
-     * Creates an authentication exception.
+     * Creates a new authentication exception.
      *
-     * @param message error message
+     * @param message the detail message
      */
-    public HexudonAuthenticationException(
-            String message
-    ) {
+    public HexudonAuthenticationException(String message) {
         super(message);
     }
 }

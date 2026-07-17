@@ -1,30 +1,24 @@
 package com.naprock.hexudon.sdk.model;
 
 /**
- * Represents the role and behavior type of an Agent in Hexudon game.
- *
+ * Represents the role of an agent in the Hexudon game.
  * <p>
- * PATROL Agent:
- * - Collects Udon (noodle resource).
- * - Consumes fuel when moving.
- *
- * <p>
- * REFUEL Agent:
- * - Provides fuel to Patrol Agents.
- * - Does not consume fuel when moving.
- *
- * <p>
- * The integer value must match the game server protocol.
+ * Each agent type is mapped to the integer value defined by the
+ * Hexudon server protocol.
  */
 public enum AgentType {
 
     /**
-     * Patrol agent that collects resources and consumes fuel.
+     * Patrol agent.
+     * <p>
+     * Collects Udon resources and consumes fuel while moving.
      */
     PATROL(0),
 
     /**
-     * Refuel agent that restores fuel for Patrol agents.
+     * Refuel agent.
+     * <p>
+     * Supplies fuel to patrol agents and does not consume fuel when moving.
      */
     REFUEL(1);
 
@@ -35,21 +29,20 @@ public enum AgentType {
     }
 
     /**
-     * Returns the integer representation used by the game server.
+     * Returns the protocol integer value of this agent type.
      *
-     * @return agent type value
+     * @return protocol value
      */
     public int getValue() {
         return value;
     }
 
     /**
-     * Converts an integer value from API response/request
-     * into corresponding AgentType.
+     * Returns the agent type corresponding to the protocol value.
      *
-     * @param value integer representation
-     * @return matching AgentType
-     * @throws IllegalArgumentException if value is unknown
+     * @param value protocol value
+     * @return matching agent type
+     * @throws IllegalArgumentException if the value is invalid
      */
     public static AgentType fromValue(int value) {
         for (AgentType type : values()) {

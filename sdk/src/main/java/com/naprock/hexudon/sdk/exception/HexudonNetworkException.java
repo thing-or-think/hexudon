@@ -1,32 +1,38 @@
 package com.naprock.hexudon.sdk.exception;
 
 /**
- * Exception thrown when network communication fails.
- *
+ * Exception thrown when a network communication error occurs.
  * <p>
- * Represents transport-level failures such as:
+ * This exception is typically raised when the SDK encounters low-level
+ * networking failures such as:
  * <ul>
- *     <li>TCP connection errors.</li>
- *     <li>Connection timeout.</li>
- *     <li>Read/write I/O failures.</li>
+ *     <li>Connection timeout</li>
+ *     <li>Socket errors</li>
+ *     <li>DNS resolution failures</li>
+ *     <li>I/O errors after the final retry attempt</li>
+ *     <li>InterruptedException during request execution</li>
  * </ul>
- *
  * <p>
- * This exception wraps the original network exception
- * to preserve the root cause and stack trace.
+ * The original cause is preserved to help diagnose networking issues.
  */
 public class HexudonNetworkException extends HexudonException {
 
     /**
-     * Creates a network exception with message and root cause.
+     * Creates a new network exception with a detail message.
      *
-     * @param message error description
-     * @param cause original network exception
+     * @param message the detail message
      */
-    public HexudonNetworkException(
-            String message,
-            Throwable cause
-    ) {
+    public HexudonNetworkException(String message) {
+        super(message);
+    }
+
+    /**
+     * Creates a new network exception with the specified message and cause.
+     *
+     * @param message the detail message
+     * @param cause   the underlying network exception
+     */
+    public HexudonNetworkException(String message, Throwable cause) {
         super(message, cause);
     }
 }

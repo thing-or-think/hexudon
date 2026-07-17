@@ -4,8 +4,8 @@ package com.naprock.hexudon.sdk.config;
  * Immutable HTTP client timeout configuration.
  *
  * @param connectTimeoutMs connection timeout in milliseconds
- * @param readTimeoutMs read timeout in milliseconds
- * @param writeTimeoutMs write timeout in milliseconds
+ * @param readTimeoutMs    read timeout in milliseconds
+ * @param writeTimeoutMs   write timeout in milliseconds
  */
 public record HttpClientConfig(
         long connectTimeoutMs,
@@ -23,35 +23,35 @@ public record HttpClientConfig(
                     10_000
             );
 
-
+    /**
+     * Compact constructor.
+     *
+     * @throws IllegalArgumentException if any timeout is negative
+     */
     public HttpClientConfig {
-
-        if (connectTimeoutMs < 0) {
-            throw new IllegalArgumentException(
-                    "connectTimeoutMs must be >= 0"
-            );
-        }
-
-        if (readTimeoutMs < 0) {
-            throw new IllegalArgumentException(
-                    "readTimeoutMs must be >= 0"
-            );
-        }
-
-        if (writeTimeoutMs < 0) {
-            throw new IllegalArgumentException(
-                    "writeTimeoutMs must be >= 0"
-            );
-        }
+        validateTimeout(connectTimeoutMs, "connectTimeoutMs");
+        validateTimeout(readTimeoutMs, "readTimeoutMs");
+        validateTimeout(writeTimeoutMs, "writeTimeoutMs");
     }
-
 
     /**
      * Returns the default HTTP client configuration.
      *
-     * @return default configuration instance
+     * @return default configuration
      */
     public static HttpClientConfig defaultConfig() {
         return DEFAULT;
+    }
+
+    /**
+     * Validates a timeout value.
+     *
+     * @param value timeout value
+     * @param field field name
+     */
+    private static void validateTimeout(long value, String field) {
+        if (value < 0) {
+            throw new IllegalArgumentException(field + " must be greater than or equal to 0");
+        }
     }
 }

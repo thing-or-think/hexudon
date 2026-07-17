@@ -1,37 +1,17 @@
 package com.naprock.hexudon.sdk.model;
 
 /**
- * Represents the congestion level of a road cell.
- *
- * <p>
- * Traffic level affects movement cost calculation:
- * <ul>
- *     <li>NORMAL: 1x movement cost</li>
- *     <li>BUSY: 2x movement cost</li>
- *     <li>CONGESTED: 4x movement cost</li>
- * </ul>
- *
- * <p>
- * The integer value must match the Hexudon game server protocol.
+ * Traffic congestion level of a road tile.
  */
 public enum TrafficLevel {
 
-    /**
-     * Normal traffic condition.
-     * Movement cost multiplier: 1x.
-     */
+    /** Normal traffic (1x movement cost). */
     NORMAL(0, 1),
 
-    /**
-     * Busy traffic condition.
-     * Movement cost multiplier: 2x.
-     */
+    /** Busy traffic (2x movement cost). */
     BUSY(1, 2),
 
-    /**
-     * Congested traffic condition.
-     * Movement cost multiplier: 4x.
-     */
+    /** Congested traffic (4x movement cost). */
     CONGESTED(2, 4);
 
     private final int value;
@@ -43,9 +23,9 @@ public enum TrafficLevel {
     }
 
     /**
-     * Returns the integer representation used by the game server.
+     * Returns the numeric traffic value.
      *
-     * @return traffic level value
+     * @return traffic value
      */
     public int getValue() {
         return value;
@@ -54,19 +34,18 @@ public enum TrafficLevel {
     /**
      * Returns the movement cost multiplier.
      *
-     * @return cost multiplier
+     * @return movement cost multiplier
      */
     public int getCostMultiplier() {
         return costMultiplier;
     }
 
     /**
-     * Converts an integer value from API request/response
-     * into corresponding TrafficLevel.
+     * Returns the traffic level for the given value.
      *
-     * @param value integer representation
-     * @return matching TrafficLevel
-     * @throws IllegalArgumentException if value is unknown
+     * @param value traffic value
+     * @return matching traffic level
+     * @throws IllegalArgumentException if the value is invalid
      */
     public static TrafficLevel fromValue(int value) {
         for (TrafficLevel level : values()) {
@@ -74,9 +53,6 @@ public enum TrafficLevel {
                 return level;
             }
         }
-
-        throw new IllegalArgumentException(
-                "Unknown traffic level value: " + value
-        );
+        throw new IllegalArgumentException("Unknown traffic level: " + value);
     }
 }

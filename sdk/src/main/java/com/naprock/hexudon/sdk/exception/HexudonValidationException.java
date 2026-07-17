@@ -4,39 +4,24 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Exception thrown when request validation fails.
- *
- * <p>
- * Represents validation errors returned by Hexudon Server
- * when client sends invalid request data.
- *
- * <p>
- * This exception is thrown when server responds with:
- * <ul>
- *     <li>HTTP 400 Bad Request</li>
- *     <li>HTTP 422 Unprocessable Entity</li>
- * </ul>
- *
- * <p>
- * The exception contains detailed validation errors through
- * {@link ErrorResponse}.
+ * Exception thrown when the server rejects a request because
+ * of validation errors (typically HTTP 400 or 422).
  */
 public class HexudonValidationException extends HexudonException {
 
     private final ErrorResponse errorResponse;
 
     /**
-     * Creates a validation exception.
+     * Creates a new validation exception.
      *
-     * @param message exception message
-     * @param errorResponse detailed validation error response
+     * @param message       the detail message
+     * @param errorResponse validation error details
      */
     public HexudonValidationException(
             String message,
             ErrorResponse errorResponse
     ) {
         super(message);
-
         this.errorResponse = Objects.requireNonNull(
                 errorResponse,
                 "errorResponse must not be null"
@@ -44,7 +29,17 @@ public class HexudonValidationException extends HexudonException {
     }
 
     /**
-     * Returns detailed validation error response.
+     * Creates a new validation exception with a default empty error response.
+     *
+     * @param message the detail message
+     */
+    public HexudonValidationException(String message) {
+        super(message);
+        this.errorResponse = new ErrorResponse(java.util.List.of());
+    }
+
+    /**
+     * Returns the validation error details.
      *
      * @return validation error response
      */
@@ -52,33 +47,29 @@ public class HexudonValidationException extends HexudonException {
         return errorResponse;
     }
 
-
     /**
-     * Wrapper object containing validation error details.
+     * Wrapper for validation error details returned by the server.
      *
-     * @param detail list of validation errors
+     * @param detail validation error list
      */
     public static record ErrorResponse(
             List<ValidationErrorDetail> detail
     ) {
 
+        /**
+         * Compact constructor.
+         */
         public ErrorResponse {
-
-            Objects.requireNonNull(
-                    detail,
-                    "detail must not be null"
-            );
-
+            Objects.requireNonNull(detail, "detail must not be null");
             detail = List.copyOf(detail);
         }
     }
 
-
     /**
-     * Represents a single validation error returned by server.
+     * Represents a single validation error.
      *
-     * @param loc location path of invalid field
-     * @param msg validation error message
+     * @param loc  error location (e.g. ["body","actions",0])
+     * @param msg  validation message
      * @param type validation error type
      */
     public static record ValidationErrorDetail(
@@ -87,22 +78,13 @@ public class HexudonValidationException extends HexudonException {
             String type
     ) {
 
+        /**
+         * Compact constructor.
+         */
         public ValidationErrorDetail {
-
-            Objects.requireNonNull(
-                    loc,
-                    "loc must not be null"
-            );
-
-            Objects.requireNonNull(
-                    msg,
-                    "msg must not be null"
-            );
-
-            Objects.requireNonNull(
-                    type,
-                    "type must not be null"
-            );
+            Objects.requireNonNull(loc, "loc must not be null");
+            Objects.requireNonNull(msg, "msg must not be null");
+            Objects.requireNonNull(type, "type must not be null");
 
             loc = List.copyOf(loc);
         }

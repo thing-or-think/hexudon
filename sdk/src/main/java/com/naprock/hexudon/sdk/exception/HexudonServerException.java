@@ -1,43 +1,36 @@
 package com.naprock.hexudon.sdk.exception;
 
 /**
- * Exception thrown when Hexudon server returns a server-side error.
- *
+ * Exception thrown when the Hexudon server encounters an internal error.
  * <p>
- * Represents HTTP 5xx errors such as:
- * <ul>
- *     <li>500 Internal Server Error</li>
- *     <li>502 Bad Gateway</li>
- *     <li>503 Service Unavailable</li>
- *     <li>504 Gateway Timeout</li>
- * </ul>
- *
+ * This exception is typically raised when the server responds with an
+ * HTTP 5xx status code after all retry attempts have been exhausted.
  * <p>
- * This exception contains the HTTP status code returned by server
- * to help applications decide retry or pause strategies.
+ * The HTTP status code is retained to help client applications determine
+ * an appropriate recovery strategy.
  */
 public class HexudonServerException extends HexudonException {
 
+    /**
+     * HTTP status code returned by the server.
+     */
     private final int statusCode;
 
     /**
-     * Creates a server exception with HTTP status code.
+     * Creates a new server exception.
      *
-     * @param message error message from server
-     * @param statusCode HTTP status code
+     * @param message    the detail message
+     * @param statusCode the HTTP status code
      */
-    public HexudonServerException(
-            String message,
-            int statusCode
-    ) {
+    public HexudonServerException(String message, int statusCode) {
         super(message);
         this.statusCode = statusCode;
     }
 
     /**
-     * Returns HTTP status code returned by server.
+     * Returns the HTTP status code returned by the server.
      *
-     * @return HTTP error status code
+     * @return HTTP status code
      */
     public int getStatusCode() {
         return statusCode;

@@ -1,43 +1,36 @@
 package com.naprock.hexudon.sdk.api;
 
 /**
- * The main entry point for the Hexudon SDK.
- * <p>
- * A {@code HexudonClient} manages the lifecycle of the SDK and provides
- * access to the official game and practice APIs.
- * <p>
- * Instances should be created using {@link #builder()} and closed when
- * no longer needed to release any underlying resources.
+ * The primary entry point for interacting with the Hexudon SDK.
  *
- * <pre>{@code
- * try (HexudonClient client = HexudonClient.builder()
- *         .config(config)
- *         .build()) {
+ * <p>A {@code HexudonClient} provides access to the official game API and
+ * the practice API. Instances should be created using
+ * {@link #builder()} and closed when they are no longer needed.
  *
- *     client.game().getState();
- * }
- * }</pre>
+ * <p>This interface extends {@link AutoCloseable} so it can be used with
+ * the try-with-resources statement.
  */
 public interface HexudonClient extends AutoCloseable {
 
     /**
-     * Creates a new builder for configuring and creating a client.
+     * Creates a new builder for configuring and constructing a
+     * {@code HexudonClient}.
      *
-     * @return a new client builder
+     * @return a new {@link HexudonClientBuilder}
      */
     static HexudonClientBuilder builder() {
         return new HexudonClientBuilder();
     }
 
     /**
-     * Returns the API for official match operations.
+     * Returns the API for official matches.
      *
      * @return the game API
      */
     GameApi game();
 
     /**
-     * Returns the API for practice mode operations.
+     * Returns the API for practice matches.
      *
      * @return the practice API
      */
@@ -45,8 +38,11 @@ public interface HexudonClient extends AutoCloseable {
 
     /**
      * Releases all resources associated with this client.
+     *
+     * <p>After a client has been closed, further API calls are not supported.
+     *
+     * @throws Exception if an error occurs while releasing resources
      */
     @Override
-    void close();
-
+    void close() throws Exception;
 }

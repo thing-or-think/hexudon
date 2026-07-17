@@ -1,32 +1,28 @@
 package com.naprock.hexudon.sdk.exception;
 
 /**
- * Base runtime exception for Hexudon SDK.
- *
+ * Base unchecked exception for the Hexudon SDK.
  * <p>
- * This exception represents an unrecoverable SDK error.
- * Specific SDK exceptions should extend this class.
- *
- * <p>
- * Applications using Hexudon SDK should catch this exception
- * to handle SDK failures, logging, and recovery decisions.
+ * All SDK-specific exceptions extend this class.
+ * It is intended to be caught by client applications
+ * for generic SDK error handling.
  */
 public class HexudonException extends RuntimeException {
 
     /**
-     * Creates an exception with an error message.
+     * Creates a new exception with the specified detail message.
      *
-     * @param message error description
+     * @param message the detail message
      */
     public HexudonException(String message) {
         super(message);
     }
 
     /**
-     * Creates an exception with an error message and root cause.
+     * Creates a new exception with the specified detail message and cause.
      *
-     * @param message error description
-     * @param cause original exception
+     * @param message the detail message
+     * @param cause   the root cause
      */
     public HexudonException(String message, Throwable cause) {
         super(message, cause);
