@@ -113,34 +113,34 @@ public class MatchState {
     }
 
     public void registerTeam(Team team, int maxTeams) {
-        if (team == null || team.getTeamName() == null || team.getTeamName().isEmpty()) {
+        if (team == null || team.getTeamId() == null || team.getTeamId().isEmpty()) {
             throw new GameRuleViolationException(ErrorCode.VALIDATION_ERROR, "Invalid team data");
         }
         if (status != MatchStatus.WAITING) {
             throw new MatchStateConflictException(ErrorCode.MATCH_NOT_WAITING, "Match is not in WAITING state");
         }
-        if (getTeam(team.getTeamName()) != null) {
+        if (getTeam(team.getTeamId()) != null) {
             throw new MatchStateConflictException(ErrorCode.TEAM_ALREADY_EXISTS, "Team already exists");
         }
         if (teams.size() >= maxTeams) {
             throw new MatchStateConflictException(ErrorCode.MAX_TEAMS_REACHED, "Maximum teams reached");
         }
         teams.add(team);
-        gameMap.registerTeam(team.getTeamId());
-        scoreBoard.registerTeam(team.getTeamId());
+        gameMap.registerTeam(team.getTeamNumber());
+        scoreBoard.registerTeam(team.getTeamNumber());
     }
 
-    public Team requireTeam(String teamName) {
-        Team team = getTeam(teamName);
+    public Team requireTeam(String teamId) {
+        Team team = getTeam(teamId);
         if (team == null) {
-            throw new ResourceNotFoundException(ErrorCode.TEAM_NOT_FOUND, "Team not found: " + teamName);
+            throw new ResourceNotFoundException(ErrorCode.TEAM_NOT_FOUND, "Team not found: " + teamId);
         }
         return team;
     }
 
-    public Team getTeam(String teamName) {
+    public Team getTeam(String teamId) {
         return teams.stream()
-                .filter(t -> t.getTeamName().equals(teamName))
+                .filter(t -> t.getTeamId().equals(teamId))
                 .findFirst()
                 .orElse(null);
     }

@@ -85,10 +85,9 @@ class MatchMapperTest {
 
     @Test
     void testToTeamRegistrationData() {
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
         TeamRegistrationData data = MatchMapper.toTeamRegistrationData(request);
         assertNotNull(data);
-        assertEquals("Alpha", data.teamName());
         assertEquals(List.of(0, 1), data.types());
     }
 

@@ -4,5 +4,5 @@ import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 
 public interface SubmitActionsUseCase {
 
-    void submitActions(String teamName, SubmitActionRequest submitActionRequest);
+    void submitActions(String teamId, SubmitActionRequest submitActionRequest);
 }

@@ -9,9 +9,6 @@ import java.util.List;
 
 public record TeamRegisterRequest(
 
-        @NotBlank(message = "Team name must not be blank")
-        String teamName,
-
         @NotEmpty(message = "Types must not be empty")
         List<
                 @Min(value = 0, message = "Each type must be 0 or 1")

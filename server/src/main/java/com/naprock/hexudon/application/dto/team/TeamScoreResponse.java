@@ -3,7 +3,7 @@ package com.naprock.hexudon.application.dto.team;
 import java.util.Objects;
 
 public record TeamScoreResponse(
-        String teamName,
+        String teamId,
         int uniqueUdonTypeCount,
         int totalDailyUdon,
         int totalUdonServings,
@@ -11,10 +11,10 @@ public record TeamScoreResponse(
 ) {
 
     public TeamScoreResponse {
-        Objects.requireNonNull(teamName, "teamName must not be null");
+        Objects.requireNonNull(teamId, "teamId must not be null");
 
-        if (teamName.isBlank()) {
-            throw new IllegalArgumentException("teamName must not be blank");
+        if (teamId.isBlank()) {
+            throw new IllegalArgumentException("teamId must not be blank");
         }
 
         if (uniqueUdonTypeCount < 0) {

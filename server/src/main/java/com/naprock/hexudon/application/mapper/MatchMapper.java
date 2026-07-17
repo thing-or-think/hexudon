@@ -33,7 +33,7 @@ public final class MatchMapper {
 
     public static TeamResponse toTeamResponse(Team team, int mapWidth) {
         return new TeamResponse(
-                team.getTeamId(),
+                team.getTeamNumber(),
                 team.getAgents()
                         .stream()
                         .map(agent -> toAgentResponse(agent, mapWidth))
@@ -68,14 +68,13 @@ public final class MatchMapper {
             TeamRegisterRequest request
     ) {
         return new TeamRegistrationData(
-                request.teamName(),
                 request.types()
         );
     }
 
     public static MatchStateResponse toMatchStateResponse(
             MatchState state,
-            String teamName,
+            String teamId,
             int width
     ) {
         if (state == null) {
@@ -85,10 +84,10 @@ public final class MatchMapper {
             );
         }
 
-        if (teamName == null || teamName.isBlank()) {
+        if (teamId == null || teamId.isBlank()) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "teamName must not be blank."
+                    "teamId must not be blank."
             );
         }
 
@@ -99,7 +98,7 @@ public final class MatchMapper {
             );
         }
 
-        Team currentTeam = state.requireTeam(teamName);
+        Team currentTeam = state.requireTeam(teamId);
 
         return new MatchStateResponse(
                 state.getTurnEndTime(),

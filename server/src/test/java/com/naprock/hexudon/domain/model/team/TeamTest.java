@@ -50,7 +50,7 @@ class TeamTest {
         Agent refuel = new RefuelAgent(new Coordinate(0, 0));
         Team team = new Team("Alpha", List.of(patrol, refuel));
 
-        assertEquals("Alpha", team.getTeamName());
+        assertEquals("Alpha", team.getTeamId());
         assertEquals(2, team.getAgents().size());
         assertTrue(team.getAgents().contains(patrol));
         assertTrue(team.getAgents().contains(refuel));

@@ -57,7 +57,7 @@ class GlobalExceptionHandlerTest {
     void handleValidationException_shouldReturnValidationErrorResponse() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
-        FieldError fieldError = new FieldError("target", "teamName", "Alpha", false, null, null, "must not be blank");
+        FieldError fieldError = new FieldError("target", "teamId", "Alpha", false, null, null, "must not be blank");
 
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
         when(ex.getBindingResult()).thenReturn(bindingResult);
@@ -71,7 +71,7 @@ class GlobalExceptionHandlerTest {
                 () -> assertEquals("Request body validation failed.", response.getBody().getMessage()),
                 () -> assertNotNull(response.getBody().getErrors()),
                 () -> assertEquals(1, response.getBody().getErrors().size()),
-                () -> assertEquals("teamName", response.getBody().getErrors().get(0).field()),
+                () -> assertEquals("teamId", response.getBody().getErrors().get(0).field()),
                 () -> assertEquals("Alpha", response.getBody().getErrors().get(0).rejectedValue()),
                 () -> assertEquals("must not be blank", response.getBody().getErrors().get(0).message())
         );

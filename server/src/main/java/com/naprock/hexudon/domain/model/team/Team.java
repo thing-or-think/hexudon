@@ -19,22 +19,29 @@ public class Team {
 
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(0);
 
-    private final int teamId;
-
-    private final String teamName;
+    private final int teamNumber;
+    private final String teamId;
     private final List<Agent> agents;
 
-    public Team(String teamName, List<Agent> agents) {
-        DomainValidator.requireNotBlank(teamName, "teamName");
+    public Team(String teamId, List<Agent> agents) {
+        DomainValidator.requireNotBlank(teamId, "teamId");
         DomainValidator.requireNonNull(agents, "agents");
 
-        this.teamId = ID_GENERATOR.incrementAndGet();
-        this.teamName = teamName;
+        this.teamNumber = ID_GENERATOR.incrementAndGet();
+        this.teamId = teamId;
         this.agents = agents;
     }
 
-    public int getTeamId() {
+    public int getTeamNumber() {
+        return teamNumber;
+    }
+
+    public String getTeamId() {
         return teamId;
+    }
+
+    public List<Agent> getAgents() {
+        return Collections.unmodifiableList(agents);
     }
 
     public void executeStep(
@@ -55,16 +62,8 @@ public class Team {
 
             moves.add(result);
 
-            collects.add(agent.collectUdon(teamId, gameMap.getSpotIndex()));
+            collects.add(agent.collectUdon(teamNumber, gameMap.getSpotIndex()));
         }
-    }
-
-    public String getTeamName() {
-        return teamName;
-    }
-
-    public List<Agent> getAgents() {
-        return Collections.unmodifiableList(agents);
     }
 
     public Agent findAgentByIndex(int index) {
@@ -76,12 +75,13 @@ public class Team {
 
     public void prepareNewTurn(int steps) {
         resetSteps(steps);
-        for (Agent agent : agents)
+
+        for (Agent agent : agents) {
             agent.prepareNewTurn();
+        }
     }
 
     public void resetSteps(int maxSteps) {
-
         if (maxSteps <= 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -95,7 +95,6 @@ public class Team {
     }
 
     public void refuelAgents(int maxFuel) {
-
         if (maxFuel <= 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -109,13 +108,13 @@ public class Team {
     }
 
     public void autoRefuel(int step, int maxFuel) {
-
         if (maxFuel < 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
-                    "maxFuel must be greater than 0. Provided:" + maxFuel
+                    "maxFuel must be greater than 0. Provided: " + maxFuel
             );
         }
+
         if (step <= 0) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
@@ -127,7 +126,6 @@ public class Team {
         List<PatrolAgent> patrolAgents = new ArrayList<>();
 
         for (Agent agent : agents) {
-
             if (agent.getRemainingSteps() != step) {
                 continue;
             }
@@ -140,21 +138,16 @@ public class Team {
         }
 
         for (RefuelAgent refuel : refuelAgents) {
-
             for (PatrolAgent patrol : patrolAgents) {
-
                 if (refuel.getPosition().equals(patrol.getPosition())) {
                     patrol.setFuel(maxFuel);
                 }
-
             }
-
         }
     }
 
     @Override
     public boolean equals(Object o) {
-
         if (this == o) {
             return true;
         }
@@ -163,11 +156,11 @@ public class Team {
             return false;
         }
 
-        return Objects.equals(teamName, team.teamName);
+        return Objects.equals(teamId, team.teamId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(teamName);
+        return Objects.hash(teamId);
     }
 }

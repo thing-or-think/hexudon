@@ -4,5 +4,5 @@ import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 
 public interface GetMatchStateUseCase {
 
-    MatchStateResponse getMatchState(String teamName);
+    MatchStateResponse getMatchState(String teamId);
 }

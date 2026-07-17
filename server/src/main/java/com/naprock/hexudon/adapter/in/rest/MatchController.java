@@ -12,11 +12,14 @@ import com.naprock.hexudon.application.port.in.SubmitActionsUseCase;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/game")
+@Validated
 public class MatchController {
+
     private final RegisterTeamUseCase registerTeamUseCase;
     private final SubmitActionsUseCase submitActionsUseCase;
     private final GetMatchStateUseCase getMatchStateUseCase;
@@ -24,46 +27,66 @@ public class MatchController {
 
     public MatchController(
             RegisterTeamUseCase registerTeamUseCase,
-            GetMatchConfigUseCase getMatchConfigUseCase,
             SubmitActionsUseCase submitActionsUseCase,
-            GetMatchStateUseCase getMatchStateUseCase
+            GetMatchStateUseCase getMatchStateUseCase,
+            GetMatchConfigUseCase getMatchConfigUseCase
     ) {
         this.registerTeamUseCase = registerTeamUseCase;
-        this.getMatchConfigUseCase = getMatchConfigUseCase;
         this.submitActionsUseCase = submitActionsUseCase;
         this.getMatchStateUseCase = getMatchStateUseCase;
+        this.getMatchConfigUseCase = getMatchConfigUseCase;
     }
 
+
+    /**
+     * Register team and select agent type.
+     */
     @PostMapping("/agent-types")
     @ResponseStatus(HttpStatus.CREATED)
-    public TeamResponse registerTeam(
-            @Valid @RequestBody TeamRegisterRequest request
+    public void registerAgentType(
+            @RequestHeader("X-Team-Id")
+            @NotBlank String teamId,
+
+            @Valid
+            @RequestBody TeamRegisterRequest request
     ) {
-        return registerTeamUseCase.registerTeam(request);
+        registerTeamUseCase.registerTeam(teamId, request);
     }
 
+
+    /**
+     * Get public match configuration.
+     */
     @GetMapping("/config")
     public MatchConfigResponse getMatchConfig() {
         return getMatchConfigUseCase.getMatchConfig();
     }
 
 
-
+    /**
+     * Get current match state for a team.
+     */
     @GetMapping("/state")
     public MatchStateResponse getMatchState(
-            @NotBlank
-            @RequestHeader("X-Team-Name") String teamName
+            @RequestHeader("X-Team-Id")
+            @NotBlank String teamId
     ) {
-        return getMatchStateUseCase.getMatchState(teamName);
+        return getMatchStateUseCase.getMatchState(teamId);
     }
 
+
+    /**
+     * Submit actions for current day.
+     */
     @PostMapping("/actions")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void submitActions(
-            @NotBlank
-            @RequestHeader("X-Team-Name") String teamName,
-            @Valid @RequestBody SubmitActionRequest request
+            @RequestHeader("X-Team-Id")
+            @NotBlank String teamId,
+
+            @Valid
+            @RequestBody SubmitActionRequest request
     ) {
-        submitActionsUseCase.submitActions(teamName, request);
+        submitActionsUseCase.submitActions(teamId, request);
     }
 }

@@ -93,7 +93,7 @@ class MatchManagementServiceTest {
         state.registerTeam(new Team("Alpha", new ArrayList<>()), 2);
         MatchStateResponse response = service.getMatchState("Alpha");
         assertNotNull(response);
-        assertEquals("Alpha", state.getTeams().get(0).getTeamName());
+        assertEquals("Alpha", state.getTeams().get(0).getTeamId());
     }
 
     @Test

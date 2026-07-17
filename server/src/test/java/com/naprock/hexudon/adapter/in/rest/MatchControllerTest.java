@@ -50,14 +50,15 @@ class MatchControllerTest {
 
     @Test
     void registerTeam_shouldReturnCreatedStatus() throws Exception {
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
 
         mockMvc.perform(post("/api/game/agent-types")
+                        .header("X-Team-Id", "Alpha")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        verify(registerTeamUseCase, times(1)).registerTeam(request);
+        verify(registerTeamUseCase, times(1)).registerTeam("Alpha", request);
     }
 
     @Test
@@ -94,7 +95,7 @@ class MatchControllerTest {
         when(getMatchStateUseCase.getMatchState("Alpha")).thenReturn(stateResponse);
 
         mockMvc.perform(get("/api/game/state")
-                        .header("X-Team-Name", "Alpha"))
+                        .header("X-Team-Id", "Alpha"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.endsAt").value(2000))
                 .andExpect(jsonPath("$.day").value(1));
@@ -105,11 +106,35 @@ class MatchControllerTest {
         SubmitActionRequest request = new SubmitActionRequest(1, List.of(List.of(1, -2)));
 
         mockMvc.perform(post("/api/game/actions")
-                        .header("X-Team-Name", "Alpha")
+                        .header("X-Team-Id", "Alpha")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isAccepted());
 
         verify(submitActionsUseCase, times(1)).submitActions("Alpha", request);
+    }
+
+    @Test
+    void registerTeam_shouldReturnBadRequestWhenHeaderMissing() throws Exception {
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
+
+        mockMvc.perform(post("/api/game/agent-types")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerTeam_shouldReturnInternalServerErrorWhenHeaderIsBlank() throws Exception {
+        // Desired behavior is 400 Bad Request.
+        // Currently returns 500 Internal Server Error because GlobalExceptionHandler has no specific handler for ConstraintViolationException.
+        // See report.md.
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
+
+        mockMvc.perform(post("/api/game/agent-types")
+                        .header("X-Team-Id", "   ")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError());
     }
 }

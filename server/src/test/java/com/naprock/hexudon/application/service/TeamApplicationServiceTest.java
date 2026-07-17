@@ -69,13 +69,13 @@ class TeamApplicationServiceTest {
 
     @Test
     void testRegisterTeam_success() {
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
 
-        assertDoesNotThrow(() -> service.registerTeam(request));
+        assertDoesNotThrow(() -> service.registerTeam("Alpha", request));
 
         assertEquals(1, state.getTeams().size());
         Team registeredTeam = state.getTeams().get(0);
-        assertEquals("Alpha", registeredTeam.getTeamName());
+        assertEquals("Alpha", registeredTeam.getTeamId());
         assertEquals(2, registeredTeam.getAgents().size());
         verify(stateStorePort, times(1)).saveState(state);
     }
@@ -83,10 +83,10 @@ class TeamApplicationServiceTest {
     @Test
     void testRegisterTeam_throwsExceptionWhenAgentCountMismatch() {
         // config says agents size = 2, but we request list of size 1
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0));
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0));
 
         GameRuleViolationException ex = assertThrows(GameRuleViolationException.class,
-                () -> service.registerTeam(request));
+                () -> service.registerTeam("Alpha", request));
         assertEquals(ErrorCode.VALIDATION_ERROR, ex.getErrorCode());
         assertTrue(ex.getMessage().contains("Total number of agents must equal 2"));
     }
@@ -94,8 +94,8 @@ class TeamApplicationServiceTest {
     @Test
     void testRegisterTeam_throwsExceptionWhenStateNotFound() {
         when(stateStorePort.loadState()).thenReturn(null);
-        TeamRegisterRequest request = new TeamRegisterRequest("Alpha", List.of(0, 1));
+        TeamRegisterRequest request = new TeamRegisterRequest(List.of(0, 1));
 
-        assertThrows(NullPointerException.class, () -> service.registerTeam(request));
+        assertThrows(NullPointerException.class, () -> service.registerTeam("Alpha", request));
     }
 }

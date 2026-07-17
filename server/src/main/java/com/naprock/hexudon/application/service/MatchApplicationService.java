@@ -96,14 +96,14 @@ public class MatchApplicationService implements
     }
 
     @Override
-    public MatchStateResponse getMatchState(String teamName) {
+    public MatchStateResponse getMatchState(String teamId) {
         MatchState state = stateStorePort.loadState();
         MatchConfig config = configLoaderPort.loadConfig();
-        return MatchMapper.toMatchStateResponse(state, teamName, config.map().width());
+        return MatchMapper.toMatchStateResponse(state, teamId, config.map().width());
     }
 
     @Override
-    public TeamResponse registerTeam(TeamRegisterRequest request) {
+    public void registerTeam(String teamId, TeamRegisterRequest request) {
         TeamRegistrationData registration = MatchMapper.toTeamRegistrationData(request);
 
         MatchConfig config = configLoaderPort.loadConfig();
@@ -127,18 +127,16 @@ public class MatchApplicationService implements
             agents.add(AgentFactory.create(types.get(i), coordinate));
         }
 
-        Team team = new Team(registration.teamName(), agents);
+        Team team = new Team(teamId, agents);
 
         state.registerTeam(team, config.players());
         stateStorePort.saveState(state);
-
-        return MatchMapper.toTeamResponse(team, config.map().width());
     }
 
     @Override
-    public void submitActions(String teamName, SubmitActionRequest submitActionRequest) {
+    public void submitActions(String teamId, SubmitActionRequest submitActionRequest) {
         MatchState state = stateStorePort.loadState();
-        Team team = state.requireTeam(teamName);
+        Team team = state.requireTeam(teamId);
         SubmitActionsCommand submitActionsCommand = MatchMapper.toDomainMap(submitActionRequest);
         actionValidator.validate(
                 state,

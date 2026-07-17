@@ -5,12 +5,10 @@ import java.util.List;
 import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 public record TeamRegistrationData(
-        String teamName,
         List<Integer> types
 ) {
 
     public TeamRegistrationData {
-        requireNotBlank(teamName, "teamName");
         requireNonNull(types, "types");
 
         types = List.copyOf(types);
