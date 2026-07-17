@@ -22,13 +22,13 @@ import java.time.Duration;
  * <p>
  * This class hides all OkHttp-specific logic from SDK public API.
  */
-final class OkHttpExecutor implements HttpExecutor {
+public final class OkHttpExecutor implements HttpExecutor {
 
     private final OkHttpClient client;
     private final HexudonConfig config;
 
 
-    OkHttpExecutor(HexudonConfig config) {
+    public OkHttpExecutor(HexudonConfig config) {
 
         if (config == null) {
             throw new NullPointerException(
@@ -49,16 +49,23 @@ final class OkHttpExecutor implements HttpExecutor {
 
         return new OkHttpClient.Builder()
                 .connectTimeout(
-                        Duration.ofMillis(httpConfig.connectTimeoutMs())
+                        Duration.ofMillis(
+                                httpConfig.connectTimeoutMs()
+                        )
                 )
                 .readTimeout(
-                        Duration.ofMillis(httpConfig.readTimeoutMs())
+                        Duration.ofMillis(
+                                httpConfig.readTimeoutMs()
+                        )
                 )
                 .writeTimeout(
-                        Duration.ofMillis(httpConfig.writeTimeoutMs())
+                        Duration.ofMillis(
+                                httpConfig.writeTimeoutMs()
+                        )
                 )
                 .build();
     }
+
 
     @Override
     public HttpResponse execute(
@@ -77,6 +84,7 @@ final class OkHttpExecutor implements HttpExecutor {
         int maxRetry =
                 config.retryConfig()
                         .maxRetries();
+
 
         long delay =
                 config.retryConfig()
@@ -159,10 +167,15 @@ final class OkHttpExecutor implements HttpExecutor {
                 .forEach(builder::addHeader);
 
 
+        String httpMethod =
+                request.method()
+                        .name();
+
+
         if (request.body() != null) {
 
             builder.method(
-                    request.method(),
+                    httpMethod,
                     RequestBody.create(
                             request.body(),
                             MediaType.parse(
@@ -174,7 +187,7 @@ final class OkHttpExecutor implements HttpExecutor {
         } else {
 
             builder.method(
-                    request.method(),
+                    httpMethod,
                     null
             );
         }

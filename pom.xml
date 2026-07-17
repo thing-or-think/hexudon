@@ -24,7 +24,7 @@
     <!-- Modules -->
     <modules>
         <module>server</module>
-        <module>hexudon-sdk</module>
+        <module>sdk</module>
     </modules>
 
     <!-- Global Properties -->

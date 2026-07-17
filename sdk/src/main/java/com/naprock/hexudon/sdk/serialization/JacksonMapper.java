@@ -18,7 +18,7 @@ import com.naprock.hexudon.sdk.model.Coordinate;
  * <p>
  * Thread-safe because Jackson ObjectMapper is thread-safe after configuration.
  */
-final class JacksonMapper {
+public final class JacksonMapper {
 
     private final ObjectMapper objectMapper;
 
@@ -33,7 +33,7 @@ final class JacksonMapper {
      *     <li>Exclude null fields from JSON payload.</li>
      * </ul>
      */
-    JacksonMapper() {
+    public JacksonMapper() {
         this.objectMapper = new ObjectMapper();
 
         configure();
@@ -76,7 +76,7 @@ final class JacksonMapper {
      * @return JSON byte array
      * @throws HexudonException when serialization fails
      */
-    byte[] writeValueAsBytes(Object value) {
+    public byte[] writeValueAsBytes(Object value) {
 
         if (value == null) {
             throw new IllegalArgumentException(
@@ -104,7 +104,7 @@ final class JacksonMapper {
      * @return deserialized object
      * @throws HexudonException when parsing fails
      */
-    <T> T readValue(byte[] src, Class<T> valueType) {
+    public <T> T readValue(byte[] src, Class<T> valueType) {
 
         if (src == null) {
             throw new IllegalArgumentException(

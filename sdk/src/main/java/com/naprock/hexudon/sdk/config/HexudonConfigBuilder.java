@@ -1,66 +1,89 @@
 package com.naprock.hexudon.sdk.config;
 
-import java.util.Objects;
-
 /**
  * Builder for creating {@link HexudonConfig}.
  *
  * <p>
- * Provides fluent API for SDK configuration setup.
+ * Provides a fluent API for SDK configuration setup.
  */
 public final class HexudonConfigBuilder {
 
-    private String baseUrl =
-            "http://localhost:8080";
+    private String baseUrl = "http://localhost:8080";
 
-    private String teamName;
+    private String gameId;
+
+    private String teamId;
+
+    private String token;
+
+    private boolean practice;
 
     private HttpClientConfig httpClientConfig;
 
     private RetryConfig retryConfig;
 
-    private boolean enableLogging =
-            true;
-
+    private boolean enableLogging = true;
 
     /**
-     * Creates a new configuration builder with default values.
+     * Creates a new configuration builder.
      */
     public HexudonConfigBuilder() {
     }
 
-
     /**
-     * Sets game server base URL.
+     * Sets server base URL.
      *
      * @param baseUrl server base URL
      * @return current builder instance
      */
-    public HexudonConfigBuilder baseUrl(
-            String baseUrl
-    ) {
-
+    public HexudonConfigBuilder baseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
-
         return this;
     }
-
 
     /**
-     * Sets team name used for authentication.
+     * Sets game identifier.
      *
-     * @param teamName team identifier
+     * @param gameId game identifier
      * @return current builder instance
      */
-    public HexudonConfigBuilder teamName(
-            String teamName
-    ) {
-
-        this.teamName = teamName;
-
+    public HexudonConfigBuilder gameId(String gameId) {
+        this.gameId = gameId;
         return this;
     }
 
+    /**
+     * Sets team identifier.
+     *
+     * @param teamId team identifier
+     * @return current builder instance
+     */
+    public HexudonConfigBuilder teamId(String teamId) {
+        this.teamId = teamId;
+        return this;
+    }
+
+    /**
+     * Sets authentication token.
+     *
+     * @param token bearer token
+     * @return current builder instance
+     */
+    public HexudonConfigBuilder token(String token) {
+        this.token = token;
+        return this;
+    }
+
+    /**
+     * Enables or disables practice mode.
+     *
+     * @param practice practice mode flag
+     * @return current builder instance
+     */
+    public HexudonConfigBuilder practice(boolean practice) {
+        this.practice = practice;
+        return this;
+    }
 
     /**
      * Sets HTTP client configuration.
@@ -68,15 +91,10 @@ public final class HexudonConfigBuilder {
      * @param httpClientConfig HTTP configuration
      * @return current builder instance
      */
-    public HexudonConfigBuilder httpClientConfig(
-            HttpClientConfig httpClientConfig
-    ) {
-
+    public HexudonConfigBuilder httpClientConfig(HttpClientConfig httpClientConfig) {
         this.httpClientConfig = httpClientConfig;
-
         return this;
     }
-
 
     /**
      * Sets retry configuration.
@@ -84,15 +102,10 @@ public final class HexudonConfigBuilder {
      * @param retryConfig retry configuration
      * @return current builder instance
      */
-    public HexudonConfigBuilder retryConfig(
-            RetryConfig retryConfig
-    ) {
-
+    public HexudonConfigBuilder retryConfig(RetryConfig retryConfig) {
         this.retryConfig = retryConfig;
-
         return this;
     }
-
 
     /**
      * Enables or disables HTTP logging.
@@ -100,123 +113,69 @@ public final class HexudonConfigBuilder {
      * @param enableLogging logging flag
      * @return current builder instance
      */
-    public HexudonConfigBuilder enableLogging(
-            boolean enableLogging
-    ) {
-
+    public HexudonConfigBuilder enableLogging(boolean enableLogging) {
         this.enableLogging = enableLogging;
-
         return this;
     }
 
-
     /**
-     * Builds immutable {@link HexudonConfig}.
-     *
-     * <p>
-     * Values are resolved using the following priority:
-     * <ol>
-     *     <li>Explicit builder value</li>
-     *     <li>Environment variable</li>
-     *     <li>Default value</li>
-     * </ol>
+     * Builds an immutable {@link HexudonConfig}.
      *
      * @return validated SDK configuration
-     * @throws IllegalArgumentException if configuration is invalid
      */
     public HexudonConfig build() {
 
-        String resolvedBaseUrl =
-                resolveBaseUrl();
+        String resolvedBaseUrl = resolveBaseUrl();
 
-        String resolvedTeamName =
-                resolveTeamName();
-
-
-        validateBaseUrl(
-                resolvedBaseUrl
-        );
-
-        validateTeamName(
-                resolvedTeamName
-        );
-
+        validateBaseUrl(resolvedBaseUrl);
+        validateRequired("gameId", gameId);
+        validateRequired("teamId", teamId);
+        validateRequired("token", token);
 
         HttpClientConfig resolvedHttpConfig =
                 httpClientConfig != null
                         ? httpClientConfig
                         : HttpClientConfig.defaultConfig();
 
-
         RetryConfig resolvedRetryConfig =
                 retryConfig != null
                         ? retryConfig
                         : RetryConfig.defaultConfig();
 
-
         return new HexudonConfig(
                 resolvedBaseUrl,
-                resolvedTeamName,
+                gameId,
+                teamId,
+                token,
+                practice,
                 resolvedHttpConfig,
                 resolvedRetryConfig,
                 enableLogging
         );
     }
 
-
     private String resolveBaseUrl() {
 
-        if (baseUrl != null
-                && !baseUrl.isBlank()) {
-
+        if (baseUrl != null && !baseUrl.isBlank()) {
             return baseUrl;
         }
 
+        String env = System.getenv("HEXUDON_BASE_URL");
 
-        String env =
-                System.getenv(
-                        "HEXUDON_BASE_URL"
-                );
-
-
-        if (env != null
-                && !env.isBlank()) {
-
+        if (env != null && !env.isBlank()) {
             return env;
         }
-
 
         return "http://localhost:8080";
     }
 
+    private void validateBaseUrl(String baseUrl) {
 
-    private String resolveTeamName() {
-
-        if (teamName != null
-                && !teamName.isBlank()) {
-
-            return teamName;
-        }
-
-
-        return System.getenv(
-                "HEXUDON_TEAM_NAME"
-        );
-    }
-
-
-    private void validateBaseUrl(
-            String baseUrl
-    ) {
-
-        if (baseUrl == null
-                || baseUrl.isBlank()) {
-
+        if (baseUrl == null || baseUrl.isBlank()) {
             throw new IllegalArgumentException(
                     "baseUrl must not be blank"
             );
         }
-
 
         if (!baseUrl.startsWith("http://")
                 && !baseUrl.startsWith("https://")) {
@@ -227,16 +186,14 @@ public final class HexudonConfigBuilder {
         }
     }
 
-
-    private void validateTeamName(
-            String teamName
+    private void validateRequired(
+            String field,
+            String value
     ) {
 
-        if (teamName == null
-                || teamName.isBlank()) {
-
+        if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(
-                    "teamName must not be blank"
+                    field + " must not be blank"
             );
         }
     }
