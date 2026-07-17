@@ -9,12 +9,12 @@ import com.naprock.hexudon.sdk.http.HttpResponse;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * OkHttp based implementation of HttpExecutor.
@@ -24,22 +24,21 @@ import java.time.Duration;
  */
 public final class OkHttpExecutor implements HttpExecutor {
 
+    private static final MediaType BINARY_MEDIA_TYPE =
+            MediaType.parse("application/octet-stream");
+
     private final OkHttpClient client;
     private final HexudonConfig config;
 
 
     public OkHttpExecutor(HexudonConfig config) {
 
-        if (config == null) {
-            throw new NullPointerException(
-                    "config must not be null"
-            );
-        }
-
-        this.config = config;
+        this.config = Objects.requireNonNull(
+                config,
+                "config must not be null"
+        );
         this.client = createClient(config);
     }
-
 
     private OkHttpClient createClient(
             HexudonConfig config
@@ -66,7 +65,6 @@ public final class OkHttpExecutor implements HttpExecutor {
                 .build();
     }
 
-
     @Override
     public HttpResponse execute(
             HttpRequest request
@@ -74,28 +72,25 @@ public final class OkHttpExecutor implements HttpExecutor {
             throws HexudonNetworkException,
             HexudonServerException {
 
-        if (request == null) {
-            throw new IllegalArgumentException(
-                    "request must not be null"
-            );
-        }
+        Objects.requireNonNull(
+                request,
+                "request must not be null"
+        );
 
 
-        int maxRetry =
-                config.retryConfig()
-                        .maxRetries();
+        var retryConfig = config.retryConfig();
 
+        int maxRetries =
+                retryConfig.maxRetries();
 
         long delay =
-                config.retryConfig()
-                        .retryDelayMs();
+                retryConfig.retryDelayMs();
 
-
-        Exception lastException = null;
+        IOException lastException = null;
 
 
         for (int attempt = 0;
-             attempt <= maxRetry;
+             attempt <= maxRetries;
              attempt++) {
 
             try {
@@ -104,25 +99,32 @@ public final class OkHttpExecutor implements HttpExecutor {
                         executeInternal(request);
 
 
-                if (response.statusCode() >= 500) {
+                /*
+                 * Success or client error:
+                 * do not retry.
+                 */
+                if (response.statusCode() < 500) {
+                    return response;
+                }
 
-                    if (attempt < maxRetry) {
 
-                        sleep(delay);
-                        delay *= 2;
-                        continue;
-                    }
-
+                /*
+                 * Server error:
+                 * retry until max attempts reached.
+                 */
+                if (attempt == maxRetries) {
 
                     throw new HexudonServerException(
-                            "Server returned status "
+                            "Server returned error status: "
                                     + response.statusCode(),
                             response.statusCode()
                     );
                 }
 
 
-                return response;
+            } catch (HexudonServerException e) {
+
+                throw e;
 
 
             } catch (IOException e) {
@@ -130,103 +132,138 @@ public final class OkHttpExecutor implements HttpExecutor {
                 lastException = e;
 
 
-                if (attempt < maxRetry) {
+                if (attempt == maxRetries) {
 
-                    sleep(delay);
-                    delay *= 2;
-                    continue;
+                    throw new HexudonNetworkException(
+                            "Network error after retry attempts.",
+                            lastException
+                    );
                 }
-
-
-                throw new HexudonNetworkException(
-                        "HTTP request failed",
-                        e
-                );
             }
+
+
+            sleep(delay);
+
+
+            delay = (long) (
+                    delay * retryConfig.retryMultiplier()
+            );
         }
 
 
         throw new HexudonNetworkException(
-                "HTTP request failed after retries",
+                "HTTP request failed after retries.",
                 lastException
         );
     }
-
 
     private HttpResponse executeInternal(
             HttpRequest request
     ) throws IOException {
 
 
-        Request.Builder builder =
-                new Request.Builder()
-                        .url(buildUrl(request));
+        String url = buildUrl(request);
 
 
-        request.headers()
-                .forEach(builder::addHeader);
+        okhttp3.Request.Builder builder =
+                new okhttp3.Request.Builder()
+                        .url(url);
 
 
-        String httpMethod =
-                request.method()
-                        .name();
+        /*
+         * Headers
+         */
+        for (Map.Entry<String, String> header
+                : request.headers().entrySet()) {
 
-
-        if (request.body() != null) {
-
-            builder.method(
-                    httpMethod,
-                    RequestBody.create(
-                            request.body(),
-                            MediaType.parse(
-                                    "application/octet-stream"
-                            )
-                    )
-            );
-
-        } else {
-
-            builder.method(
-                    httpMethod,
-                    null
+            builder.addHeader(
+                    header.getKey(),
+                    header.getValue()
             );
         }
 
 
-        try (Response response =
-                     client.newCall(
-                             builder.build()
-                     ).execute()) {
+        /*
+         * Body
+         */
+        RequestBody body = null;
+
+        if (request.body() != null) {
+
+            body = RequestBody.create(
+                    request.body(),
+                    BINARY_MEDIA_TYPE
+            );
+        }
+
+
+        builder.method(
+                request.method().name(),
+                body
+        );
+
+
+        try (okhttp3.Response response =
+                     client.newCall(builder.build())
+                             .execute()) {
+
+
+            byte[] responseBody =
+                    response.body() != null
+                            ? response.body().bytes()
+                            : new byte[0];
 
 
             return new HttpResponse(
                     response.code(),
-                    response.headers()
-                            .toMultimap(),
-                    response.body() == null
-                            ? null
-                            : response.body().bytes()
+                    response.headers().toMultimap(),
+                    responseBody
             );
         }
     }
 
 
-    private String buildUrl(
-            HttpRequest request
-    ) {
+
+    private String buildUrl(HttpRequest request) {
+
+        Objects.requireNonNull(
+                request,
+                "request must not be null"
+        );
+
+
+        String baseUrl = config.baseUrl();
+
+        while (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(
+                    0,
+                    baseUrl.length() - 1
+            );
+        }
+
+
+        String path = request.path();
+
+        while (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
 
         HttpUrl.Builder builder =
-                HttpUrl.parse(
-                                config.baseUrl()
-                                        + request.path()
+                Objects.requireNonNull(
+                                HttpUrl.parse(
+                                        baseUrl + "/" + path
+                                ),
+                                "Invalid URL"
                         )
                         .newBuilder();
 
 
+        /*
+         * Query params
+         */
         request.queryParams()
-                .forEach(
-                        builder::addQueryParameter
-                );
+                .forEach(builder::addQueryParameter);
 
 
         return builder.build()
@@ -260,7 +297,11 @@ public final class OkHttpExecutor implements HttpExecutor {
                 .executorService()
                 .shutdown();
 
+
         client.connectionPool()
                 .evictAll();
+
+
+        client.cache();
     }
 }

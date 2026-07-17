@@ -8,7 +8,6 @@ import com.naprock.hexudon.sdk.model.request.SubmitActionRequest;
 import com.naprock.hexudon.sdk.model.request.TeamRegisterRequest;
 import com.naprock.hexudon.sdk.model.response.MatchConfigResponse;
 import com.naprock.hexudon.sdk.model.response.MatchStateResponse;
-import com.naprock.hexudon.sdk.model.response.TeamResponse;
 
 /**
  * Defines the operations for interacting with the official Hexudon game.
@@ -22,14 +21,13 @@ public interface GameApi {
      * Registers a team and its agent types.
      *
      * @param request the team registration request
-     * @return the registered team information
      * @throws NullPointerException if {@code request} is {@code null}
      * @throws HexudonValidationException if the request is invalid
      * @throws HexudonAuthenticationException if authentication fails
      * @throws HexudonNetworkException if a network error occurs
      * @throws HexudonServerException if the server returns an error
      */
-    TeamResponse registerTeam(TeamRegisterRequest request);
+    void registerTeam(TeamRegisterRequest request);
 
     /**
      * Retrieves the static configuration of a match.

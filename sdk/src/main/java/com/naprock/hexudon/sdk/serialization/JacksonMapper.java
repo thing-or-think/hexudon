@@ -128,4 +128,41 @@ public final class JacksonMapper {
             );
         }
     }
+
+    /**
+     * Deserializes JSON string into Java object.
+     *
+     * @param json JSON string
+     * @param valueType target class
+     * @param <T> target type
+     * @return deserialized object
+     * @throws HexudonException when parsing fails
+     */
+    public <T> T readValue(String json, Class<T> valueType) {
+
+        if (json == null) {
+            throw new IllegalArgumentException(
+                    "json must not be null"
+            );
+        }
+
+        if (valueType == null) {
+            throw new IllegalArgumentException(
+                    "valueType must not be null"
+            );
+        }
+
+        try {
+            return objectMapper.readValue(
+                    json,
+                    valueType
+            );
+
+        } catch (Exception e) {
+            throw new HexudonException(
+                    "Failed to deserialize JSON",
+                    e
+            );
+        }
+    }
 }

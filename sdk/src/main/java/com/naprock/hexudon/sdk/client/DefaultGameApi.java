@@ -2,7 +2,10 @@ package com.naprock.hexudon.sdk.client;
 
 import com.naprock.hexudon.sdk.api.GameApi;
 import com.naprock.hexudon.sdk.config.HexudonConfig;
+import com.naprock.hexudon.sdk.exception.HexudonAuthenticationException;
 import com.naprock.hexudon.sdk.exception.HexudonServerException;
+import com.naprock.hexudon.sdk.exception.HexudonValidationException;
+import com.naprock.hexudon.sdk.exception.HexudonValidationException.ErrorResponse;
 import com.naprock.hexudon.sdk.http.HttpExecutor;
 import com.naprock.hexudon.sdk.http.HttpMethod;
 import com.naprock.hexudon.sdk.http.HttpRequest;
@@ -11,7 +14,6 @@ import com.naprock.hexudon.sdk.model.request.SubmitActionRequest;
 import com.naprock.hexudon.sdk.model.request.TeamRegisterRequest;
 import com.naprock.hexudon.sdk.model.response.MatchConfigResponse;
 import com.naprock.hexudon.sdk.model.response.MatchStateResponse;
-import com.naprock.hexudon.sdk.model.response.TeamResponse;
 import com.naprock.hexudon.sdk.serialization.JacksonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -39,32 +41,34 @@ public final class DefaultGameApi implements GameApi {
             JacksonMapper mapper,
             HexudonConfig config
     ) {
-        this.httpExecutor = Objects.requireNonNull(httpExecutor);
-        this.mapper = Objects.requireNonNull(mapper);
-        this.config = Objects.requireNonNull(config);
+        this.httpExecutor = Objects.requireNonNull(httpExecutor, "httpExecutor must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
+        this.config = Objects.requireNonNull(config, "config must not be null");
     }
 
 
     @Override
-    public TeamResponse registerTeam(TeamRegisterRequest request) {
+    public void registerTeam(TeamRegisterRequest request) {
 
         Objects.requireNonNull(request);
 
         HttpRequest httpRequest = HttpRequest.builder()
                 .method(HttpMethod.POST)
-                .path("/api/game/register")
+                .path("/api/game/agent-types")
                 .headers(defaultHeaders())
                 .body(mapper.writeValueAsBytes(request))
                 .build();
 
-        return execute(httpRequest, TeamResponse.class);
+        HttpResponse response = httpExecutor.execute(httpRequest);
+
+        checkResponse(response);
     }
 
 
     @Override
     public MatchConfigResponse getMatchConfig(String gameId) {
 
-        Objects.requireNonNull(gameId);
+        Objects.requireNonNull(gameId, "gameId must not be null");
 
         HttpRequest request = HttpRequest.builder()
                 .method(HttpMethod.GET)
@@ -80,7 +84,7 @@ public final class DefaultGameApi implements GameApi {
     @Override
     public MatchStateResponse getMatchState(String gameId) {
 
-        Objects.requireNonNull(gameId);
+        Objects.requireNonNull(gameId, "gameId must not be null");
 
         HttpRequest request = HttpRequest.builder()
                 .method(HttpMethod.GET)
@@ -142,20 +146,30 @@ public final class DefaultGameApi implements GameApi {
 
 
     private void checkResponse(HttpResponse response) {
+        Objects.requireNonNull(response, "response must not be null");
 
-        if (response.statusCode() >= 400) {
-
-            String message = response.body() == null
-                    ? ""
-                    : new String(
-                    response.body(),
-                    StandardCharsets.UTF_8
-            );
-
-            throw new HexudonServerException(
-                    message,
-                    response.statusCode()
-            );
+        if (response.statusCode() < 400) {
+            return;
         }
+
+        int statusCode = response.statusCode();
+        String message = new String(response.body(), StandardCharsets.UTF_8);
+
+        switch (statusCode) {
+            case 401, 403 ->
+                    throw new HexudonAuthenticationException(message);
+
+            case 400, 422 -> {
+                ErrorResponse errorResponse = parseValidationError(message);
+                throw new HexudonValidationException(message, errorResponse);
+            }
+
+            default ->
+                    throw new HexudonServerException(message, statusCode);
+        }
+    }
+
+    private ErrorResponse parseValidationError(String json) {
+        return mapper.readValue(json, ErrorResponse.class);
     }
 }

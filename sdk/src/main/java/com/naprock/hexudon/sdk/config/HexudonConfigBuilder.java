@@ -8,7 +8,7 @@ package com.naprock.hexudon.sdk.config;
  */
 public final class HexudonConfigBuilder {
 
-    private String baseUrl = "http://localhost:8080";
+    private String baseUrl;
 
     private String gameId;
 
@@ -128,7 +128,6 @@ public final class HexudonConfigBuilder {
         String resolvedBaseUrl = resolveBaseUrl();
 
         validateBaseUrl(resolvedBaseUrl);
-        validateRequired("gameId", gameId);
         validateRequired("teamId", teamId);
         validateRequired("token", token);
 
