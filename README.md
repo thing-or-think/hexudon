@@ -287,9 +287,3 @@ mvn test
 *   **WebSocket Protocol**: Các package `websocket` (Inbound adapter) và `publisher` (Outbound adapter) trên server hiện tại mới chỉ là thư mục trống. Toàn bộ tương tác hiện tại phải thực hiện qua REST API dạng thăm dò (polling).
 *   **Chế độ luyện tập (Practice Mode)**: Bộ Java SDK đã xây dựng xong cấu trúc gọi API luyện tập (`PracticeApi` gọi các đường dẫn `/api/game/practice/*`), tuy nhiên trên Server **chưa triển khai** bất kỳ endpoint hay nghiệp vụ nào tương ứng cho tính năng này.
 *   **Cơ sở dữ liệu lưu trữ (Database Persistence)**: Chưa có adapter kết nối tới các cơ sở dữ liệu vật lý (như PostgreSQL, MySQL). Trạng thái game hiện tại được lưu trữ hoàn toàn tạm thời trên bộ nhớ RAM.
-
----
-
-## License
-
-Mã nguồn dự án Hexudon thuộc quyền sở hữu của naprock. Mọi hành vi phân phối, thay đổi hoặc sử dụng cho mục đích thương mại phải được sự cho phép bằng văn bản từ chủ sở hữu dự án.
