@@ -1,432 +1,295 @@
-# HEXUDON - Game Simulation Server
+# Hexudon
 
-`HEXUDON` is a multi-agent, turn-based tactic game simulation server operating on a hexagonal grid (Odd-R offset grid). Teams register their teams and submit action queues to control autonomous agents. The goal of the game is to harvest Udon noodle resources at different spots, coordinate auto-refueling between patrol and refuel agents, optimize path costs under dynamic traffic congestion levels, and score the highest points.
+Hexudon là một hệ thống mô phỏng game chiến thuật theo lượt (turn-based), đa tác tử (multi-agent) hoạt động trên lưới ô lục giác nằm ngang dạng **Odd-R offset**. Trong trò chơi này, các đội tham gia sẽ lập trình các Bot tự động để đăng ký, theo dõi trạng thái trận đấu và gửi danh sách hành động hàng ngày. Mục tiêu chính của trò chơi là tối ưu hóa việc thu thập các loại mì Udon tại các địa điểm cung cấp (`Spot`), phối hợp nhiên liệu di chuyển thông qua cơ chế sạc xăng của xe tiếp tế (`RefuelAgent`) cho xe tuần tra (`PatrolAgent`), và cạnh tranh điểm số trong điều kiện chi phí di chuyển thay đổi động theo mức độ ùn tắc giao thông (`TrafficLevel`).
 
-The project is designed following **Domain-Driven Design (DDD)** and **Hexagonal Architecture (Ports and Adapters)** principles. This keeps the core simulation logic completely isolated from web frameworks and external database concerns.
+Dự án được xây dựng và tổ chức theo phương pháp **Thiết kế hướng tên miền (DDD - Domain-Driven Design)** và **Kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters)**, giúp tách biệt hoàn toàn lõi nghiệp vụ mô phỏng với các thành phần công nghệ bên ngoài như Web Framework và Cơ sở dữ liệu.
 
 ---
 
-## Architecture & System Design
+## Overview
 
-Hexudon is structured into four distinct layers in line with the Hexagonal Architecture:
+Dự án Hexudon cung cấp một nền tảng chạy game cục bộ (Game Server Engine) và một bộ công cụ phát triển phần mềm (Java SDK) hỗ trợ lập trình viên xây dựng bot thông minh:
 
-1. **Domain Layer (`com.naprock.hexudon.domain`)**:
-   - Contains core entities, aggregates, value objects, domain exceptions, and validation logic.
-   - Completely free of external framework dependencies (contains no Spring Boot imports).
-2. **Application Layer (`com.naprock.hexudon.application`)**:
-   - **Inbound Ports**: Interfaces representing the driver use cases (e.g., `RegisterTeamUseCase`, `SubmitActionsUseCase`).
-   - **Outbound Ports**: Interfaces representing driven actions (e.g., `MatchStateStorePort`, `MatchConfigLoaderPort`).
-   - **Application Services**: `MatchApplicationService` coordinates domain actions and implements inbound ports.
-   - **DTOs & Mappers**: Standardizes request/response payloads and transforms them into domain structures.
-3. **Adapter Layer (`com.naprock.hexudon.adapter`)**:
-   - **Inbound (Driving)**: Handles external requests, containing `MatchController` (REST API) and `MatchInitializerRunner` (startup hook).
-   - **Outbound (Driven)**: Implements repository interfaces, containing `InMemoryMatchStateRepository` (RAM persistence) and `FileMatchConfigLoader` (reads JSON configs).
-4. **Infrastructure Layer (`com.naprock.hexudon.infrastructure`)**:
-   - Manages framework-level configurations, such as CORS policies (`WebConfig`) and task scheduling (`SchedulerConfig`).
+*   **Game Server**: Bộ lõi động cơ game chịu trách nhiệm duy trì luật chơi, xác thực và chạy thử các danh sách bước đi gửi lên, tự động cập nhật ngày đấu (turn) bằng Scheduler, tính toán điểm số và mật độ giao thông trên đường bộ.
+*   **Java SDK**: Thư viện kết nối đóng gói sẵn HTTP Client, JSON Mapper, cơ chế tự động gửi lại (Retry) với thuật toán Exponential Backoff và các mô hình dữ liệu lưới lục giác giúp các bot dễ dàng giao tiếp với server mà không cần tự xây dựng các kết nối HTTP thô.
+*   **Đối tượng sử dụng**: Các lập trình viên hoặc đội chơi lập trình bot trí tuệ nhân tạo (AI) / chiến thuật tham gia đấu giải hoặc chạy thử thuật toán tìm đường trên lưới hex.
+
+---
+
+## Architecture
+
+Hệ thống được thiết kế để tách biệt rõ ràng các thành phần thông qua các cổng giao tiếp (Ports) và bộ điều hợp (Adapters):
 
 ```mermaid
 graph TD
-    %% Layers representation
-    subgraph Adapter Layer
-        direction LR
-        REST["MatchController (REST API)"]
-        InitRunner["MatchInitializerRunner (Startup)"]
-        InMemoryRepo["InMemoryMatchStateRepository (In-Memory Store)"]
-        ConfigLoader["FileMatchConfigLoader (File Loader)"]
+    subgraph Client / Bot System
+        Bot[Client Bot Application] --> |uses| SDK[Hexudon Java SDK]
     end
 
-    subgraph Application Layer
-        direction TB
-        UseCases["Inbound Ports (Use Cases)<br>- InitializeMatchUseCase<br>- RegisterTeamUseCase<br>- SubmitActionsUseCase<br>- GetMatchStateUseCase<br>- GetMatchConfigUseCase<br>- GetBoardConfigUseCase<br>- CheckAndSimulateTurnUseCase"]
-        OutPorts["Outbound Ports (Driven)<br>- MatchStateStorePort<br>- MatchConfigLoaderPort"]
-        AppService["MatchApplicationService<br>(Service orchestrator)"]
+    subgraph Hexudon Server
+        subgraph Inbound Adapters
+            REST[MatchController REST API]
+            Init[MatchInitializerRunner Startup]
+            Sched[SchedulerConfig Cron]
+        end
+
+        subgraph Application Core
+            UseCases[Inbound Ports / Use Cases]
+            MatchAppService[MatchApplicationService]
+            OutPorts[Outbound Ports / SPI]
+        end
+
+        subgraph Domain Layer
+            MatchState[MatchState Aggregate Root]
+            Team[Team Entity]
+            Agent[Agent Entity]
+            GameMap[GameMap Entity]
+            ActionValidator[ActionValidator Domain Service]
+        end
+
+        subgraph Outbound Adapters
+            InMemoryRepo[InMemoryMatchStateRepository]
+            FileLoader[FileMatchConfigLoader]
+        end
     end
 
-    subgraph Domain Layer
-        direction TB
-        AggRoot["MatchState (Aggregate Root)"]
-        TeamObj["Team"]
-        AgentObj["Agent (PatrolAgent, RefuelAgent)"]
-        GameMapObj["GameMap"]
-        SpotObj["Spot"]
-        ScoreObj["ScoreBoard / TeamScore"]
-        TrafficObj["TrafficTracker / TrafficHistory"]
-        
-        ActVal["ActionValidator"]
-    end
+    %% Giao tiếp SDK -> Server
+    SDK --> |HTTP Requests với Header X-Team-Id| REST
 
-    %% Wiring
-    REST --> |Invokes| UseCases
-    InitRunner --> |Invokes| UseCases
-    UseCases --- AppService
-    AppService --- OutPorts
+    %% Luồng chạy Server
+    REST --> |calls| UseCases
+    Init --> |calls| UseCases
+    Sched --> |calls| UseCases
+    UseCases --- MatchAppService
+    MatchAppService --- OutPorts
+    
     OutPorts --> InMemoryRepo
-    OutPorts --> ConfigLoader
+    OutPorts --> FileLoader
 
-    AppService --> |Uses| AggRoot
-    AppService --> |Uses| ActVal
+    MatchAppService --> |invokes| MatchState
+    MatchAppService --> |uses| ActionValidator
 
-    AggRoot --> TeamObj
-    AggRoot --> GameMapObj
-    AggRoot --> ScoreObj
-    AggRoot --> TrafficObj
-    TeamObj --> AgentObj
-    GameMapObj --> SpotObj
+    MatchState --> Team
+    MatchState --> GameMap
+    Team --> Agent
 ```
+
+### Chi tiết các luồng tương tác:
+1.  **Tương tác Client-Server**: Client Bot sử dụng thư viện `Hexudon Java SDK` gửi các gói tin HTTP (chứa Header xác thực định danh `X-Team-Id`) tới endpoint REST của `Hexudon Server`.
+2.  **Xác thực và Giả lập tại Server**: Khi nhận danh sách hành động của bot, server thực hiện giải mã và đưa qua `ActionValidator` để chạy thử (Dry-run) trên bản đồ tĩnh, nếu tất cả bước đi hợp lệ (không đi vào ô nước cấm, không vượt quá giới hạn số bước đi của lượt) thì server mới chấp nhận lưu trữ.
+3.  **Tự động thúc lượt (Game Loop)**: Một bộ lập lịch nền (Scheduler) trên Server sẽ liên tục theo dõi thời gian. Khi đến hạn kết thúc lượt, Scheduler sẽ kích hoạt tiến trình chạy mô phỏng chính thức: tính toán di chuyển, trừ xăng, thực hiện sạc xăng chéo, thu hoạch mì Udon, chấm điểm và tính toán lưu lượng giao thông ROAD để áp dụng chi phí xăng mới cho lượt sau.
 
 ---
 
-## Directory & Package Structure
+## Project Structure
+
+Thư mục gốc của repository được tổ chức thành hai module chính chạy trên nền cấu hình Maven đa module (Multi-module):
 
 ```text
-server/src/main/java/com/naprock/hexudon
-├── HexudonApplication.java                   # Main Spring Boot entry point
-├── adapter                                    # Driving & Driven adapters
-│   ├── in
-│   │   ├── initializer
-│   │   │   └── MatchInitializerRunner.java    # Performs startup game state initialization
-│   │   └── rest
-│   │       ├── MatchController.java           # REST Controller for game endpoints
-│   │       └── advice
-│   │           ├── ErrorResponse.java         # Standard REST error payload DTO
-│   │           ├── GlobalExceptionHandler.java# Central MVC exception translator
-│   │           └── ValidationErrorDetail.java # Formats field-level validation errors
-│   └── out
-│       ├── configuration
-│       │   └── DomainBeanConfig.java          # Exposes pure domain service beans
-│       ├── loader
-│       │   └── FileMatchConfigLoader.java     # Classpath resource JSON configuration loader
-│       └── persistence
-│           └── InMemoryMatchStateRepository.java# In-memory store for MatchState
-├── application                                # Usecases, Ports, DTOs, Mappers
-│   ├── dto
-│   │   ├── agent
-│   │   │   └── AgentResponse.java
-│   │   ├── match
-│   │   │   ├── BoardConfigResponse.java
-│   │   │   ├── CellResponse.java
-│   │   │   ├── CoordinateRequest.java
-│   │   │   ├── CoordinateResponse.java
-│   │   │   ├── MapResponse.java
-│   │   │   ├── MatchConfigResponse.java
-│   │   │   ├── MatchStateResponse.java
-│   │   │   ├── SpotResponse.java
-│   │   │   ├── SubmitActionRequest.java
-│   │   │   └── TrafficResponse.java
-│   │   └── team
-│   │       ├── TeamRegisterRequest.java
-│   │       ├── TeamResponse.java
-│   │       └── TeamScoreResponse.java
-│   ├── mapper
-│   │   └── MatchMapper.java                   # Domain to DTO mapping utility
-│   ├── model
-│   │   ├── match
-│   │   │   └── SubmitActionsCommand.java
-│   │   └── team
-│   │       └── TeamRegistrationData.java
-│   ├── port                                   # Ports defining app boundaries
-│   │   ├── in                                 # Inbound drivers
-│   │   └── out                                # Outbound driven repositories/loaders
-│   └── service
-│       └── MatchApplicationService.java       # Coordinates ports and domain rules
-├── domain                                     # Pure business logic core (DDD)
-│   ├── exception                              # Domain specific business and system exceptions
-│   ├── factory
-│   │   └── AgentFactory.java                  # Instantiates Patrol/Refuel agents by ID
-│   ├── model
-│   │   ├── agent
-│   │   │   ├── Agent.java                     # Base abstract Agent class
-│   │   │   ├── AgentType.java                 # Enum: PATROL (0), REFUEL (1)
-│   │   │   ├── PatrolAgent.java               # Patrol agent gathers Udon and consumes fuel
-│   │   │   └── RefuelAgent.java               # Refuel agent replenishes patrol fuel levels
-│   │   ├── geometry
-│   │   │   ├── Coordinate.java                # Row-major index and hexagonal geometry
-│   │   │   └── Direction.java                 # Enum representing hex grid directions
-│   │   ├── map
-│   │   │   ├── Cell.java                      # Cell representation
-│   │   │   ├── GameMap.java                   # Grid width, height, cell registry, movement costs
-│   │   │   ├── MapConfig.java
-│   │   │   ├── Spot.java                      # Udon harvesting spot
-│   │   │   ├── SpotConfig.java
-│   │   │   ├── TerrainType.java               # PLAIN (0), ROAD (1), MOUNTAIN (2), POND (3)
-│   │   │   └── UdonType.java                  # TANUKI (0), KITSUNE (1), TEMPURA (2), BEEF (3)
-│   │   ├── match
-│   │   │   ├── MatchConfig.java               # Match immutable configurations
-│   │   │   ├── MatchState.java                # Game engine state aggregate root
-│   │   │   └── MatchStatus.java               # Enum: WAITING, PLAYING, FINISHED
-│   │   ├── movement
-│   │   │   ├── Action.java                    # MOVE / WAIT commands
-│   │   │   ├── ActionType.java                # MOVE, WAIT enums
-│   │   │   ├── MoveResult.java
-│   │   │   └── MovementCost.java              # Step cost and fuel cost per cell
-│   │   ├── score
-│   │   │   ├── ScoreBoard.java                # Accumulates scores of all teams
-│   │   │   └── TeamScore.java                 # Specific team score state
-│   │   ├── team
-│   │   │   ├── CollectResult.java
-│   │   │   └── Team.java                      # Manages team info and agent registrations
-│   │   └── traffic
-│   │       ├── TrafficFlow.java               # Cell coordinates with congestion level
-│   │       ├── TrafficHistory.java            # Accumulates historical traffic flows
-│   │       ├── TrafficLevel.java              # NORMAL (1x cost), BUSY (2x cost), CONGESTED (4x cost)
-│   │       └── TrafficTracker.java            # Calculates traffic congestion coefficients
-│   ├── service
-│   │   └── ActionValidator.java               # Simulates plans using dummy agents to check rules
-│   └── validation
-│       └── DomainValidator.java               # Central Domain validation utility
-└── infrastructure                             # System & Framework configuration
-    ├── configuration
-    │   ├── AppConfig.java
-    │   ├── SchedulerConfig.java               # Configures Spring scheduler for match loops
-    │   └── WebConfig.java                     # Sets CORS policies
-    └── util
-        └── FileUtils.java
+hexudon (Root)
+├── server              # Module chứa mã nguồn Game Simulation Engine (Spring Boot)
+│   ├── src
+│   │   ├── main/java   # Phân chia package theo layer: adapter, application, domain, infrastructure
+│   │   └── resources   # Cấu hình application.yml, match_config.json mặc định
+│   └── pom.xml
+├── sdk                 # Module thư viện phát triển bot dành cho lập trình viên Java
+│   ├── src
+│   │   └── main/java   # Giao tiếp HTTP, Retry Backoff, cấu hình kết nối, mô hình map
+│   └── pom.xml
+├── docs                # Thư mục chứa tài liệu bổ sung (hiện tại trống)
+├── API.md              # Tài liệu tham chiếu OpenAPI đầy đủ của hệ thống
+├── pom.xml             # File Maven parent cấu hình dependency và Java 21 toàn dự án
+└── README.md           # Tài liệu giới thiệu tổng quan hệ thống (tệp tin này)
 ```
 
 ---
 
-## Technology Stack
+## Modules
 
-- **Java Version**: Java 21
-- **Framework**: Spring Boot 3.5.4
-- **Build Tool**: Maven 3.9.x
-- **Libraries**:
-  - `spring-boot-starter-web` - REST API controllers
-  - `spring-boot-starter-validation` - Input object constraint verification
-  - `lombok` - Boilerplate generation (optional compilation dependency)
-  - `fasterxml-jackson` - JSON serialization and deserialization
-- **In-Memory Storage**: State stored in `InMemoryMatchStateRepository` JVM memory.
-- **Testing Suite**:
-  - `JUnit 5` & `Mockito` - Unit and integration testing
-  - `ArchUnit 1.3.0` - Architectural constraint verification
+### 1. [Server](file:///d:/Documents/GitHub/hexudon/server)
+*   **Vai trò**: Game Engine trung tâm quản lý toàn bộ vòng đời trận đấu, bản đồ lưới lục giác, chấm điểm và mô phỏng các hành động của Agent.
+*   **Tech Stack**: Java 21, Spring Boot 3.5.4, Maven.
+*   **Chức năng chính**: 
+    *   Tự động nạp cấu hình bản đồ từ file JSON khi khởi động.
+    *   Cung cấp REST API cho các bot đăng ký và nộp chuỗi bước đi.
+    *   Bộ Scheduler tự động mô phỏng bước đi và chuyển ngày chơi khi đến hạn.
+    *   Tính toán ùn tắc giao thông trên đường bộ (`ROAD`) để thay đổi chi phí xăng di chuyển động.
+*   **Tài liệu chi tiết**: Xem thêm tại [server/README.md](file:///d:/Documents/GitHub/hexudon/server/README.md).
+
+### 2. [SDK](file:///d:/Documents/GitHub/hexudon/sdk)
+*   **Vai trò**: Thư viện Java Client chính thức giúp viết mã nguồn Bot nhanh chóng, che giấu các kết nối HTTP thô.
+*   **Tech Stack**: Java 21, OkHttp 4.12.0, Jackson Databind 2.20.0.
+*   **Chức năng chính**:
+    *   Cung cấp giao diện `HexudonClient` làm entry point chính.
+    *   Triển khai `GameApi` để gọi các hàm đăng ký, lấy config và nộp hành động.
+    *   Tích hợp sẵn bộ Retry tự động với thuật toán Exponential Backoff khi gặp sự cố mạng hoặc lỗi tạm thời từ server (5xx).
+    *   Định nghĩa sẵn các lớp hình học lưới như tọa độ ô và hướng di chuyển để hỗ trợ bot tính toán tìm đường.
+*   **Tài liệu chi tiết**: Xem thêm tại [sdk/README.md](file:///d:/Documents/GitHub/hexudon/sdk/README.md).
+
+---
+
+## Tech Stack
+
+Dưới đây là bảng tổng hợp công nghệ được sử dụng trên toàn bộ repository:
+
+| Component | Technology |
+| :--- | :--- |
+| **Backend Language** | Java 21 (Sử dụng các cấu trúc hiện đại như Record, Pattern Matching) |
+| **Backend Framework** | Spring Boot 3.5.4 |
+| **Build Tool** | Apache Maven 3.9+ |
+| **Database / Storage** | In-Memory (Bộ nhớ RAM JVM thông qua thực thi Repository tĩnh) |
+| **JSON Serialization** | FasterXML Jackson Databind |
+| **Client SDK HTTP** | OkHttp 4.12.0 |
+| **Testing Framework** | JUnit 5, Mockito, AssertJ, ArchUnit 1.3.0 (kiểm thử kiến trúc) |
+| **Monitor / Dashboard** | *Chưa được implement hoặc chưa có tài liệu* |
+| **Frontend / Web UI** | *Chưa được implement hoặc chưa có tài liệu* |
+
+---
+
+## Getting Started
+
+### Yêu cầu cài đặt (Requirements)
+*   **Java**: JDK 21 hoặc cao hơn.
+*   **Build Tool**: Maven 3.9 hoặc cao hơn.
+
+### 1. Biên dịch toàn bộ dự án
+Chạy lệnh sau tại thư mục gốc để biên dịch cả `server` và `sdk`:
+```bash
+mvn clean install
+```
+
+### 2. Khởi chạy Game Server
+Để khởi chạy máy chủ mô phỏng cục bộ:
+```bash
+mvn spring-boot:run -pl server
+```
+Mặc định server sẽ chạy tại địa chỉ `http://localhost:8080`.
+
+### 3. Tích hợp SDK vào Bot của bạn
+Thêm dependency của SDK vào file `pom.xml` của ứng dụng bot của bạn:
+```xml
+<dependency>
+    <groupId>com.naprock</groupId>
+    <artifactId>hexudon-sdk</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+> [!NOTE]
+> **Run SDK Example & Monitor**:
+> *   *Chưa được implement*: Hiện tại repository không đi kèm ứng dụng monitor UI hay bot chạy ví dụ (`bot-example`). Module SDK thuần túy cung cấp thư viện để lập trình viên tự phát triển bot độc lập.
 
 ---
 
 ## Configuration
 
-The backend is configured in `server/src/main/resources/application.yml`:
+### Cấu hình phía Server
+Cấu hình Spring Boot và Scheduler được đặt tại [server/src/main/resources/application.yml](file:///d:/Documents/GitHub/hexudon/server/src/main/resources/application.yml):
+*   `server.port`: Cổng lắng nghe mặc định (`8080`).
+*   `match.scheduler.interval`: Chu kỳ quét thời gian của scheduler tính bằng mili-giây (Mặc định `1000`).
 
-```yaml
-spring:
-  application:
-    name: hexudon-server
+Tham số trò chơi và bản đồ được nạp từ file JSON [server/src/main/resources/match_config.json](file:///d:/Documents/GitHub/hexudon/server/src/main/resources/match_config.json):
+*   `daySeconds`: Mảng quy định thời gian tối đa mỗi lượt chơi (ví dụ: `[5, 5, 5, 10]` giây).
+*   `daySteps`: Mảng giới hạn số bước đi của Agent trong lượt tương ứng.
+*   `fuelLimits`: Dung tích bình xăng của PatrolAgent (ví dụ: `20`).
+*   `players`: Số lượng đội tối đa tham gia.
 
-server:
-  port: 8080
-
-match:
-  scheduler:
-    interval: 1000  # Interval (in milliseconds) of the scheduler check
-```
-
-- **Scheduler Interval**: Controls the tick rate at which the server checks if the current turn has expired and triggers simulation transitions.
-- **JSON Configuration**: Game parameters, grid dimensions, spots, and starting positions are read from `server/src/main/resources/match_config.json`.
-
----
-
-## REST API Specification
-
-All endpoints are hosted under the base path `/api/game`.
-
-### 1. Register Team
-- **Endpoint**: `POST /api/game/agent-types`
-- **Request DTO**: `TeamRegisterRequest`
-  ```json
-  {
-    "teamName": "Alpha",
-    "types": [0, 1, 0, 1]
-  }
-  ```
-  *(Array size must exactly match the number of agents specified in `match_config.json` where `0 = PATROL` and `1 = REFUEL`)*
-- **Response DTO**: `TeamResponse` (Status: `201 Created`)
-  ```json
-  {
-    "id": 1,
-    "agents": [
-      { "kind": 0, "pos": 4, "fuel": 20 },
-      { "kind": 1, "pos": 12, "fuel": 20 }
-    ]
-  }
-  ```
-- **Description**: Registers a team with a list of agent roles. Agents are initialized at the coordinates specified by the game configuration.
-
-### 2. Get Match Config
-- **Endpoint**: `GET /api/game/config`
-- **Response DTO**: `MatchConfigResponse` (Status: `200 OK`)
-  ```json
-  {
-    "startsAt": 1778227300,
-    "daySeconds": [5, 5, 5, 10],
-    "daySteps": [50, 100, 150, 200],
-    "map": {
-      "height": 8,
-      "width": 8,
-      "cells": [[3, 0, 1, 2, 0, 1, 2, 0], ...]
-    },
-    "spots": [
-      { "brand": 0, "pos": 1, "stocks": 4 }
-    ],
-    "agents": [4, 12, 20, 28],
-    "fuelLimits": 20,
-    "players": 8,
-    "busyThreshold": 2.0,
-    "jammedThreshold": 4.0
-  }
-  ```
-- **Description**: Fetches the layout parameters and match config definitions.
-
-### 3. Get Match State
-- **Endpoint**: `GET /api/game/state`
-- **Required Header**: `X-Team-Name: <teamName>`
-- **Response DTO**: `MatchStateResponse` (Status: `200 OK`)
-  ```json
-  {
-    "endsAt": 1778227305,
-    "day": 1,
-    "agents": [
-      { "kind": 0, "pos": 4, "fuel": 20 }
-    ],
-    "others": [],
-    "traffics": [
-      { "pos": 1, "status": 0 }
-    ]
-  }
-  ```
-- **Description**: Retrieves the current turn status, agent positions, other teams, and traffic flow levels from the perspective of the requesting team.
-
-### 4. Submit Actions
-- **Endpoint**: `POST /api/game/actions`
-- **Required Header**: `X-Team-Name: <teamName>`
-- **Request DTO**: `SubmitActionRequest`
-  ```json
-  {
-    "day": 1,
-    "actions": [
-      [2, -1],
-      [5, 5]
-    ]
-  }
-  ```
-  *(Actions is a list of lists of integers representing movement commands for each agent. Positive integers $0 \dots 5$ represent move direction values; negative values $-N$ represent waiting $N$ steps)*
-- **Response**: Status `202 Accepted`
-- **Description**: Submits the move plan for the current turn. The server simulates the plans locally using dummy agents to validate step limits and movement validity before accepting them.
+### Cấu hình phía SDK Client
+Khi khởi tạo `HexudonClient`, các tham số cấu hình chính bao gồm:
+*   `baseUrl`: URL của Hexudon Server (Mặc định `http://localhost:8080`).
+*   `teamId`: Định danh bắt buộc của đội chơi (Gửi qua header `X-Team-Id`).
+*   `token`: Bearer Token xác thực bắt buộc.
 
 ---
 
-## Domain Model Core Mechanics
+## API Overview
 
-### 1. Hexagonal Geometry (`Coordinate`)
-The grid is organized as an **Odd-R offset horizontal hexagonal grid**. 
-- Adjacency calculation is offset depending on whether the row index `y` is even or odd.
-- Distance calculations convert $(x, y)$ coordinates into 3D Cube Coordinates $(x, y, z)$ where:
-  $$\text{Distance} = \max(|dx|, |dy|, |dz|)$$
+Ứng dụng Hexudon Server cung cấp các API thông qua HTTP REST. Toàn bộ các API chính thức nằm dưới tiền tố đường dẫn `/api/game`:
 
-### 2. Terrain & Movement Costs (`TerrainType`, `MovementCost`)
-- **Terrain values**: `PLAIN` (0), `ROAD` (1), `MOUNTAIN` (2), `POND` (3).
-- Plain, Road, and Mountain cell types return `true` for `isWalkable()`, whereas `POND` is non-walkable.
-- Movement step and fuel consumption are look up based on the destination cell type:
-  - `PLAIN`: 1 step cost, 2 fuel cost.
-  - `ROAD`: 1 step cost, 1 fuel cost (subject to traffic modifiers).
-  - `MOUNTAIN`: 3 step cost, 3 fuel cost.
-  - `POND`: Non-walkable.
+1.  **Cấu hình**:
+    *   `GET /api/game/config`: Lấy cấu hình tham số bản đồ và ngày đấu.
+2.  **Đăng ký**:
+    *   `POST /api/game/agent-types`: Đăng ký tên đội (truyền qua Header `X-Team-Id`) và lựa chọn danh sách loại Agent ban đầu.
+3.  **Hành động**:
+    *   `POST /api/game/actions`: Nộp danh sách kế hoạch di chuyển/chờ đợi cho các Agent của lượt chơi hiện tại.
+4.  **Trạng thái**:
+    *   `GET /api/game/state`: Lấy thông tin trạng thái trận đấu hiện tại từ góc nhìn của đội chơi (Header `X-Team-Id`).
 
-### 3. Agent Lifecycle (`PatrolAgent`, `RefuelAgent`)
-- **PatrolAgent**: Gathers Udon noodles from spots. Consumes fuel when moving.
-- **RefuelAgent**: Does not consume fuel and cannot gather Udon. 
-- **Auto-Refuel**: If a `RefuelAgent` and `PatrolAgent` of the same team occupy the same coordinate at the same step of a simulation, the `PatrolAgent`'s fuel level is instantly reset to `maxFuel`.
+> [!IMPORTANT]
+> **Lưu ý về Header xác thực**:
+> *   Các request từ client lên server bắt buộc phải truyền mã định danh đội chơi qua HTTP Header có tên **`X-Team-Id`** (Không phải `X-Team-Name` như một số tài liệu cũ ghi nhận).
 
-### 4. Traffic Congestion Modifiers (`TrafficTracker`)
-- Only `ROAD` cells calculate congestion levels.
-- Every time an agent moves through or stays on a `ROAD` cell, the step count increments.
-- At the end of the turn, the traffic rate is calculated:
-  $$\text{Traffic Rate} = \frac{\text{Previous Turn Steps} + \text{Current Turn Steps}}{\text{Total Registered Teams}}$$
-- Congestion status levels:
-  - $\text{Rate} < 2.0$: `NORMAL` (1x cost).
-  - $2.0 \le \text{Rate} < 4.0$: `BUSY` (2x cost).
-  - $\text{Rate} \ge 4.0$: `CONGESTED` (4x cost).
+*Tài liệu OpenAPI chi tiết mô tả cấu trúc JSON yêu cầu và phản hồi được lưu tại tệp tin:* [API.md](file:///d:/Documents/GitHub/hexudon/API.md).
 
 ---
 
-## Simulation Match Flow
+## Domain Overview
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Team as Client (Team)
-    participant Server as Spring Boot Server
-    participant Scheduler as Simulation Scheduler
+Nghiệp vụ của trò chơi xoay quanh các khái niệm và quy tắc lõi sau:
 
-    Note over Server: Startup Initialization
-    Server->>Server: Reads match_config.json & initializes GameMap
-    
-    Note over Server: WAITING state
-    Team->>Server: POST /api/game/agent-types (Registration)
-    Server-->>Team: Returns TeamResponse (Agent positions)
-
-    Note over Scheduler: Game Start Check
-    Scheduler->>Server: Tick checks canStart() (teams > 0)
-    Server->>Server: Match state -> PLAYING
-
-    Note over Server: Turn Phase (PLAYING)
-    loop Every Turn (Day)
-        Team->>Server: POST /api/game/actions (Submit Actions)
-        Server->>Server: Dry-runs validation check
-        Server-->>Team: 202 Accepted
-        
-        Team->>Server: GET /api/game/state (Poll State)
-        Server-->>Team: Returns current turn metrics
-
-        Note over Scheduler: Turn Timeout
-        Scheduler->>Server: Tick checks now >= turnEndTime
-        Server->>Server: Simulates turn steps descending (daySteps to 1)
-        Server->>Server: 1. Auto-refuels co-located agents
-        Server->>Server: 2. Moves agents & processes Udon harvests
-        Server->>Server: 3. Calculates traffic congestion costs
-        Server->>Server: 4. Updates ScoreBoard and increments turn count
-    end
-    Note over Server: Match state -> FINISHED
-```
+1.  **Lưới lục giác (Map)**: Sử dụng hệ lưới lục giác ngang Odd-R offset. Địa hình ô bản đồ có 4 loại: PLAIN (đồng bằng), ROAD (đường bộ), MOUNTAIN (núi cao), và POND (ao hồ). Ô địa hình POND là ô bị cấm không thể di chuyển qua.
+2.  **Agent (Tác tử)**: Mỗi đội sở hữu một nhóm Agent tự hành ban đầu được sinh ra tại vị trí cố định. Có hai loại Agent:
+    *   `PatrolAgent` (Tuần tra): Di chuyển qua các ô sẽ tiêu tốn nhiên liệu và bước hành động. Nhiệm vụ duy nhất là đứng tại các ô có Spot để thu hoạch mì Udon.
+    *   `RefuelAgent` (Tiếp tế): Di chuyển chỉ tốn bước đi, không tốn nhiên liệu. Khi đứng cùng ô tọa độ với PatrolAgent cùng đội ở bất kỳ bước mô phỏng nào, nó sẽ tự động nạp đầy nhiên liệu cho PatrolAgent.
+3.  **Ùn tắc giao thông (Traffic)**: Khi nhiều Agent của các đội cùng di chuyển qua hoặc đứng lại ở các ô đường bộ (`ROAD`), mức độ ùn tắc của ô đó tăng lên. Cuối lượt chơi, hệ thống tính toán tỷ lệ ùn tắc và quy đổi thành mức độ `NORMAL` (xăng tiêu thụ = 1), `BUSY` (xăng tiêu thụ = 2), hoặc `CONGESTED` (xăng tiêu thụ = 4) áp dụng cho lượt chơi tiếp theo.
+4.  **Điểm Spot và Điểm số**: Mỗi ô Spot chứa một lượng mì Udon hữu hạn cho từng đội chơi (kho hàng độc lập giữa các đội). Agent tuần tra đứng tại Spot thu hoạch sẽ nhận được Udon và ghi điểm vào bảng xếp hạng. Tồn kho của các Spot sẽ được làm đầy lại vào đầu mỗi lượt chơi mới.
 
 ---
 
-## Build & Execution Instructions
+## Documentation
 
-### 1. Build and Package
-To build the server and package it as a runnable JAR:
-```bash
-mvn clean install
-```
+Dưới đây là danh sách các tài liệu tham khảo chính trong kho mã nguồn:
 
-### 2. Run the Server
-Run the Spring Boot application locally:
-```bash
-mvn spring-boot:run -pl server
-```
-The server will start listening at `http://localhost:8080` by default.
+*   [API.md](file:///d:/Documents/GitHub/hexudon/API.md): Tài liệu đặc tả OpenAPI đầy đủ của hệ thống bao gồm cả các endpoint quản trị (Admin) và chế độ luyện tập (Practice).
+*   [server/README.md](file:///d:/Documents/GitHub/hexudon/server/README.md): Hướng dẫn chi tiết mã nguồn, kiến trúc lục giác, luồng xử lý và cách chạy module Server.
+*   [sdk/README.md](file:///d:/Documents/GitHub/hexudon/sdk/README.md): Hướng dẫn cài đặt, cấu hình retry và cách lập trình tích hợp SDK vào mã nguồn bot của bạn.
+*   *ARCHITECTURE.md, GAME_RULES.md, DATA_MODEL.md, DEVELOPMENT_ROADMAP.md*: **Chưa được tạo lập** hoặc chưa có sẵn trong thư mục `docs` (thư mục `docs` hiện tại đang trống).
 
-### 3. Run Automated Tests
-To run the JUnit 5 unit, integration, and ArchUnit tests:
+---
+
+## Development Guide
+
+### Ràng buộc kiến trúc (Architecture Enforcement)
+Khi đóng góp mã nguồn cho dự án, các lập trình viên phải tuân thủ nghiêm ngặt các quy tắc kiến trúc lục giác được tự động kiểm tra bằng ArchUnit trong lớp [ArchitectureTest.java](file:///d:/Documents/GitHub/hexudon/server/src/test/java/com/naprock/hexudon/ArchitectureTest.java):
+*   Các class nằm trong package `domain` **không được phép** import hoặc tham chiếu tới các class ở các package `application`, `adapter`, hoặc `infrastructure`.
+*   Các class trong package `application` chỉ được phép tương tác với `domain` và các interfaces định nghĩa cổng (Ports), không được tham chiếu trực tiếp đến các adapters bên ngoài.
+
+### Quy tắc đặt tên và Thiết kế bất biến
+*   Sử dụng Java `record` cho tất cả các đối tượng dữ liệu truyền tải (DTOs, Commands) và các Value Object đơn giản trong Domain để bảo đảm tính bất biến (Immutability).
+*   Các danh sách (Collections) trả về từ các đối tượng nghiệp vụ phải được bọc bằng `Collections.unmodifiableList` hoặc `List.copyOf` để tránh rò rỉ trạng thái.
+
+---
+
+## Testing
+
+Hệ thống cung cấp các bộ kiểm thử tự động phong phú ở cả hai module:
+
+*   **Server Tests**: Kiểm thử luật chơi của Agent, nạp xăng tự động, tính toán ùn tắc, kiểm tra ánh xạ dữ liệu, và kiểm thử kiến trúc tĩnh ArchUnit.
+*   **SDK Tests**: Kiểm thử tuần tự hóa JSON coordinate, cơ chế tự động gửi lại (Retry) khi gặp lỗi mạng, và xác thực cấu hình kết nối.
+
+Cách chạy toàn bộ kiểm thử trên repository:
 ```bash
 mvn test
 ```
 
 ---
 
-## Current Features & Limitations
+## Roadmap
 
-### Implemented Features
-- Odd-R horizontal hexagonal grid math calculations and coordinate indexing.
-- Complete game simulation core covering agent movements, step costs, and auto-refuel logic.
-- REST API bindings for team registration, state pulling, configuration loading, and action submissions.
-- Multi-step validation checks for action plans via simulator validation.
-- Spring-scheduled turn timers processing turn simulation loops.
-- Static code structures architecture checking via ArchUnit.
+### Các tính năng đã hoàn thành
+*   Xây dựng hoàn chỉnh lõi tính toán hình học lưới lục giác ngang Odd-R và khoảng cách hex.
+*   Cơ chế mô phỏng di chuyển bước, auto-refuel, và thu hoạch tài nguyên theo luật chơi.
+*   Tự động cập nhật ùn tắc giao thông ROAD động theo lượt.
+*   Thiết lập REST API cơ bản cho cấu hình, trạng thái trận đấu và gửi hành động.
+*   Bộ Java SDK tích hợp Retry Exponential Backoff kết nối ổn định.
 
-### Planned/Missing Features (Stubs present but not implemented)
-- **WebSocket Protocol**: empty packages `websocket` (driving adapter) and `publisher` (driven adapter) are present; all state checks must use REST poll requests.
-- **Database Persistence**: State is stored entirely in memory.
-- **Serve / Response Time Tracking**: `TeamScore` has stub methods `incrementServings()` and `addResponseTime()`, but they are not hooked up to the simulation run loops.
+### Các tính năng chưa hoàn thành / Đang lên kế hoạch (Có cấu trúc khung nhưng chưa triển khai)
+*   **WebSocket Protocol**: Các package `websocket` (Inbound adapter) và `publisher` (Outbound adapter) trên server hiện tại mới chỉ là thư mục trống. Toàn bộ tương tác hiện tại phải thực hiện qua REST API dạng thăm dò (polling).
+*   **Chế độ luyện tập (Practice Mode)**: Bộ Java SDK đã xây dựng xong cấu trúc gọi API luyện tập (`PracticeApi` gọi các đường dẫn `/api/game/practice/*`), tuy nhiên trên Server **chưa triển khai** bất kỳ endpoint hay nghiệp vụ nào tương ứng cho tính năng này.
+*   **Cơ sở dữ liệu lưu trữ (Database Persistence)**: Chưa có adapter kết nối tới các cơ sở dữ liệu vật lý (như PostgreSQL, MySQL). Trạng thái game hiện tại được lưu trữ hoàn toàn tạm thời trên bộ nhớ RAM.
 
-### Known Limitations
-- **Single Match Instance**: The repository holds a single global `MatchState` singleton.
-- **Authentication**: Action submissions rely entirely on the trust header `X-Team-Name` without validation tokens, keys, or security filters.
+---
+
+## License
+
+Mã nguồn dự án Hexudon thuộc quyền sở hữu của naprock. Mọi hành vi phân phối, thay đổi hoặc sử dụng cho mục đích thương mại phải được sự cho phép bằng văn bản từ chủ sở hữu dự án.
