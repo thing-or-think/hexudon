@@ -78,7 +78,7 @@ class DefaultGameApiTest {
           "cells": [0,0,0,0, 0,0,0,0, 0,0,0,0],
           "spots": [],
           "agents": [],
-          "playersLimit": 2
+          "players": 2
         }
         """;
         HttpResponse mockResponse = new HttpResponse(200, Collections.emptyMap(), mockConfigJson.getBytes());
@@ -114,7 +114,7 @@ class DefaultGameApiTest {
           "cells": [0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0],
           "spots": [],
           "agents": [],
-          "playersLimit": 2
+          "players": 2
         }
         """;
         HttpResponse configResponse = new HttpResponse(200, Collections.emptyMap(), mockConfigJson.getBytes());
@@ -162,7 +162,7 @@ class DefaultGameApiTest {
           "cells": [0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0],
           "spots": [],
           "agents": [],
-          "playersLimit": 2
+          "players": 2
         }
         """;
         HttpResponse configResponse = new HttpResponse(200, Collections.emptyMap(), mockConfigJson.getBytes());

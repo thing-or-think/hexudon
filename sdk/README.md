@@ -1,13 +1,13 @@
 # Hexudon Java SDK
 
-Thư viện Java SDK chính thức hỗ trợ kết nối, tương tác và điều khiển các Agent trong hệ thống **Hexudon Game Server**. SDK này giúp các đội chơi lập trình Bot dễ dàng tích hợp, gửi hành động và nhận thông tin trận đấu theo thời gian thực.
+Thư viện Java SDK chính thức hỗ trợ kết nối, tương tác và điều khiển các Agent trong hệ thống **Hexudon Game Server**. SDK này được module hóa hoàn toàn (Java Platform Module System - JPMS), giúp các đội chơi lập trình Bot dễ dàng tích hợp, gửi hành động và nhận thông tin trận đấu theo thời gian thực với tính đóng gói cao.
 
 ---
 
 ## 1. Yêu cầu hệ thống & Cài đặt
 
-### Yêu cầu
-* **Java Version**: Java 21 hoặc cao hơn.
+### Yêu cầu môi trường
+* **Java Version**: JDK 21 hoặc cao hơn.
 * **Build Tool**: Maven (3.9.x+) hoặc Gradle.
 
 ### Maven Dependency
@@ -21,70 +21,83 @@ Thêm dependency sau vào file `pom.xml` của dự án của bạn:
 </dependency>
 ```
 
-### Dependencies chính của SDK
-SDK sử dụng các thư viện phổ biến và ổn định sau:
+### Công nghệ sử dụng & Dependencies chính
+SDK sử dụng các thư viện hiệu năng cao, hiện đại và ổn định sau:
 * **Jackson Databind** (`2.20.0`) - Cho việc serialize/deserialize dữ liệu JSON.
-* **OkHttp** (`4.12.0`) - Client HTTP hiệu năng cao hỗ trợ kết nối và tự động thử lại.
+* **OkHttp** (`4.12.0`) - Client HTTP hỗ trợ kết nối hiệu năng cao và tự động thử lại.
+* **Okio JVM** (`3.6.0`) - Hỗ trợ I/O hiệu năng cao và giải quyết xung đột module trong JPMS.
+* **Kotlin Stdlib** (`1.9.25`) - Dependency cần thiết cho OkHttp chạy trên Module Path.
 
 ---
 
 ## 2. Kiến trúc & Cấu trúc Package
 
-Dự án SDK được chia thành các package chuyên biệt để cô lập trách nhiệm rõ ràng:
+Dự án sử dụng cơ chế đóng gói chặt chẽ của **Java Platform Module System (JPMS)**. Tất cả các implementation chi tiết nằm trong package `com.naprock.hexudon.sdk.internal.*` đều được ẩn hoàn toàn (encapsulated) đối với ứng dụng bên ngoài. 
+
+Ứng dụng của bạn chỉ có thể truy cập các package được export chính thức được khai báo trong `module-info.java`:
+
+```java
+module com.naprock.hexudon.sdk {
+    exports com.naprock.hexudon.sdk.api;
+    exports com.naprock.hexudon.sdk.config;
+    exports com.naprock.hexudon.sdk.model;
+    exports com.naprock.hexudon.sdk.exception;
+}
+```
+
+### Sơ đồ cấu trúc package:
 
 ```text
 com.naprock.hexudon.sdk
 ├── api            # Các Interface API chính và Builder tạo Client (HexudonClient, GameApi, PracticeApi)
-├── config         # Cấu hình kết nối, timeout và cơ chế Retry
-├── exception      # Hệ thống ngoại lệ (Exceptions) xử lý lỗi mạng, xác thực, validate dữ liệu
-├── model          # Các Domain Model, Enum dùng chung (Coordinate, Direction, TerrainType, v.v.)
-│   ├── request    # DTO chứa dữ liệu gửi lên Game Server
-│   └── response   # DTO chứa dữ liệu trả về từ Game Server
-├── serialization  # Xử lý JSON Mapper nội bộ
-└── http           # Triển khai tầng giao tiếp HTTP (OkHttp) ẩn dưới API
+├── config         # Cấu hình kết nối, timeout và cơ chế Retry (HexudonConfig, HttpClientConfig, RetryConfig)
+├── exception      # Hệ thống ngoại lệ xử lý lỗi mạng, xác thực, validate dữ liệu (HexudonException, v.v.)
+├── model          # Các Domain Model, Enum dùng chung (Coordinate, Agent, Team, TerrainType, v.v.)
+└── internal       # [Kín] Các DTO request/response, HTTP Engine (OkHttp), Mapper, Custom Serializers
 ```
 
-### Trách nhiệm của các package chính:
-* **`api`**: Cung cấp entry point chính (`HexudonClient`). Người dùng chỉ tương tác với các Interface trong package này để gửi nhận dữ liệu.
+### Trách nhiệm của các package công khai (Public Packages):
+* **`api`**: Cung cấp các điểm truy cập chính (`HexudonClient`). Người dùng tương tác với hệ thống qua các API đã định nghĩa tại đây.
 * **`config`**: Quản lý cấu hình tĩnh như URL server, credentials, cũng như hành vi HTTP (Timeout, Retry).
-* **`exception`**: Định nghĩa rõ ràng các lỗi xảy ra trong quá trình gọi API giúp ứng dụng bắt lỗi chuẩn xác (xác thực sai, lỗi server, lỗi kết nối mạng...).
-* **`model`**: Đóng gói các kiểu dữ liệu và hình học lưới lục giác giúp Bot tính toán khoảng cách và di chuyển.
+* **`exception`**: Định nghĩa cây ngoại lệ giúp ứng dụng bắt lỗi chuẩn xác (xác thực sai, lỗi server, lỗi kết nối mạng, lỗi validate dữ liệu từ server).
+* **`model`**: Đóng gói các kiểu dữ liệu nghiệp vụ, bản đồ, thông tin Agent và hình học lưới lục giác để Bot tính toán di chuyển.
 
 ---
 
 ## 3. Cấu hình SDK (`HexudonConfig`)
 
-Lớp `HexudonConfig` (dạng `record` bất biến) đóng vai trò cấu hình toàn bộ hành vi của SDK client. Bạn nên tạo nó thông qua `HexudonConfigBuilder` hoặc cấu hình trực tiếp từ `HexudonClientBuilder`.
+Lớp `HexudonConfig` (dạng `record` bất biến) quản lý cấu hình hoạt động của SDK. Bạn nên tạo cấu hình này thông qua `HexudonConfigBuilder` hoặc cấu hình trực tiếp từ `HexudonClientBuilder`.
 
 ### Các thuộc tính cấu hình
 
 | Thuộc tính | Kiểu dữ liệu | Bắt buộc | Giá trị mặc định | Mô tả |
 | :--- | :--- | :---: | :--- | :--- |
-| `baseUrl` | `String` | Không | `http://localhost:8080` | URL của Hexudon Server. Phải bắt đầu bằng `http://` hoặc `https://`. Có thể cấu hình qua biến môi trường `HEXUDON_BASE_URL`. |
-| `teamId` | `String` | **Có** | *Không* | Mã định danh duy nhất của đội chơi. Gửi qua HTTP Header `X-Team-Id`. |
-| `token` | `String` | **Có** | *Không* | Bearer Token dùng để xác thực. Gửi qua HTTP Header `Authorization`. |
+| `baseUrl` | `String` | Không | `http://localhost:8080` | URL của Hexudon Server. Phải bắt đầu bằng `http://` hoặc `https://`. Tự động phân giải từ biến môi trường `HEXUDON_BASE_URL` nếu có. |
+| `teamId` | `String` | **Có** | *Không* | Mã định danh duy nhất của đội chơi. |
+| `token` | `String` | **Có** | *Không* | Token xác thực (Bearer Token). |
 | `practice` | `boolean` | Không | `false` | Bật/tắt chế độ luyện tập (Practice Mode). |
-| `enableLogging`| `boolean` | Không | `true` | Bật/tắt HTTP logging để theo dõi các request/response thô. |
+| `enableLogging`| `boolean` | Không | `true` | Bật/tắt HTTP logging để theo dõi các request/response thô từ SDK. |
 | `httpClientConfig`| `HttpClientConfig` | Không | `HttpClientConfig.DEFAULT` | Cấu hình thời gian timeout cho HTTP Client. |
-| `retryConfig` | `RetryConfig` | Không | `RetryConfig.DEFAULT` | Cấu hình tự động gửi lại yêu cầu khi gặp lỗi server 5xx. |
+| `retryConfig` | `RetryConfig` | Không | `RetryConfig.DEFAULT` | Cấu hình tự động gửi lại yêu cầu khi gặp lỗi server 5xx hoặc lỗi mạng tạm thời. |
 
 ### Cấu hình HTTP Timeout (`HttpClientConfig`)
+Cũng là một `record` bất biến gồm các thuộc tính:
 * `connectTimeoutMs` (Mặc định `5,000` ms): Thời gian chờ kết nối tối đa.
 * `readTimeoutMs` (Mặc định `10,000` ms): Thời gian chờ đọc phản hồi tối đa.
 * `writeTimeoutMs` (Mặc định `10,000` ms): Thời gian chờ ghi dữ liệu tối đa.
 
 ### Cấu hình Retry (`RetryConfig`)
-Khi server gặp sự cố tạm thời (lỗi HTTP 5xx như 500, 502, 503, 504), SDK sẽ tự động thử lại dựa trên cấu hình:
+Khi server gặp sự cố hoặc kết nối mạng bị gián đoạn, SDK sẽ tự động thử lại dựa trên thuật toán Exponential Backoff:
 * `maxRetries` (Mặc định `3` lần): Số lần thử lại tối đa.
 * `retryDelayMs` (Mặc định `1,000` ms): Thời gian trễ ban đầu giữa các lần thử lại.
-* `retryMultiplier` (Mặc định `2.0`): Hệ số nhân thời gian trễ theo thuật toán Exponential Backoff (ví dụ: trễ 1s -> 2s -> 4s).
+* `retryMultiplier` (Mặc định `2.0`): Hệ số nhân thời gian trễ tăng dần qua mỗi lần thất bại (ví dụ: trễ 1s -> 2s -> 4s).
 
 ---
 
 ## 4. Chi tiết Public API
 
-### 4.1. Entry Point: `HexudonClient`
-Quản lý vòng đời kết nối và cung cấp các API để giao tiếp với Server.
+### 4.1. Khởi tạo Client: `HexudonClient`
+Quản lý vòng đời kết nối và cung cấp các API tương tác.
 
 ```java
 public interface HexudonClient extends AutoCloseable {
@@ -99,7 +112,7 @@ public interface HexudonClient extends AutoCloseable {
     
     // Giải phóng tài nguyên HTTP client khi đóng ứng dụng
     @Override
-    void close();
+    void close() throws Exception;
 }
 ```
 
@@ -108,47 +121,67 @@ public interface HexudonClient extends AutoCloseable {
 ### 4.2. Trận đấu chính thức: `GameApi`
 Sử dụng các phương thức này trong các ngày thi đấu chính thức.
 
-#### `void registerTeam(TeamRegisterRequest request)`
+#### `void registerAgentTypes(String gameId, TeamRegistration registration)`
 Đăng ký các loại Agent cho đội chơi trước khi trận đấu bắt đầu.
-* **Tham số**: `TeamRegisterRequest` chứa danh sách kiểu Agent (`types`: `0` cho PATROL, `1` cho REFUEL).
-* **Ngoại lệ có thể xảy ra**: `HexudonValidationException`, `HexudonAuthenticationException`, `HexudonNetworkException`, `HexudonServerException`.
+* **Tham số**: 
+  - `gameId`: ID trận đấu.
+  - `registration`: Đối tượng `TeamRegistration` chứa mã đội chơi (`teamId`) và danh sách các vai trò Agent (`types` nhận giá trị từ `AgentType` enum).
+* **Ngoại lệ**: `HexudonValidationException`, `HexudonAuthenticationException`, `HexudonNetworkException`, `HexudonServerException`.
 
-#### `MatchConfigResponse getMatchConfig(String gameId)`
-Lấy cấu hình bản đồ, danh sách điểm thu hoạch Udon và giới hạn nhiên liệu của trận đấu.
-* **Tham số**: `gameId` (String) - ID trận đấu.
-* **Trả về**: `MatchConfigResponse`.
+#### `MatchConfig getMatchConfig(String gameId)`
+Lấy cấu hình tĩnh của trận đấu (bản đồ, danh sách điểm thu hoạch Udon, giới hạn nhiên liệu, v.v.).
+* **Tham số**: `gameId` - ID trận đấu.
+* **Trả về**: Đối tượng `MatchConfig`.
 
-#### `MatchStateResponse getMatchState(String gameId)`
-Lấy trạng thái hiện tại của trận đấu (vị trí Agent của ta, đối thủ nhìn thấy được, tình trạng giao thông trên các ô đường bộ).
-* **Tham số**: `gameId` (String) - ID trận đấu.
-* **Trả về**: `MatchStateResponse`.
+#### `MatchState getMatchState(String gameId)`
+Lấy trạng thái động hiện tại của trận đấu (vị trí các Agent của ta, đối thủ nhìn thấy được, tình trạng giao thông trên các ô đường bộ, ngày đấu hiện tại).
+* **Tham số**: `gameId` - ID trận đấu.
+* **Trả về**: Đối tượng `MatchState`.
 
-#### `void submitActions(SubmitActionRequest request)`
-Gửi danh sách các bước di chuyển kế tiếp của các Agent cho ngày đấu hiện tại.
-* **Tham số**: `SubmitActionRequest` gồm ngày hiện tại và danh sách hướng đi của từng Agent.
-* **Ngoại lệ**: Sẽ ném ra `HexudonValidationException` nếu đường đi không hợp lệ hoặc vượt quá giới hạn bước di chuyển của ngày đấu đó.
+#### `void submitActions(String gameId, SubmitActions actions)`
+Gửi danh sách các bước hành động kế tiếp của các Agent cho ngày đấu hiện tại.
+* **Tham số**: 
+  - `gameId`: ID trận đấu.
+  - `actions`: Đối tượng `SubmitActions` gồm ngày hiện tại (`day`) và danh sách các chuỗi hành động di chuyển (`List<List<GameAction>>`).
+* **Ngoại lệ**: Ném ra `HexudonValidationException` nếu hành động không hợp lệ hoặc vượt quá giới hạn bước di chuyển cho phép của ngày đấu đó.
+
+#### `DayInfo getDayInfo(String gameId)`
+Lấy thông tin đồng bộ hóa ngày thi đấu hiện tại từ server.
+* **Tham số**: `gameId` - ID trận đấu.
+* **Trả về**: Đối tượng `DayInfo`.
+
+#### `GameResult getGameResult(String gameId)`
+Lấy kết quả chung cuộc khi trận đấu kết thúc.
+* **Tham số**: `gameId` - ID trận đấu.
+* **Trả về**: Đối tượng `GameResult` chứa ID đội thắng cuộc và bảng điểm của các đội chơi.
 
 ---
 
 ### 4.3. Phòng luyện tập: `PracticeApi`
-Dành riêng cho việc kiểm thử chiến thuật, sao chép hoặc reset trạng thái game.
+Dành riêng cho việc kiểm thử chiến thuật, sao chép tiến trình hoặc reset trạng thái game luyện tập.
 
-#### `void submitPracticeActions(PracticeSubmitRequest request)`
-Gửi danh sách hành động lập lịch trong phòng tập.
-* **Tham số**: `PracticeSubmitRequest` (chứa `gameId`, `day`, và danh sách hành động `actions`).
+#### `void submitPracticeActions(String gameId, SubmitActions actions)`
+Gửi danh sách hành động lập lịch cho các Agent trong phòng tập.
+* **Tham số**: 
+  - `gameId`: ID trận đấu luyện tập.
+  - `actions`: Đối tượng `SubmitActions` chứa thông tin ngày và các hành động của Agent.
 
 #### `String getPracticePeerState(String gameId)`
-Lấy lịch sử đấu (replay) của các đội đối thủ trong phòng luyện tập để phân tích.
-* **Tham số**: `gameId` (String).
+Lấy dữ liệu thô (chuỗi JSON) chứa lịch sử thi đấu (replay) của các đội đối thủ trong phòng luyện tập để phân tích chiến thuật.
+* **Tham số**: `gameId` - ID trận đấu.
 * **Trả về**: Chuỗi JSON thô chứa dữ liệu replay.
 
-#### `void copyPracticeState(PracticeCopyRequest request)`
-Sao chép tiến trình thi đấu từ một trận đấu luyện tập của đội khác để chạy thử nghiệm.
-* **Tham số**: `PracticeCopyRequest` (chứa `gameId`, `fromGameId`, `fromTeamId`, `uptoDay`).
+#### `void copyPracticeState(String gameId, String fromGameId, String fromTeamId, int uptoDay)`
+Sao chép tiến trình thi đấu từ một trận đấu luyện tập của đội khác để tiến hành chạy thử nghiệm.
+* **Tham số**:
+  - `gameId`: ID trận đấu hiện tại của bạn.
+  - `fromGameId`: ID trận đấu nguồn muốn sao chép.
+  - `fromTeamId`: ID đội chơi muốn sao chép.
+  - `uptoDay`: Ngày thi đấu giới hạn muốn sao chép đến (ví dụ: sao chép đến hết Ngày 5).
 
 #### `void resetPractice(String gameId)`
-Khởi động lại trận đấu luyện tập về ngày đầu tiên (Day 1) với trạng thái ban đầu.
-* **Tham số**: `gameId` (String).
+Khởi động lại toàn bộ trận đấu luyện tập về ngày đầu tiên (Day 0) với trạng thái ban đầu để kiểm thử lại từ đầu.
+* **Tham số**: `gameId` - ID trận đấu luyện tập.
 
 ---
 
@@ -158,33 +191,28 @@ Quy trình vận hành chuẩn của Bot khi tích hợp SDK như sau:
 
 ```mermaid
 graph TD
-    A[Khởi tạo HexudonClient] --> B[Đăng ký Team & Thiết lập Agent]
-    B --> C[Lấy Match Config]
+    A[Khởi tạo HexudonClient] --> B[Đăng ký Agent Types qua registerAgentTypes]
+    B --> C[Lấy MatchConfig để lập bản đồ]
     C --> D[Vòng lặp Turn-Based theo từng Ngày]
-    D --> E[Lấy Match State hiện tại]
+    D --> E[Lấy MatchState hiện tại]
     E --> F[Tính toán chiến thuật di chuyển]
     F --> G[Gửi hành động qua submitActions]
     G --> H{Trận đấu kết thúc?}
     H -- Chưa --> D
-    H -- Rồi --> I[Đóng HexudonClient giải phóng tài nguyên]
+    H -- Rồi --> I[Lấy GameResult kết quả]
+    I --> J[Đóng HexudonClient để giải phóng tài nguyên]
 ```
 
-### Ví dụ Code Java Hoàn Chỉnh
+### Ví dụ Code Java 21 Hoàn Chỉnh
 
-Dưới đây là một chương trình Java hoàn chỉnh mô tả vòng lặp chơi game tự động:
+Dưới đây là mã nguồn một chương trình Java hoàn chỉnh mô tả vòng lặp chơi game tự động sử dụng chính xác các public API và domain models của SDK:
 
 ```java
 import com.naprock.hexudon.sdk.api.HexudonClient;
 import com.naprock.hexudon.sdk.api.GameApi;
 import com.naprock.hexudon.sdk.exception.HexudonException;
 import com.naprock.hexudon.sdk.exception.HexudonValidationException;
-import com.naprock.hexudon.sdk.model.AgentType;
-import com.naprock.hexudon.sdk.model.Direction;
-import com.naprock.hexudon.sdk.model.MatchStatus;
-import com.naprock.hexudon.sdk.internal.dto.request.SubmitActionRequest;
-import com.naprock.hexudon.sdk.internal.dto.request.TeamRegisterRequest;
-import com.naprock.hexudon.sdk.internal.dto.response.MatchConfigResponse;
-import com.naprock.hexudon.sdk.internal.dto.response.MatchStateResponse;
+import com.naprock.hexudon.sdk.model.*;
 
 import java.util.List;
 
@@ -196,12 +224,12 @@ public class HexudonBotApp {
         String teamId = "team-alpha-id";
         String gameId = "match-101";
 
-        // 1. Khởi tạo Client bằng Try-With-Resources để tự động close
+        // 1. Khởi tạo Client bằng Try-With-Resources để tự động close giải phóng tài nguyên
         try (HexudonClient client = HexudonClient.builder()
                 .baseUrl(baseUrl)
                 .token(token)
                 .teamId(teamId)
-                .practice(false)
+                .practice(false) // Đặt true nếu chạy phòng luyện tập
                 .enableLogging(true)
                 .build()) {
 
@@ -209,19 +237,20 @@ public class HexudonBotApp {
 
             // 2. Đăng ký loại Agent (ví dụ đội hình có 2 Patrol và 2 Refuel)
             System.out.println("Đang đăng ký đội chơi...");
-            TeamRegisterRequest registerRequest = new TeamRegisterRequest(
+            TeamRegistration registration = new TeamRegistration(
+                    teamId,
                     List.of(
-                            AgentType.PATROL.getValue(),
-                            AgentType.REFUEL.getValue(),
-                            AgentType.PATROL.getValue(),
-                            AgentType.REFUEL.getValue()
+                            AgentType.PATROL,
+                            AgentType.REFUEL,
+                            AgentType.PATROL,
+                            AgentType.REFUEL
                     )
             );
-            gameApi.registerTeam(registerRequest);
+            gameApi.registerAgentTypes(gameId, registration);
             System.out.println("Đăng ký đội chơi thành công!");
 
             // 3. Lấy cấu hình trận đấu
-            MatchConfigResponse config = gameApi.getMatchConfig(gameId);
+            MatchConfig config = gameApi.getMatchConfig(gameId);
             System.out.printf("Bản đồ kích thước: %d x %d%n", config.mapWidth(), config.mapHeight());
 
             // 4. Vòng lặp chính của Game
@@ -230,11 +259,20 @@ public class HexudonBotApp {
 
             while (isRunning) {
                 try {
-                    MatchStateResponse state = gameApi.getMatchState(gameId);
+                    MatchState state = gameApi.getMatchState(gameId);
 
                     // Kiểm tra trạng thái trận đấu
                     if (state.status() == MatchStatus.FINISHED) {
                         System.out.println("Trận đấu đã kết thúc!");
+                        
+                        // Lấy kết quả trận đấu chung cuộc
+                        GameResult result = gameApi.getGameResult(gameId);
+                        System.out.printf("Đội chiến thắng: %s%n", result.winner());
+                        System.out.println("Bảng điểm chung cuộc:");
+                        result.scores().forEach((team, score) -> 
+                            System.out.printf("- %s: %d điểm%n", team, score)
+                        );
+                        
                         isRunning = false;
                         break;
                     }
@@ -244,20 +282,27 @@ public class HexudonBotApp {
                     if (state.status() == MatchStatus.PLAYING && currentDay > lastSubmittedDay) {
                         System.out.printf("--- BẮT ĐẦU NGÀY %d ---%n", currentDay);
 
-                        // Lập kế hoạch hành động di chuyển cho các Agent
-                        // Hướng di chuyển tương ứng: 0 = UP_RIGHT, 1 = RIGHT, 2 = DOWN_RIGHT, ...
-                        // Số âm thể hiện hành động ĐỨNG YÊN (WAIT) trong N bước (ví dụ: -1 là đợi 1 bước)
-                        List<List<Integer>> agentActions = List.of(
-                                List.of(Direction.RIGHT.ordinal(), Direction.UP_RIGHT.ordinal()), // Agent 0 di chuyển
-                                List.of(-1),                                                     // Agent 1 đứng yên 1 lượt
-                                List.of(Direction.LEFT.ordinal()),                                // Agent 2 di chuyển
-                                List.of(-2)                                                      // Agent 3 đứng yên 2 lượt
+                        // Lấy thông tin đồng bộ ngày hiện tại
+                        DayInfo dayInfo = gameApi.getDayInfo(gameId);
+                        System.out.printf("Trạng thái ngày đấu: %s%n", dayInfo.status());
+
+                        // Lập kế hoạch hành động di chuyển cho các Agent của đội ta
+                        // Sử dụng MoveAction (di chuyển theo hướng Direction) hoặc WaitAction (đứng yên N bước)
+                        // Ví dụ: Agent 0 di chuyển RIGHT sau đó UP_RIGHT
+                        //        Agent 1 đứng yên 1 lượt
+                        //        Agent 2 di chuyển LEFT
+                        //        Agent 3 đứng yên 2 lượt
+                        List<List<GameAction>> agentActions = List.of(
+                                List.of(new MoveAction(Direction.RIGHT), new MoveAction(Direction.UP_RIGHT)),
+                                List.of(new WaitAction(1)),
+                                List.of(new MoveAction(Direction.LEFT)),
+                                List.of(new WaitAction(2))
                         );
 
-                        SubmitActionRequest actionRequest = new SubmitActionRequest(currentDay, agentActions);
+                        SubmitActions submitActions = new SubmitActions(currentDay, agentActions);
 
                         System.out.println("Đang gửi hành động của các Agent...");
-                        gameApi.submitActions(actionRequest);
+                        gameApi.submitActions(gameId, submitActions);
 
                         lastSubmittedDay = currentDay;
                         System.out.printf("Gửi hành động thành công cho ngày %d!%n", currentDay);
@@ -268,7 +313,11 @@ public class HexudonBotApp {
 
                 } catch (HexudonValidationException e) {
                     System.err.println("Dữ liệu gửi lên không hợp lệ: " + e.getMessage());
-                    System.err.println("Chi tiết lỗi validation từ Server: " + e.getErrorResponse());
+                    System.err.println("Chi tiết lỗi validation từ Server:");
+                    for (HexudonValidationException.ValidationErrorDetail detail : e.getErrorResponse().detail()) {
+                        System.err.printf("- Vị trí: %s | Lỗi: %s | Kiểu: %s%n", 
+                                detail.loc(), detail.msg(), detail.type());
+                    }
                     isRunning = false;
                 } catch (HexudonException e) {
                     System.err.println("Lỗi nghiệp vụ SDK: " + e.getMessage());
@@ -293,45 +342,47 @@ public class HexudonBotApp {
 
 Hệ thống lưới bản đồ trong Hexudon sử dụng kiểu lưới lục giác xếp gạch ngang hàng lẻ bị lệch (**Odd-R Offset Horizontal Hexagonal Grid**).
 
-### Coordinate
-Lớp `Coordinate` đóng gói các tọa độ lưới:
+### Tọa độ (`Coordinate`)
+Lớp `Coordinate` (dạng `record`) đóng gói các tọa độ lưới:
 * `pos`: Chỉ số tuyến tính 1D của ô trên bản đồ (tính bằng `y * width + x`).
 * `x`: Tọa độ cột (0-indexed).
 * `y`: Tọa độ hàng (0-indexed).
 
 #### Các phương thức tiện ích trong `Coordinate`:
-* **`getDistance(Coordinate other)`**: Tính khoảng cách ngắn nhất (số bước đi tối thiểu) giữa hai ô lục giác. Hệ thống sẽ tự động chuyển đổi tọa độ Odd-R sang hệ tọa độ 3 chiều (Cube Coordinates) để tính toán chính xác:
+* **`distanceTo(Coordinate other)`**: Tính khoảng cách ngắn nhất (số bước đi tối thiểu) giữa hai ô lục giác. Hệ thống tự động chuyển đổi tọa độ Odd-R sang hệ tọa độ 3 chiều (Cube Coordinates) để tính toán chính xác tuyệt đối:
   $$\text{Khoảng cách} = \frac{|dx| + |dy| + |dz|}{2}$$
-* **`getNeighbor(Direction direction, int width)`**: Tìm tọa độ ô lân cận dựa vào hướng di chuyển. Tự động xử lý độ lệch hàng chẵn/lẻ của lưới Odd-R.
+* **`getNeighbor(Direction direction, int width)`**: Tìm tọa độ ô lân cận dựa vào hướng di chuyển. Tự động xử lý độ lệch hàng chẵn/lẻ đặc trưng của lưới Odd-R.
 
 ### Hướng di chuyển (`Direction`)
-Bao gồm 6 hướng tương thích trực tiếp với server:
-* `UP_RIGHT` (0)
-* `RIGHT` (1)
-* `DOWN_RIGHT` (2)
-* `DOWN_LEFT` (3)
-* `LEFT` (4)
-* `UP_LEFT` (5)
+Bao gồm 6 hướng tương thích trực tiếp với giao thức server:
+* `UP_LEFT` (0)
+* `UP_RIGHT` (1)
+* `RIGHT` (2)
+* `DOWN_RIGHT` (3)
+* `DOWN_LEFT` (4)
+* `LEFT` (5)
 
 ---
 
 ## 7. Các Đối Tượng Dữ Liệu Phản Hồi từ Server
 
 ### Địa hình (`TerrainType`)
-Mỗi ô trên bản đồ có một loại địa hình quyết định tính di chuyển và lượng tiêu thụ nhiên liệu:
+Mỗi ô trên bản đồ có một loại địa hình quyết định khả năng di chuyển và lượng tiêu thụ nhiên liệu cơ bản:
 
-| Địa hình | ID | Đi qua được? | Chi phí bước đi (Base Step Cost) | Nhiên liệu tiêu hao (Base Fuel Cost) |
+| Địa hình | ID | Đi qua được? | Chi phí bước đi cơ bản (Base Step Cost) | Nhiên liệu tiêu hao cơ bản (Base Fuel Cost) |
 | :--- | :---: | :---: | :---: | :---: |
-| **`PLAIN`** | 0 | Có | 1 | 2 |
-| **`ROAD`** | 1 | Có | 1 | 1 |
-| **`MOUNTAIN`**| 2 | Có | 3 | 3 |
-| **`POND`** | 3 | Không | Không thể | Không thể |
+| **`PLAIN`** | 0 | Có | 2 | 1 |
+| **`ROAD`** | 1 | Có | 1 | 2 |
+| **`MOUNTAIN`**| 2 | Có | 3 | 2 |
+| **`POND`** | 3 | **Không** | Vô hạn | Vô hạn |
 
 ### Trạng thái giao thông (`TrafficLevel`)
-Trạng thái ùn tắc giao thông trên các ô địa hình **`ROAD`** sẽ thay đổi động qua từng lượt đấu dựa vào tần suất di chuyển của các đội. Trạng thái giao thông sẽ nhân hệ số lên chi phí bước đi:
-* **`NORMAL`** (0): Hệ số nhân chi phí bước đi x1.
-* **`BUSY`** (1): Hệ số nhân chi phí bước đi x2.
-* **`CONGESTED`** (2): Hệ số nhân chi phí bước đi x4.
+Trạng thái ùn tắc giao thông trên các ô địa hình **`ROAD`** sẽ thay đổi động qua từng ngày đấu dựa vào tần suất di chuyển của các đội chơi. Trạng thái giao thông sẽ nhân hệ số lên chi phí bước đi của ô đó:
+* **`SMOOTH`** (0): Hệ số nhân chi phí bước đi x1 (không đổi).
+* **`CONGESTED`** (1): Hệ số nhân chi phí bước đi x2.
+* **`JAM`** (2): Hệ số nhân chi phí bước đi x4.
+
+Các loại địa hình khác ngoài `ROAD` luôn giữ nguyên chi phí bước đi cơ bản bất kể mức độ giao thông.
 
 ---
 
@@ -341,14 +392,32 @@ Tất cả các ngoại lệ do SDK ném ra đều kế thừa từ lớp `Hexud
 
 ```text
 HexudonException (Ngoại lệ cơ sở)
-├── HexudonAuthenticationException (Lỗi 401/403: Token sai hoặc hết hạn)
-├── HexudonNetworkException        (Lỗi kết nối mạng, Timeout, Đứt kết nối TCP)
-├── HexudonServerException         (Lỗi 5xx từ phía server hoặc vượt quá số lần retry)
-└── HexudonValidationException     (Lỗi 400/422: Dữ liệu gửi lên không đúng định dạng hoặc sai luật chơi)
+├── HexudonAuthenticationException (Lỗi 401/403: Token sai, hết hạn hoặc không đủ quyền)
+├── HexudonNetworkException        (Lỗi kết nối mạng, Timeout, Đứt socket TCP)
+├── HexudonSerializationException  (Lỗi khi Jackson parse/build JSON)
+├── HexudonServerException         (Lỗi 5xx hoặc máy chủ gặp sự cố sau khi đã thử lại tối đa)
+└── HexudonValidationException     (Lỗi 400/422: Dữ liệu gửi lên không đúng định dạng hoặc vi phạm luật chơi)
 ```
 
 ### Mẹo xử lý lỗi Validation:
-Khi gặp `HexudonValidationException`, bạn có thể lấy ra thông tin chi tiết các trường bị lỗi bằng cách gọi `e.getErrorResponse()`. Đối tượng này chứa một danh sách các lỗi nhỏ bao gồm:
-* `loc`: Vị trí trường bị lỗi (ví dụ: `["actions", "0", "1"]`).
-* `msg`: Nội dung thông báo lỗi từ server (ví dụ: *"Invalid direction"*).
-* `type`: Kiểu lỗi validate.
+Khi bắt được `HexudonValidationException`, bạn có thể lấy danh sách chi tiết các lỗi cụ thể bằng cách gọi `e.getErrorResponse()`. Đối tượng `ErrorResponse` này chứa danh sách các `ValidationErrorDetail` chứa:
+* `loc()`: Danh sách các trường bị lỗi định vị (ví dụ: `["body", "actions", "0", "1"]`).
+* `msg()`: Nội dung thông báo lỗi chi tiết từ server (ví dụ: *"Invalid direction"*).
+* `type()`: Kiểu lỗi validate.
+
+---
+
+## 9. Hướng dẫn Build dự án
+
+### Build thư viện
+Để biên dịch dự án và đóng gói thành file JAR:
+```bash
+mvn clean package
+```
+
+### Chạy Unit Test
+SDK đi kèm với bộ kiểm thử 234 test cases bao phủ toàn bộ các module. Chạy lệnh sau để kiểm tra:
+```bash
+mvn test
+```
+

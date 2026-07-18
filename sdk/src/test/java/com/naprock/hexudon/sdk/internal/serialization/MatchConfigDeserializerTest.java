@@ -33,7 +33,7 @@ class MatchConfigDeserializerTest {
             { "pos": 3 }
           ],
           "fuelLimits": 150,
-          "playersLimit": 4,
+          "players": 4,
           "busyThreshold": 1.2,
           "jammedThreshold": 2.4
         }

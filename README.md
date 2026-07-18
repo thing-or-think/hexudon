@@ -8,10 +8,11 @@ Dự án được xây dựng và tổ chức theo phương pháp **Thiết kế
 
 ## Overview
 
-Dự án Hexudon cung cấp một nền tảng chạy game cục bộ (Game Server Engine) và một bộ công cụ phát triển phần mềm (Java SDK) hỗ trợ lập trình viên xây dựng bot thông minh:
+Dự án Hexudon cung cấp một nền tảng chạy game cục bộ (Game Server Engine), một bộ công cụ phát triển phần mềm (Java SDK) hỗ trợ lập trình viên xây dựng bot thông minh, và một ứng dụng bot mẫu (Bot Application) hoàn chỉnh:
 
 *   **Game Server**: Bộ lõi động cơ game chịu trách nhiệm duy trì luật chơi, xác thực và chạy thử các danh sách bước đi gửi lên, tự động cập nhật ngày đấu (turn) bằng Scheduler, tính toán điểm số và mật độ giao thông trên đường bộ.
 *   **Java SDK**: Thư viện kết nối đóng gói sẵn HTTP Client, JSON Mapper, cơ chế tự động gửi lại (Retry) với thuật toán Exponential Backoff và các mô hình dữ liệu lưới lục giác giúp các bot dễ dàng giao tiếp với server mà không cần tự xây dựng các kết nối HTTP thô.
+*   **Bot Application**: Ứng dụng bot mẫu hoàn chỉnh được phát triển dựa trên Java SDK, tích hợp sẵn các chiến thuật AI (như Greedy BFS và Wait) giúp người chơi dễ dàng chạy thử và phát triển thuật toán riêng.
 *   **Đối tượng sử dụng**: Các lập trình viên hoặc đội chơi lập trình bot trí tuệ nhân tạo (AI) / chiến thuật tham gia đấu giải hoặc chạy thử thuật toán tìm đường trên lưới hex.
 
 ---
@@ -83,7 +84,7 @@ graph TD
 
 ## Project Structure
 
-Thư mục gốc của repository được tổ chức thành hai module chính chạy trên nền cấu hình Maven đa module (Multi-module):
+Thư mục gốc của repository được tổ chức thành ba module chính chạy trên nền cấu hình Maven đa module (Multi-module):
 
 ```text
 hexudon (Root)
@@ -95,6 +96,11 @@ hexudon (Root)
 ├── sdk                 # Module thư viện phát triển bot dành cho lập trình viên Java
 │   ├── src
 │   │   └── main/java   # Giao tiếp HTTP, Retry Backoff, cấu hình kết nối, mô hình map
+│   └── pom.xml
+├── bot                 # Module chứa mã nguồn Bot mẫu và các chiến thuật AI (Greedy, Wait)
+│   ├── src
+│   │   ├── main/java   # GameRunner, BotBrain, BotConfig và các thuật toán tìm đường (PathFinder)
+│   │   └── resources   # Cấu hình logging và tệp thuộc tính config bot.properties
 │   └── pom.xml
 ├── docs                # Thư mục chứa tài liệu bổ sung (hiện tại trống)
 ├── API.md              # Tài liệu tham chiếu OpenAPI đầy đủ của hệ thống
@@ -126,6 +132,15 @@ hexudon (Root)
     *   Định nghĩa sẵn các lớp hình học lưới như tọa độ ô và hướng di chuyển để hỗ trợ bot tính toán tìm đường.
 *   **Tài liệu chi tiết**: Xem thêm tại [sdk/README.md](file:///d:/Documents/GitHub/hexudon/sdk/README.md).
 
+### 3. [Bot](file:///d:/Documents/GitHub/hexudon/bot)
+*   **Vai trò**: Bot mẫu tự động tham gia trận đấu, kết nối và đồng bộ trạng thái với Game Server thông qua Java SDK để gửi các hành động chiến thuật.
+*   **Tech Stack**: Java 21, Maven.
+*   **Chức năng chính**:
+    *   Đăng ký tự động số lượng Agent loại Patrol/Refuel phù hợp với cấu hình của Game Server.
+    *   Vòng lặp thăm dò (polling) tự động theo dõi và cập nhật trạng thái trận đấu theo lượt.
+    *   Tích hợp sẵn bộ não AI (`BotBrain`) có thể cấu hình được.
+    *   Triển khai thuật toán BFS để tìm đường đi ngắn nhất trên lưới ô lục giác Odd-R offset.
+
 ---
 
 ## Tech Stack
@@ -138,8 +153,9 @@ Dưới đây là bảng tổng hợp công nghệ được sử dụng trên to
 | **Backend Framework** | Spring Boot 3.5.4 |
 | **Build Tool** | Apache Maven 3.9+ |
 | **Database / Storage** | In-Memory (Bộ nhớ RAM JVM thông qua thực thi Repository tĩnh) |
-| **JSON Serialization** | FasterXML Jackson Databind |
+| **JSON Serialization** | FasterXML Jackson Databind 2.20.0 |
 | **Client SDK HTTP** | OkHttp 4.12.0 |
+| **Logging (Bot)** | Java Util Logging (JUL) |
 | **Testing Framework** | JUnit 5, Mockito, AssertJ, ArchUnit 1.3.0 (kiểm thử kiến trúc) |
 | **Monitor / Dashboard** | *Chưa được implement hoặc chưa có tài liệu* |
 | **Frontend / Web UI** | *Chưa được implement hoặc chưa có tài liệu* |
@@ -153,7 +169,7 @@ Dưới đây là bảng tổng hợp công nghệ được sử dụng trên to
 *   **Build Tool**: Maven 3.9 hoặc cao hơn.
 
 ### 1. Biên dịch toàn bộ dự án
-Chạy lệnh sau tại thư mục gốc để biên dịch cả `server` và `sdk`:
+Chạy lệnh sau tại thư mục gốc để biên dịch cả `server`, `sdk` và `bot`:
 ```bash
 mvn clean install
 ```
@@ -165,8 +181,14 @@ mvn spring-boot:run -pl server
 ```
 Mặc định server sẽ chạy tại địa chỉ `http://localhost:8080`.
 
-### 3. Tích hợp SDK vào Bot của bạn
-Thêm dependency của SDK vào file `pom.xml` của ứng dụng bot của bạn:
+### 3. Khởi chạy Bot
+Để khởi chạy bot mẫu kết nối tới server:
+```bash
+mvn exec:java -pl bot
+```
+
+### 4. Tích hợp SDK vào Bot tự phát triển
+Thêm dependency của SDK vào file `pom.xml` của ứng dụng bot riêng của bạn:
 ```xml
 <dependency>
     <groupId>com.naprock</groupId>
@@ -176,8 +198,8 @@ Thêm dependency của SDK vào file `pom.xml` của ứng dụng bot của bạ
 ```
 
 > [!NOTE]
-> **Run SDK Example & Monitor**:
-> *   *Chưa được implement*: Hiện tại repository không đi kèm ứng dụng monitor UI hay bot chạy ví dụ (`bot-example`). Module SDK thuần túy cung cấp thư viện để lập trình viên tự phát triển bot độc lập.
+> **Ứng dụng Bot Mẫu**:
+> *   Dự án đã tích hợp sẵn module `bot` làm mẫu. Bạn có thể sử dụng trực tiếp module này làm điểm bắt đầu để phát triển hoặc kiểm thử thuật toán AI của mình mà không cần tạo mới project từ đầu.
 
 ---
 
@@ -194,8 +216,21 @@ Tham số trò chơi và bản đồ được nạp từ file JSON [server/src/m
 *   `fuelLimits`: Dung tích bình xăng của PatrolAgent (ví dụ: `20`).
 *   `players`: Số lượng đội tối đa tham gia.
 
+### Cấu hình phía Bot (Client)
+Bot hỗ trợ nạp cấu hình động thông qua hệ thống phân cấp: **Thuộc tính hệ thống JVM** (System Property) -> **Biến môi trường** (Env Var) -> **Tệp bot.properties** -> **Giá trị mặc định**.
+
+Để chỉnh sửa cấu hình tĩnh, hãy sao chép tệp `bot/src/main/resources/bot.properties.example` thành `bot/src/main/resources/bot.properties` và điều chỉnh các giá trị:
+
+*   `HEXUDON_BASE_URL`: URL của Hexudon Server (Mặc định: `http://localhost:8080`).
+*   `HEXUDON_TOKEN`: Token xác thực Bearer được cấp cho đội chơi (Bắt buộc).
+*   `HEXUDON_TEAM_ID`: ID định danh của đội chơi (Bắt buộc, gửi qua header `X-Team-Id`).
+*   `HEXUDON_GAME_ID`: ID của trận đấu cần tham gia (Bắt buộc).
+*   `HEXUDON_PRACTICE`: Thiết lập chế độ luyện tập `true`/`false` (Mặc định: `false`).
+*   `BOT_POLL_DELAY_MS`: Thời gian chờ giữa các lần polling trạng thái game tính bằng mili-giây (Mặc định: `1000`).
+*   `BOT_DEBUG`: Kích hoạt log chi tiết của bot ở mức FINE nếu đặt là `true`.
+
 ### Cấu hình phía SDK Client
-Khi khởi tạo `HexudonClient`, các tham số cấu hình chính bao gồm:
+Khi khởi tạo `HexudonClient` thủ công trong code Java, các tham số chính bao gồm:
 *   `baseUrl`: URL của Hexudon Server (Mặc định `http://localhost:8080`).
 *   `teamId`: Định danh bắt buộc của đội chơi (Gửi qua header `X-Team-Id`).
 *   `token`: Bearer Token xác thực bắt buộc.
@@ -236,6 +271,26 @@ Nghiệp vụ của trò chơi xoay quanh các khái niệm và quy tắc lõi s
 
 ---
 
+## Bot Strategies
+
+Module `bot` triển khai các chiến thuật thông minh thông qua giao diện `BotBrain`:
+
+### 1. Greedy Strategy (`GreedyStrategy` - Mặc định)
+Chiến thuật di chuyển tham lam sử dụng thuật toán tìm kiếm theo chiều rộng (BFS) trên lưới lục giác:
+*   **Đối với tác tử tuần tra (PATROL)**:
+    *   If standing on a `Spot` with remaining Udon stock: performs a wait action (`WaitAction`) to collect.
+    *   Otherwise: searches for the nearest `Spot` with stock using BFS (`PathFinder`) to generate a movement path (`MoveAction`). If all spots are out of stock, it falls back to moving to the nearest spot anyway to wait for stock replenishment.
+*   **Đối với tác tử tiếp tế (REFUEL)**:
+    *   Finds the teammate `PATROL` agent with the lowest fuel.
+    *   Calculates the shortest path to that patrol agent's position using BFS.
+    *   Once adjacent or at the same tile as the patrol agent, it waits to allow the Server's passive auto-refuel mechanism to trigger.
+*   *Lưu ý*: Chuỗi hành động di chuyển của mỗi tác tử trong ngày được cắt (cap) tương ứng với giới hạn bước đi tối đa của lượt đó (`daySteps`).
+
+### 2. Wait Strategy (`WaitStrategy` - Fallback)
+*   Chiến thuật an toàn yêu cầu tất cả tác tử đứng yên (Wait 1 step). Được kích hoạt tự động làm cơ chế phòng ngừa khi chiến thuật chính xảy ra lỗi ngoại lệ không mong muốn trong quá trình tính toán.
+
+---
+
 ## Documentation
 
 Dưới đây là danh sách các tài liệu tham khảo chính trong kho mã nguồn:
@@ -262,10 +317,11 @@ Khi đóng góp mã nguồn cho dự án, các lập trình viên phải tuân t
 
 ## Testing
 
-Hệ thống cung cấp các bộ kiểm thử tự động phong phú ở cả hai module:
+Hệ thống cung cấp các bộ kiểm thử tự động phong phú ở các module:
 
 *   **Server Tests**: Kiểm thử luật chơi của Agent, nạp xăng tự động, tính toán ùn tắc, kiểm tra ánh xạ dữ liệu, và kiểm thử kiến trúc tĩnh ArchUnit.
 *   **SDK Tests**: Kiểm thử tuần tự hóa JSON coordinate, cơ chế tự động gửi lại (Retry) khi gặp lỗi mạng, và xác thực cấu hình kết nối.
+*   *Lưu ý*: Module `bot` không đi kèm các kiểm thử đơn vị độc lập.
 
 Cách chạy toàn bộ kiểm thử trên repository:
 ```bash
@@ -282,6 +338,7 @@ mvn test
 *   Tự động cập nhật ùn tắc giao thông ROAD động theo lượt.
 *   Thiết lập REST API cơ bản cho cấu hình, trạng thái trận đấu và gửi hành động.
 *   Bộ Java SDK tích hợp Retry Exponential Backoff kết nối ổn định.
+*   Xây dựng module `bot` chạy mẫu tích hợp sẵn giải thuật BFS tìm đường tối ưu sạc và ăn udon.
 
 ### Các tính năng chưa hoàn thành / Đang lên kế hoạch (Có cấu trúc khung nhưng chưa triển khai)
 *   **WebSocket Protocol**: Các package `websocket` (Inbound adapter) và `publisher` (Outbound adapter) trên server hiện tại mới chỉ là thư mục trống. Toàn bộ tương tác hiện tại phải thực hiện qua REST API dạng thăm dò (polling).
