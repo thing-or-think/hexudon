@@ -1,4 +1,4 @@
-module com.thingorthink.hexudon.sdk {
+module com.naprock.hexudon.sdk {
 
 
     requires com.fasterxml.jackson.databind;
@@ -6,13 +6,13 @@ module com.thingorthink.hexudon.sdk {
     requires okhttp3;
 
 
-    exports com.thingorthink.hexudon.sdk.api;
+    exports com.naprock.hexudon.sdk.api;
 
-    exports com.thingorthink.hexudon.sdk.config;
+    exports com.naprock.hexudon.sdk.config;
 
-    exports com.thingorthink.hexudon.sdk.model;
+    exports com.naprock.hexudon.sdk.model;
 
-    exports com.thingorthink.hexudon.sdk.exception;
+    exports com.naprock.hexudon.sdk.exception;
 
 
 }

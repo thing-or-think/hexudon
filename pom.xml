@@ -25,6 +25,7 @@
     <modules>
         <module>server</module>
         <module>sdk</module>
+        <module>bot</module>
     </modules>
 
     <!-- Global Properties -->
@@ -40,5 +41,17 @@
         <logback.version>1.5.19</logback.version>
 
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>com.naprock</groupId>
+                <artifactId>hexudon-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
 
 </project>
