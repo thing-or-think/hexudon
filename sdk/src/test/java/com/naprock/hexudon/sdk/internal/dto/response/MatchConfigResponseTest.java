@@ -31,7 +31,7 @@ class MatchConfigResponseTest {
         assertThat(response.spots()).hasSize(1);
         assertThat(response.agentsStartPos()).containsExactly(0);
         assertThat(response.fuelLimits()).isEqualTo(100);
-        assertThat(response.playersLimit()).isEqualTo(2);
+        assertThat(response.players()).isEqualTo(2);
         assertThat(response.busyThreshold()).isEqualTo(1.1);
         assertThat(response.jammedThreshold()).isEqualTo(2.2);
     }

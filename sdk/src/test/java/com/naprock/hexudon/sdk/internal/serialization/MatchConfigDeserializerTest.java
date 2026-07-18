@@ -62,7 +62,7 @@ class MatchConfigDeserializerTest {
         assertThat(response.agentsStartPos()).containsExactly(1, 3);
         
         assertThat(response.fuelLimits()).isEqualTo(150);
-        assertThat(response.playersLimit()).isEqualTo(4);
+        assertThat(response.players()).isEqualTo(4);
         assertThat(response.busyThreshold()).isEqualTo(1.2);
         assertThat(response.jammedThreshold()).isEqualTo(2.4);
     }
@@ -101,7 +101,7 @@ class MatchConfigDeserializerTest {
         assertThat(response.spots()).isEmpty();
         assertThat(response.agentsStartPos()).isEmpty();
         assertThat(response.fuelLimits()).isEqualTo(100); // default
-        assertThat(response.playersLimit()).isEqualTo(0);   // default
+        assertThat(response.players()).isEqualTo(0);   // default
     }
 
     @Test

@@ -22,7 +22,7 @@ import com.naprock.hexudon.sdk.internal.serialization.MatchConfigDeserializer;
  * @param spots List of Udon shops
  * @param agentsStartPos Starting positions of Agents represented as 1D indexes
  * @param fuelLimits Maximum fuel capacity
- * @param playersLimit Maximum number of players allowed
+ * @param players Maximum number of players allowed
  * @param busyThreshold Threshold value for BUSY traffic level
  * @param jammedThreshold Threshold value for CONGESTED traffic level
  */
@@ -37,7 +37,7 @@ public record MatchConfigResponse(
         List<SpotResponse> spots,
         List<Integer> agentsStartPos,
         int fuelLimits,
-        int playersLimit,
+        int players,
         double busyThreshold,
         double jammedThreshold
 ) {
@@ -95,7 +95,7 @@ public record MatchConfigResponse(
             );
         }
 
-        if (playersLimit < 0) {
+        if (players < 0) {
             throw new IllegalArgumentException(
                     "Players limit must not be negative"
             );

@@ -22,6 +22,8 @@ graph/
 *.env
 *.env.*
 *.local
+bot.properties
+!bot.properties.example
 # Exclude standard properties and yml files from being ignored by generic rules
 !/src/main/resources/*.properties
 !/src/main/resources/*.yml

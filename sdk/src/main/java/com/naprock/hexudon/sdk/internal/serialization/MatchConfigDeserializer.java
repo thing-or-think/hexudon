@@ -66,7 +66,7 @@ public final class MatchConfigDeserializer
                 spots,
                 agentsStartPos,
                 root.path("fuelLimits").asInt(100),
-                root.path("playersLimit").asInt(0),
+                root.path("players").asInt(0),
                 root.path("busyThreshold").asDouble(0.0),
                 root.path("jammedThreshold").asDouble(0.0)
         );

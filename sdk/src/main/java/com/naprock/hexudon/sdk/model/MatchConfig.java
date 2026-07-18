@@ -67,7 +67,7 @@ public record MatchConfig(
         }
 
         if (playersLimit <= 0) {
-            throw new IllegalArgumentException("playersLimit must be greater than 0");
+            throw new IllegalArgumentException("players must be greater than 0");
         }
 
         if (busyThreshold < 0.0) {

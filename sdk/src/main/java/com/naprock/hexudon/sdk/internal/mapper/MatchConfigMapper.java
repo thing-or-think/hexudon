@@ -106,7 +106,7 @@ public final class MatchConfigMapper {
                 spots,
                 agentStartPositions,
                 dto.fuelLimits(),
-                dto.playersLimit(),
+                dto.players(),
                 dto.busyThreshold(),
                 dto.jammedThreshold()
         );

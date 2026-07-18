@@ -90,7 +90,7 @@ class MatchConfigTest {
 
         assertThatThrownBy(() -> new MatchConfig(1000L, List.of(1.0), List.of(10), 1, 1, board, spots, agentsStartPos, 100, 0, 1.0, 2.0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("playersLimit must be greater than 0");
+                .hasMessageContaining("players must be greater than 0");
 
         assertThatThrownBy(() -> new MatchConfig(1000L, List.of(1.0), List.of(10), 1, 1, board, spots, agentsStartPos, 100, 2, -0.1, 2.0))
                 .isInstanceOf(IllegalArgumentException.class)

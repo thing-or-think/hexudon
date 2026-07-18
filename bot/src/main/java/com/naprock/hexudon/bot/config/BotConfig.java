@@ -2,6 +2,10 @@ package com.naprock.hexudon.bot.config;
 
 import com.naprock.hexudon.bot.exception.BotException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 /**
  * Immutable configuration for the Hexudon Bot.
  *
@@ -52,6 +56,7 @@ public record BotConfig(
     // -----------------------------------------------------------------------
     // Compact constructor
     // -----------------------------------------------------------------------
+    private static final Properties PROPERTIES = loadProperties();
 
     /**
      * Validates the configuration.
@@ -95,21 +100,47 @@ public record BotConfig(
     // -----------------------------------------------------------------------
 
     /**
-     * Resolves a configuration value: system property → env var → default.
+     * Resolution order:
+     * System Property -> Environment Variable -> bot.properties -> Default.
      */
     private static String resolve(String key, String defaultValue) {
-        String sysProp = System.getProperty(key);
-        if (sysProp != null && !sysProp.isBlank()) {
-            return sysProp.trim();
+
+        String value = System.getProperty(key);
+        if (value != null && !value.isBlank()) {
+            return value.trim();
         }
 
-        String envVar = System.getenv(key);
-        if (envVar != null && !envVar.isBlank()) {
-            return envVar.trim();
+        value = System.getenv(key);
+        if (value != null && !value.isBlank()) {
+            return value.trim();
+        }
+
+        value = PROPERTIES.getProperty(key);
+        if (value != null && !value.isBlank()) {
+            return value.trim();
         }
 
         return defaultValue;
     }
+
+    private static Properties loadProperties() {
+        Properties properties = new Properties();
+
+        try (InputStream input =
+                     BotConfig.class.getClassLoader()
+                             .getResourceAsStream("bot.properties")) {
+
+            if (input != null) {
+                properties.load(input);
+            }
+
+        } catch (IOException e) {
+            throw new BotException("Unable to load bot.properties", e);
+        }
+
+        return properties;
+    }
+
 
     private static long parseLong(String value) {
         try {

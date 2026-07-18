@@ -308,15 +308,22 @@ public final class OkHttpExecutor implements HttpExecutor {
             byte[] responseBody =
                     response.body() == null
                             ? null
-                            : response.body()
-                            .bytes();
+                            : response.body().bytes();
 
+//            System.out.println("========================================");
+//            System.out.println(request.method() + " " + url);
+//            System.out.println("Status: " + response.code());
+//
+//            if (responseBody != null) {
+//                System.out.println("Response:");
+//                System.out.println(new String(responseBody));
+//            }
+//
+//            System.out.println("========================================");
 
             Map<String, List<String>> headers =
                     response.headers()
                             .toMultimap();
-
-
 
             return new HttpResponse(
                     response.code(),
