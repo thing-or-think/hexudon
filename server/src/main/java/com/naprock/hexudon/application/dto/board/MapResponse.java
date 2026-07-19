@@ -1,4 +1,4 @@
-package com.naprock.hexudon.application.dto.match;
+package com.naprock.hexudon.application.dto.board;
 
 import java.util.List;
 

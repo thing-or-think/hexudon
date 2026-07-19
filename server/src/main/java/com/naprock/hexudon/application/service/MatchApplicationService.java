@@ -1,11 +1,10 @@
 package com.naprock.hexudon.application.service;
 
-import com.naprock.hexudon.application.dto.match.BoardConfigResponse;
+import com.naprock.hexudon.application.dto.board.BoardConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
-import com.naprock.hexudon.application.dto.team.TeamResponse;
 import com.naprock.hexudon.application.mapper.MatchMapper;
 import com.naprock.hexudon.application.model.match.SubmitActionsCommand;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;

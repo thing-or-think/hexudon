@@ -1,0 +1,48 @@
+{
+  "endsAt": 365.0,
+  "day": 4,
+  "agents": [
+    {
+      "kind": 0,
+      "pos": 77,
+      "fuel": 83
+    },
+    {
+      "kind": 1,
+      "pos": 4,
+      "fuel": 0
+    }
+  ],
+  "others": [
+    {
+      "id": 0,
+      "agents": [
+        {
+          "kind": 0,
+          "pos": 1,
+          "fuel": 2
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "agents": [
+        {
+          "kind": 1,
+          "pos": 9,
+          "fuel": 20
+        }
+      ]
+    }
+  ],
+  "traffics": [
+    {
+      "pos": 0,
+      "status": 0
+    },
+    {
+      "pos": 13,
+      "status": 1
+    }
+  ]
+}

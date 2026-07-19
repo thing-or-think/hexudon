@@ -1,0 +1,40 @@
+{
+  "game_id": "d2d87157-9158-484f-be37-814a0cf44524:21",
+  "is_practice": true,
+  "no_reset": false,
+  "startsAt": 1784034064,
+  "daySeconds": [
+    60.0,
+    76.0
+  ],
+  "daySteps": [
+    37,
+    36
+  ],
+  "map": {
+    "height": 12,
+    "width": 12,
+    "cells": [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 0]
+    ]
+  },
+  "spots": [
+    {
+      "pos": 28,
+      "brand": 3,
+      "stocks": 3
+    },
+    {
+      "pos": 8,
+      "brand": 3,
+      "stocks": 1
+    }
+  ],
+  "fuelLimits": 85,
+  "players": 1,
+  "busyThreshold": 2,
+  "jammedThreshold": 5,
+  "agent_selection_time_limit": 45.0
+}

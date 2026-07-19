@@ -1,0 +1,25 @@
+[
+  {
+    "actions": [
+      {
+        "day": 0,
+        "team_id": "21",
+        "plan": [
+          [5, 5, -33],
+          [4, -35]
+        ],
+        "submitted_at": 1784386989.8280413,
+        "submit_count": 1
+      },
+      {
+        "day": 1,
+        "team_id": "21",
+        "plan": [
+          [-36]
+        ],
+        "submitted_at": 1784387019.6240563,
+        "submit_count": 1
+      }
+    ]
+  }
+]

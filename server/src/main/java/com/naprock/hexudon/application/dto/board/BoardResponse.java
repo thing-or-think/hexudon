@@ -1,25 +1,39 @@
-package com.naprock.hexudon.application.dto.match;
-
-import com.naprock.hexudon.application.dto.board.MapResponse;
-import com.naprock.hexudon.application.dto.board.SpotResponse;
+package com.naprock.hexudon.application.dto.board;
 
 import java.util.List;
 import java.util.Objects;
 
-public record MatchConfigResponse(
+/**
+ * Response DTO containing the complete board configuration.
+ *
+ * <p>Used by:
+ * <ul>
+ *     <li>GET /api/game/board</li>
+ * </ul>
+ */
+public record BoardResponse(
+        String gameId,
+        boolean isPractice,
+        boolean noReset,
         long startsAt,
-        List<Integer> daySeconds,
+        List<Double> daySeconds,
         List<Integer> daySteps,
         MapResponse map,
         List<SpotResponse> spots,
-        List<Integer> agents,
         int fuelLimits,
         int players,
         double busyThreshold,
-        double jammedThreshold
+        double jammedThreshold,
+        double agentSelectionTimeLimit
 ) {
 
-    public MatchConfigResponse {
+    public BoardResponse {
+
+        gameId = Objects.requireNonNull(gameId, "gameId must not be null");
+
+        if (gameId.isBlank()) {
+            throw new IllegalArgumentException("gameId must not be blank");
+        }
 
         if (startsAt <= 0) {
             throw new IllegalArgumentException("startsAt must be positive");
@@ -39,10 +53,6 @@ public record MatchConfigResponse(
                 Objects.requireNonNull(spots, "spots must not be null")
         );
 
-        agents = List.copyOf(
-                Objects.requireNonNull(agents, "agents must not be null")
-        );
-
         if (daySeconds.isEmpty()) {
             throw new IllegalArgumentException("daySeconds must not be empty");
         }
@@ -51,14 +61,26 @@ public record MatchConfigResponse(
             throw new IllegalArgumentException("daySteps must not be empty");
         }
 
-        if (agents.isEmpty()) {
-            throw new IllegalArgumentException("agents must not be empty");
-        }
-
         if (daySeconds.size() != daySteps.size()) {
             throw new IllegalArgumentException(
                     "daySeconds and daySteps must have the same size"
             );
+        }
+
+        for (Double second : daySeconds) {
+            if (second == null || second <= 0) {
+                throw new IllegalArgumentException(
+                        "Each value in daySeconds must be greater than 0"
+                );
+            }
+        }
+
+        for (Integer step : daySteps) {
+            if (step == null || step <= 0) {
+                throw new IllegalArgumentException(
+                        "Each value in daySteps must be greater than 0"
+                );
+            }
         }
 
         if (fuelLimits <= 0) {
@@ -78,6 +100,12 @@ public record MatchConfigResponse(
         if (jammedThreshold <= busyThreshold) {
             throw new IllegalArgumentException(
                     "jammedThreshold must be greater than busyThreshold"
+            );
+        }
+
+        if (agentSelectionTimeLimit <= 0) {
+            throw new IllegalArgumentException(
+                    "agentSelectionTimeLimit must be greater than 0"
             );
         }
     }

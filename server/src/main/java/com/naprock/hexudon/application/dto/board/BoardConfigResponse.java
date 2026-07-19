@@ -1,4 +1,4 @@
-package com.naprock.hexudon.application.dto.match;
+package com.naprock.hexudon.application.dto.board;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;

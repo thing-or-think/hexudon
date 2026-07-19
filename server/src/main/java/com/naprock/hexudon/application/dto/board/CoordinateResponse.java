@@ -1,4 +1,4 @@
-package com.naprock.hexudon.application.dto.match;
+package com.naprock.hexudon.application.dto.board;
 
 public record CoordinateResponse(
         int x,

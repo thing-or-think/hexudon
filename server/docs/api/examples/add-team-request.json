@@ -1,0 +1,9 @@
+{
+  "game_id": "game-123",
+  "team_id": "team-2",
+  "agents": [
+    4,
+    12,
+    20
+  ]
+}

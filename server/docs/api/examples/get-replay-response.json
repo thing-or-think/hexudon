@@ -1,0 +1,52 @@
+{
+  "days": [
+    {
+      "day": 0,
+      "total_steps": 37,
+      "road_condition": {
+        "0": 0,
+        "13": 0,
+        "20": 0,
+        "32": 0,
+        "36": 0
+      },
+      "team": {
+        "team_id": "21",
+        "kinds": [0, 0, 1, 0],
+        "final_servings": 3,
+        "final_types": 2,
+        "submitted": true,
+        "significant_frames": [
+          {
+            "step": 0,
+            "agents": [
+              {
+                "cell": 79,
+                "fuel": 85,
+                "type": "patrol"
+              },
+              {
+                "cell": 22,
+                "fuel": 85,
+                "type": "patrol"
+              },
+              {
+                "cell": 4,
+                "fuel": 0,
+                "type": "refuel"
+              },
+              {
+                "cell": 110,
+                "fuel": 85,
+                "type": "patrol"
+              }
+            ],
+            "collected": [],
+            "servings": 0,
+            "types": 0
+          }
+        ]
+      }
+    }
+  ]
+}

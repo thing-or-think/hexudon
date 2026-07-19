@@ -1,0 +1,13 @@
+{
+  "ranking": [
+    "21"
+  ],
+  "detail": {
+    "21": {
+      "distinct_types": 2,
+      "cumulative_daily_types": 8,
+      "total_servings": 12,
+      "cumulative_response_time": 0.0
+    }
+  }
+}

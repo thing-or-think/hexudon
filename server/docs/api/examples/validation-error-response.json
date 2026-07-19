@@ -1,0 +1,14 @@
+{
+  "detail": [
+    {
+      "loc": [
+        "body",
+        "game_id"
+      ],
+      "msg": "field required",
+      "type": "value_error.missing",
+      "input": null,
+      "ctx": {}
+    }
+  ]
+}

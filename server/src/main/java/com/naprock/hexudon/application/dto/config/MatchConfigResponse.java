@@ -1,4 +1,4 @@
-package com.naprock.hexudon.application.dto.match;
+package com.naprock.hexudon.application.dto.config;
 
 import com.naprock.hexudon.application.dto.board.MapResponse;
 import com.naprock.hexudon.application.dto.board.SpotResponse;
@@ -8,7 +8,7 @@ import java.util.Objects;
 
 public record MatchConfigResponse(
         long startsAt,
-        List<Integer> daySeconds,
+        List<Double> daySeconds,
         List<Integer> daySteps,
         MapResponse map,
         List<SpotResponse> spots,
@@ -59,6 +59,30 @@ public record MatchConfigResponse(
             throw new IllegalArgumentException(
                     "daySeconds and daySteps must have the same size"
             );
+        }
+
+        for (Double second : daySeconds) {
+            if (second == null || second <= 0) {
+                throw new IllegalArgumentException(
+                        "Each value in daySeconds must be greater than 0"
+                );
+            }
+        }
+
+        for (Integer step : daySteps) {
+            if (step == null || step <= 0) {
+                throw new IllegalArgumentException(
+                        "Each value in daySteps must be greater than 0"
+                );
+            }
+        }
+
+        for (Integer agent : agents) {
+            if (agent == null || agent < 0) {
+                throw new IllegalArgumentException(
+                        "Each agent position must be non-negative"
+                );
+            }
         }
 
         if (fuelLimits <= 0) {

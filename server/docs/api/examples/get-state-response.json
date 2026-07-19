@@ -1,0 +1,51 @@
+{
+  "status": "in_progress",
+  "day": 4,
+  "steps_today": 53,
+  "day_deadline_in": 0.0,
+  "road_condition": {
+    "36": 0,
+    "69": 0,
+    "98": 0
+  },
+  "teams": {
+    "21": {
+      "types_selected": true,
+      "agents": [
+        {
+          "agent_id": "0",
+          "type": "patrol",
+          "cell": 77,
+          "fuel": 83
+        },
+        {
+          "agent_id": "1",
+          "type": "patrol",
+          "cell": 33,
+          "fuel": 84
+        },
+        {
+          "agent_id": "2",
+          "type": "refuel",
+          "cell": 4,
+          "fuel": null
+        },
+        {
+          "agent_id": "3",
+          "type": "patrol",
+          "cell": 97,
+          "fuel": 84
+        }
+      ],
+      "stock": {
+        "28": 3,
+        "74": 4,
+        "97": 2
+      },
+      "total_servings": 12,
+      "distinct_types": [0, 2],
+      "submit_count": 0,
+      "last_submitted_at": null
+    }
+  }
+}

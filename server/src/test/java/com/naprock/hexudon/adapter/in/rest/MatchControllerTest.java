@@ -1,10 +1,10 @@
 package com.naprock.hexudon.adapter.in.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.naprock.hexudon.application.dto.match.MapResponse;
+import com.naprock.hexudon.application.dto.board.MapResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
-import com.naprock.hexudon.application.dto.match.SpotResponse;
+import com.naprock.hexudon.application.dto.board.SpotResponse;
 import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
 import com.naprock.hexudon.application.port.in.GetMatchConfigUseCase;

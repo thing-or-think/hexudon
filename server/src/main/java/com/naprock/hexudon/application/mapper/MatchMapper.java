@@ -1,9 +1,14 @@
 package com.naprock.hexudon.application.mapper;
 
 import com.naprock.hexudon.application.dto.agent.AgentResponse;
+import com.naprock.hexudon.application.dto.board.BoardConfigResponse;
+import com.naprock.hexudon.application.dto.board.CoordinateRequest;
+import com.naprock.hexudon.application.dto.board.MapResponse;
+import com.naprock.hexudon.application.dto.board.SpotResponse;
 import com.naprock.hexudon.application.dto.match.*;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
 import com.naprock.hexudon.application.dto.team.TeamResponse;
+import com.naprock.hexudon.application.dto.traffic.TrafficResponse;
 import com.naprock.hexudon.application.model.match.SubmitActionsCommand;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;

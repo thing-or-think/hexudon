@@ -1,0 +1,40 @@
+{
+  "game_id": "game-123",
+  "history": [
+    {
+      "day": 0,
+      "state": {
+        "endsAt": 1778227300,
+        "day": 0,
+        "steps_today": 50,
+        "road_condition": {
+          "10": 1,
+          "20": 2
+        },
+        "teams": {
+          "team-1": {
+            "agents": [
+              {
+                "agent_id": "agent-1",
+                "pos": 4,
+                "cell": 4,
+                "fuel": 20,
+                "type": "patrol",
+                "kind": 0
+              }
+            ],
+            "distinct_types": [
+              "BrandA"
+            ]
+          }
+        },
+        "status": "finished"
+      },
+      "actions": {
+        "team-1": [
+          [0, 1, 2]
+        ]
+      }
+    }
+  ]
+}

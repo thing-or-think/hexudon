@@ -2,6 +2,7 @@ package com.naprock.hexudon.application.dto.match;
 
 import com.naprock.hexudon.application.dto.agent.AgentResponse;
 import com.naprock.hexudon.application.dto.team.TeamResponse;
+import com.naprock.hexudon.application.dto.traffic.TrafficResponse;
 
 import java.util.List;
 import java.util.Objects;

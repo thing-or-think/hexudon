@@ -1,9 +1,12 @@
 package com.naprock.hexudon.application.mapper;
 
 import com.naprock.hexudon.application.dto.agent.AgentResponse;
+import com.naprock.hexudon.application.dto.board.BoardConfigResponse;
+import com.naprock.hexudon.application.dto.board.CoordinateRequest;
+import com.naprock.hexudon.application.dto.board.SpotResponse;
 import com.naprock.hexudon.application.dto.match.*;
 import com.naprock.hexudon.application.dto.team.TeamRegisterRequest;
-import com.naprock.hexudon.application.dto.team.TeamResponse;
+import com.naprock.hexudon.application.dto.traffic.TrafficResponse;
 import com.naprock.hexudon.application.model.match.SubmitActionsCommand;
 import com.naprock.hexudon.application.model.team.TeamRegistrationData;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
@@ -15,12 +18,10 @@ import com.naprock.hexudon.domain.model.geometry.Coordinate;
 import com.naprock.hexudon.domain.model.map.*;
 import com.naprock.hexudon.domain.model.match.MatchConfig;
 import com.naprock.hexudon.domain.model.match.MatchState;
-import com.naprock.hexudon.domain.model.movement.Action;
 import com.naprock.hexudon.domain.model.team.Team;
 import com.naprock.hexudon.domain.model.traffic.TrafficFlow;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;

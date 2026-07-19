@@ -1,6 +1,6 @@
 package com.naprock.hexudon.application.service;
 
-import com.naprock.hexudon.application.dto.match.BoardConfigResponse;
+import com.naprock.hexudon.application.dto.board.BoardConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchConfigResponse;
 import com.naprock.hexudon.application.dto.match.MatchStateResponse;
 import com.naprock.hexudon.application.port.out.MatchConfigLoaderPort;
