@@ -19,50 +19,30 @@
     <name>Hexudon Java SDK</name>
     <description>Official Java SDK for the Hexudon Game Server.</description>
 
-    <properties>
-        <java.version>21</java.version>
-        <maven.compiler.release>${java.version}</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- Dependencies -->
-        <jackson.version>2.20.0</jackson.version>
-        <okhttp.version>4.12.0</okhttp.version>
-    </properties>
-
     <dependencies>
 
         <!-- JSON -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <!-- HTTP Client -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>${okhttp.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.squareup.okio</groupId>
-                    <artifactId>okio</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- Okio JVM to resolve JPMS split-package / module-name collision -->
         <dependency>
             <groupId>com.squareup.okio</groupId>
             <artifactId>okio-jvm</artifactId>
-            <version>3.6.0</version>
         </dependency>
 
         <!-- Kotlin Stdlib to ensure standard library is explicitly on module-path -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
-            <version>1.9.25</version>
         </dependency>
 
         <!-- Test -->
@@ -75,21 +55,18 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.26.3</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -101,16 +78,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.1</version>
-                <configuration>
-                    <release>${java.version}</release>
-                </configuration>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.3</version>
                 <configuration>
                     <argLine>
                         @{argLine}
@@ -124,7 +96,6 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
                 <executions>
                     <execution>
                         <goals>

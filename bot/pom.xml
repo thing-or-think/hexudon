@@ -22,12 +22,6 @@
 
     </dependencies>
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <build>
         <plugins>
 
@@ -35,7 +29,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
                 <configuration>
                     <mainClass>com.naprock.hexudon.bot.BotApplication</mainClass>
                 </configuration>

@@ -1,5 +1,6 @@
 package com.naprock.hexudon.sdk.internal.http;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -200,5 +201,20 @@ public record HttpRequest(
                     body
             );
         }
+    }
+
+    @Override
+    public String toString() {
+        return "HttpRequest[" +
+                "method=" + method +
+                ", path=" + path +
+                ", headers=" + headers +
+                ", queryParams=" + queryParams +
+                ", body=" + (
+                body == null
+                        ? null
+                        : new String(body, StandardCharsets.UTF_8)
+        ) +
+                "]";
     }
 }

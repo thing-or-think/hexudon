@@ -9,7 +9,9 @@ build/
 /out/
 bin/
 /dist/
-docs
+*/docs/*
+!*/docs/api/
+!*/docs/api/**
 CLASS SPECIFICATIONS/
 graph/
 

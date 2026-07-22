@@ -6,6 +6,7 @@ import com.naprock.hexudon.bot.config.BotConfig;
 import com.naprock.hexudon.bot.exception.BotException;
 import com.naprock.hexudon.sdk.api.GameApi;
 import com.naprock.hexudon.sdk.api.HexudonClient;
+import com.naprock.hexudon.sdk.api.PracticeApi;
 import com.naprock.hexudon.sdk.exception.HexudonException;
 import com.naprock.hexudon.sdk.model.AgentType;
 import com.naprock.hexudon.sdk.model.DayInfo;
@@ -82,7 +83,7 @@ public final class GameRunner {
         LOG.info("Starting bot: " + config);
 
         try (HexudonClient client = buildClient()) {
-            runGameLoop(client.game());
+            runGameLoop(client.game(), client.practice());
         } catch (HexudonException e) {
             throw new BotException("SDK error during game loop: " + e.getMessage(), e);
         } catch (Exception e) {
@@ -97,14 +98,14 @@ public final class GameRunner {
     /**
      * Runs the game loop using the provided {@link GameApi}.
      */
-    private void runGameLoop(GameApi api) {
+    private void runGameLoop(GameApi gameApi, PracticeApi practiceApi) {
         String gameId = config.gameId();
 
         // 1. Register agent types
-        registerAgentTypes(api, gameId);
+        registerAgentTypes(gameApi, gameId);
 
         // 2. Fetch static config once
-        MatchConfig matchConfig = fetchMatchConfig(api, gameId);
+        MatchConfig matchConfig = fetchMatchConfig(gameApi, gameId);
         LOG.info("Match config loaded — board " + matchConfig.mapWidth()
                 + "x" + matchConfig.mapHeight()
                 + ", days=" + matchConfig.daySteps().size()
@@ -114,11 +115,11 @@ public final class GameRunner {
         int lastProcessedDay = -1;
 
         while (true) {
-            MatchState state = fetchMatchState(api, gameId);
+            MatchState state = fetchMatchState(gameApi, gameId);
 
             if (state.status() == MatchStatus.FINISHED) {
                 LOG.info("Match finished!");
-                printResult(api, gameId);
+                printResult(gameApi, gameId);
                 break;
             }
 
@@ -143,7 +144,7 @@ public final class GameRunner {
             List<List<GameAction>> actions = safeDecide(context);
 
             // 5. Submit actions
-            submitActions(api, gameId, currentDay, actions);
+            submitActions(practiceApi, gameId, currentDay, actions);
         }
     }
 
@@ -185,14 +186,14 @@ public final class GameRunner {
      * Submits the actions for the current day.
      */
     private void submitActions(
-            GameApi api,
+            PracticeApi api,
             String gameId,
             int day,
             List<List<GameAction>> actions
     ) {
         SubmitActions submission = new SubmitActions(day, actions);
         withRetry("submitActions", () -> {
-            api.submitActions(gameId, submission);
+            api.submitPracticeActions(gameId, submission);
             return null;
         });
         LOG.info("Actions submitted for day " + day

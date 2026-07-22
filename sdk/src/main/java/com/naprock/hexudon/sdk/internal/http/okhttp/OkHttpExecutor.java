@@ -153,6 +153,7 @@ public final class OkHttpExecutor implements HttpExecutor {
                 "request must not be null"
         );
 
+        System.out.println(request.toString());
 
         var retryConfig =
                 config.retryConfig();
@@ -310,16 +311,16 @@ public final class OkHttpExecutor implements HttpExecutor {
                             ? null
                             : response.body().bytes();
 
-//            System.out.println("========================================");
-//            System.out.println(request.method() + " " + url);
-//            System.out.println("Status: " + response.code());
-//
-//            if (responseBody != null) {
-//                System.out.println("Response:");
-//                System.out.println(new String(responseBody));
-//            }
-//
-//            System.out.println("========================================");
+            System.out.println("========================================");
+            System.out.println(request.method() + " " + url);
+            System.out.println("Status: " + response.code());
+
+            if (responseBody != null) {
+                System.out.println("Response:");
+                System.out.println(new String(responseBody));
+            }
+
+            System.out.println("========================================");
 
             Map<String, List<String>> headers =
                     response.headers()
