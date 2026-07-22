@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEXUDON | Live Game Monitor</title>
+    <!-- Modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom styling -->
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="navbar-brand" id="nav-brand">
+            <i class="fa-solid fa-hexagon-nodes brand-icon"></i>
+            <span class="brand-text">HEXUDON <span class="brand-subtext">MONITOR</span></span>
+        </div>
+        <nav class="navbar-links">
+            <button class="nav-btn active" id="btn-lobby">
+                <i class="fa-solid fa-list-check"></i> Games Lobby
+            </button>
+            <button class="nav-btn" id="btn-admin">
+                <i class="fa-solid fa-circle-user"></i> Admin Panel
+            </button>
+        </nav>
+        <div class="navbar-status">
+            <span class="status-badge live-pulse">
+                <span class="pulse-dot"></span>
+                LIVE CONNECTED
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content" id="app-root">
+        <!-- Rendered view content will be injected here -->
+        <div class="app-loader">
+            <div class="loader-spinner"></div>
+            <p>Initializing Hexudon Monitor...</p>
+        </div>
+    </main>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Main JS Application script -->
+    <script type="module" src="./js/app.js"></script>
+</body>
+</html>

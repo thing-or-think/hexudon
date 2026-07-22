@@ -22,18 +22,14 @@ paths:
     post:
       tags:
         - Admin
-      summary: Tạo bản xem trước bản đồ hợp lệ theo luật (CHỈ ADMIN)
-      description: Bao bọc MapGenerator để UI admin yêu cầu bảng đã được xác minh tính kết nối mà không tạo game thực tế.
+      summary: Tạo bản xem trước bản đồ hợp lệ theo luật (Public / Admin)
+      description: Tạo ngẫu nhiên một sơ đồ bảng chơi hợp lệ có kết nối, quy định vị trí các cửa hàng mì Udon mà không cần tạo trận đấu thực tế.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GenerateMapRequest'
-            example:
-              difficulty: easy
-              teams: 2
-              seed: 0
       responses:
         '200':
           description: Phản hồi thành công
@@ -41,15 +37,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenerateMapResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/init:
     post:
       tags:
         - Admin
-      summary: Khởi tạo Game (CHỈ ADMIN)
-      description: Khởi tạo một game thi đấu mới với bản đồ, thông số ngày, giới hạn nhiên liệu và danh sách đội.
+      summary: Khởi tạo Game (Public / Admin)
+      description: Khởi tạo một game thi đấu mới với bản đồ, thông số ngày, giới hạn nhiên liệu và vị trí Agent ban đầu.
       requestBody:
         required: true
         content:
@@ -59,15 +59,19 @@ paths:
       responses:
         '204':
           description: Khởi tạo thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/teams:
     post:
       tags:
         - Admin
-      summary: Thêm một đội vào game giữa trận đấu (CHỈ ADMIN)
-      description: Thêm đội thi đấu bổ sung vào game đang chạy.
+      summary: Đăng ký đội chơi mới (Public / Admin)
+      description: Đăng ký một đội mới trên máy chủ và tạo JWT Token để truy cập các endpoint của đội đó.
       requestBody:
         required: true
         content:
@@ -75,37 +79,27 @@ paths:
             schema:
               $ref: '#/components/schemas/AddTeamRequest'
       responses:
-        '204':
-          description: Thêm đội thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '201':
+          description: Đăng ký thành công, trả về token truy cập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddTeamResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game/reset:
-    post:
-      tags:
-        - Admin
-      summary: Đặt lại game về lúc bắt đầu (CHỈ ADMIN)
-      description: Đặt lại trạng thái game về thời điểm ban đầu để có thể phát lại.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GameRequest'
-      responses:
-        '204':
-          description: Đặt lại game thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-
-  /api/game/{game_id}:
+  /api/game/{gameId}:
     delete:
       tags:
         - Admin
-      summary: Xóa game và tất cả các lượt nộp (CHỈ ADMIN)
-      description: Xóa hoàn toàn một trận đấu theo game_id.
+      summary: Xóa game và tất cả cấu hình liên quan (Public / Admin)
+      description: Xóa hoàn toàn một trận đấu theo gameId.
       parameters:
-        - name: game_id
+        - name: gameId
           in: path
           required: true
           description: ID của game cần xóa
@@ -114,15 +108,21 @@ paths:
       responses:
         '204':
           description: Xóa game thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/config:
     get:
       tags:
         - Config
       summary: Cấu hình bảng một lần cho đội gọi yêu cầu (CHỈ ĐỘI)
-      description: Đọc cấu hình trận đấu ban đầu dành riêng cho đội thi đấu.
+      description: Đọc cấu hình trận đấu ban đầu dành riêng cho đội thi đấu (yêu cầu xác thực token).
+      security:
+        - BearerAuth: []
       parameters:
         - name: game_id
           in: query
@@ -137,72 +137,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MatchConfigResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Trận đấu không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/board:
     get:
       tags:
         - Config
-      summary: Cấu hình bảng/trận đấu độc lập với đội (Đội hoặc Admin)
-      description: Phục vụ cả admin và người xem đọc thông tin bản đồ, ngày, nhiên liệu, ngưỡng traffic.
-      parameters:
-        - name: game_id
-          in: query
-          required: true
-          description: ID của trận đấu (ID trần với đội, composite ID với admin ở chế độ practice)
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Phản hồi thành công
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BoardResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-
-  /api/game/agent-types:
-    post:
-      tags:
-        - Play
-      summary: Chọn loại Agent trước trận đấu (CHỈ ĐỘI)
-      description: Chọn loại tuần tra (patrol) hoặc nạp nhiên liệu (refuel) cho từng Agent của đội.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SelectAgentTypesRequest'
-      responses:
-        '204':
-          description: Chọn loại Agent thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-
-  /api/game/actions:
-    post:
-      tags:
-        - Play
-      summary: Nộp kế hoạch của một ngày (CHỈ ĐỘI)
-      description: Gửi danh sách các bước di chuyển (kế hoạch) cho từng Agent trong ngày thi đấu hiện tại.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubmitActionsRequest'
-      responses:
-        '204':
-          description: Nộp kế hoạch thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-    get:
-      tags:
-        - State & History
-      summary: Kế hoạch đã nộp mỗi ngày
-      description: Đọc danh sách lịch sử các kế hoạch hành động đã nộp của các ngày.
+      summary: Cấu hình bảng/trận đấu độc lập với đội (Public)
+      description: Phục vụ cả admin và người xem đọc thông tin bản đồ, ngày, nhiên liệu, ngưỡng traffic mà không cần JWT Token.
       parameters:
         - name: game_id
           in: query
@@ -216,9 +169,63 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActionsResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+                $ref: '#/components/schemas/BoardResponse'
+        '400':
+          description: Trận đấu không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/game/list:
+    get:
+      tags:
+        - Config
+      summary: Đọc danh sách tất cả cấu hình trận đấu hiện có (Public)
+      description: Lấy danh sách toàn bộ các trận đấu trên hệ thống cùng thông số cấu hình tóm tắt của chúng.
+      responses:
+        '200':
+          description: Phản hồi thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameListResponse'
+        '500':
+          description: Lỗi hệ thống không mong muốn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/game/agent-types:
+    post:
+      tags:
+        - Play
+      summary: Chọn loại Agent trước trận đấu (CHỈ ĐỘI)
+      description: Chọn loại tuần tra (patrol) hoặc nạp nhiên liệu (refuel) cho từng Agent của đội.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectAgentTypesRequest'
+      responses:
+        '204':
+          description: Chọn loại Agent thành công, không có nội dung trả về
+        '401':
+          description: Chưa xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/day:
     get:
@@ -226,6 +233,8 @@ paths:
         - Play
       summary: Thông tin ngày hiện tại (CHỈ ĐỘI)
       description: Lấy vị trí, nhiên liệu, thời hạn và trạng thái giao thông của ngày hiện tại.
+      security:
+        - BearerAuth: []
       parameters:
         - name: game_id
           in: query
@@ -240,60 +249,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GameDayResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-
-  /api/game/replay:
-    get:
-      tags:
-        - State & History
-      summary: Phát lại từng bước của các ngày đã giải quyết
-      description: Tải dữ liệu khung hình diễn biến chi tiết từng bước của trận đấu để replay.
-      parameters:
-        - name: game_id
-          in: query
-          required: true
-          description: ID của trận đấu
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Phản hồi thành công
+        '401':
+          description: Chưa xác thực
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReplayResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
-
-  /api/game/state:
-    get:
-      tags:
-        - State & History
-      summary: Toàn bộ trạng thái game (Đội hoặc Admin)
-      description: Tra cứu trạng thái trực tiếp của game bao gồm các đội, vị trí Agent, kho hàng và đường xá.
-      parameters:
-        - name: game_id
-          in: query
-          required: true
-          description: ID của trận đấu
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Phản hồi thành công
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Yêu cầu không hợp lệ hoặc game không chạy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GameStateResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/game/result:
     get:
       tags:
         - State & History
-      summary: Bảng xếp hạng và chi tiết điểm số (Đội hoặc Admin)
+      summary: Bảng xếp hạng và chi tiết điểm số (Public)
       description: Tra cứu kết quả cuối cùng, thứ hạng và thông số phục vụ/loại hình của các đội.
       parameters:
         - name: game_id
@@ -309,38 +282,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GameResultResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '400':
+          description: Trận đấu không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /api/game/practice/actions:
+  # ==========================================
+  # UNIMPLEMENTED ENDPOINTS (Not Implemented)
+  # ==========================================
+
+  /api/game/reset:
     post:
       tags:
-        - Practice
-      summary: Nộp một ngày trong game luyện tập tự chọn tốc độ
-      description: Gửi kế hoạch di chuyển trong chế độ luyện tập.
+        - Admin
+      summary: "[Not Implemented] Đặt lại game về lúc bắt đầu"
+      description: "[API chưa được hiện thực trong code] Đặt lại trạng thái game về thời điểm ban đầu để có thể phát lại."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PracticeSubmitRequest'
+              type: object
+              required:
+                - game_id
+              properties:
+                game_id:
+                  type: string
       responses:
-        '204':
-          description: Nộp kế hoạch luyện tập thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '501':
+          description: Chưa được hiện thực
 
-  /api/game/practice/peer:
+  /api/game/actions:
+    post:
+      tags:
+        - Play
+      summary: "[Not Implemented] Nộp kế hoạch của một ngày (CHỈ ĐỘI)"
+      description: "[API chưa được hiện thực trong code] Gửi danh sách các bước di chuyển cho từng Agent trong ngày thi đấu hiện tại."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitActionsRequest'
+      responses:
+        '501':
+          description: Chưa được hiện thực
     get:
       tags:
-        - Practice
-      summary: Đọc nội dung phát lại luyện tập của đội khác
-      description: Xem lịch sử và kế hoạch của các đội thi đấu khác trong chế độ luyện tập.
+        - State & History
+      summary: "[Not Implemented] Kế hoạch đã nộp mỗi ngày"
+      description: "[API chưa được hiện thực trong code] Đọc danh sách lịch sử các kế hoạch hành động đã nộp của các ngày."
       parameters:
         - name: game_id
           in: query
           required: true
-          description: ID của trận đấu luyện tập
+          schema:
+            type: string
+      responses:
+        '501':
+          description: Chưa được hiện thực
+
+  /api/game/replay:
+    get:
+      tags:
+        - State & History
+      summary: "[Not Implemented] Phát lại từng bước của các ngày đã giải quyết"
+      description: "[API chưa được hiện thực trong code] Tải dữ liệu khung hình diễn biến chi tiết từng bước của trận đấu để replay."
+      parameters:
+        - name: game_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '501':
+          description: Chưa được hiện thực
+
+  /api/game/state:
+    get:
+      tags:
+        - State & History
+      summary: Toàn bộ trạng thái game (Public)
+      description: Tra cứu trạng thái trực tiếp của game bao gồm các đội, vị trí Agent, kho hàng và đường xá.
+      parameters:
+        - name: game_id
+          in: query
+          required: true
+          description: ID của trận đấu
           schema:
             type: string
       responses:
@@ -349,217 +379,239 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PracticePeerResponse'
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+                $ref: '#/components/schemas/GameStateResponse'
+        '400':
+          description: Yêu cầu không hợp lệ (thiếu game_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Trận đấu không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/game/practice/actions:
+    post:
+      tags:
+        - Practice
+      summary: "[Not Implemented] Nộp một ngày trong game luyện tập tự chọn tốc độ"
+      description: "[API chưa được hiện thực trong code] Gửi kế hoạch di chuyển trong chế độ luyện tập."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitActionsRequest'
+      responses:
+        '501':
+          description: Chưa được hiện thực
+
+  /api/game/practice/peer:
+    get:
+      tags:
+        - Practice
+      summary: "[Not Implemented] Đọc nội dung phát lại luyện tập của đội khác"
+      description: "[API chưa được hiện thực trong code] Xem lịch sử và kế hoạch của các đội thi đấu khác trong chế độ luyện tập."
+      parameters:
+        - name: game_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '501':
+          description: Chưa được hiện thực
 
   /api/game/practice/copy:
     post:
       tags:
         - Practice
-      summary: Sao chép (fork) tiến trình luyện tập của đội khác
-      description: Copy lịch sử hành động của đội khác đến một ngày chỉ định trong chế độ luyện tập.
+      summary: "[Not Implemented] Sao chép (fork) tiến trình luyện tập của đội khác"
+      description: "[API chưa được hiện thực trong code] Copy lịch sử hành động của đội khác đến một ngày chỉ định trong chế độ luyện tập."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PracticeCopyRequest'
+              type: object
+              required:
+                - game_id
+                - from_game_id
+                - from_team_id
+                - upto_day
+              properties:
+                game_id:
+                  type: string
+                from_game_id:
+                  type: string
+                from_team_id:
+                  type: string
+                upto_day:
+                  type: integer
       responses:
-        '204':
-          description: Sao chép tiến trình thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '501':
+          description: Chưa được hiện thực
 
   /api/game/practice/reset:
     post:
       tags:
         - Practice
-      summary: Đặt lại game luyện tập của riêng bạn
-      description: Khởi động lại trận đấu luyện tập về trạng thái ban đầu để thi đấu lại.
+      summary: "[Not Implemented] Đặt lại game luyện tập của riêng bạn"
+      description: "[API chưa được hiện thực trong code] Khởi động lại trận đấu luyện tập về trạng thái ban đầu để thi đấu lại."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GameRequest'
+              type: object
+              required:
+                - game_id
+              properties:
+                game_id:
+                  type: string
       responses:
-        '204':
-          description: Đặt lại game luyện tập thành công, không có nội dung trả về
-        '422':
-          $ref: '#/components/responses/ValidationErrorResponse'
+        '501':
+          description: Chưa được hiện thực
 
 components:
-  responses:
-    ValidationErrorResponse:
-      description: Lỗi kiểm tra hợp lệ dữ liệu đầu vào
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/HTTPValidationError'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   schemas:
     GenerateMapRequest:
       type: object
       description: Yêu cầu tạo bản đồ xem trước
       required:
-        - difficulty
+        - width
+        - height
         - teams
       properties:
-        difficulty:
-          type: string
-          description: Mức độ khó của bản đồ
+        width:
+          type: integer
+          description: Chiều rộng bản đồ (từ 5 đến 50)
+        height:
+          type: integer
+          description: Chiều cao bản đồ (từ 5 đến 50)
         teams:
           type: integer
-          description: Số lượng đội tham gia (2 đến 10)
-          minimum: 2
-          maximum: 10
-        seed:
-          type: integer
-          nullable: true
-          description: Hạt giống sinh ngẫu nhiên
+          description: Số lượng đội tham gia (từ 2 đến 10)
 
     GenerateMapResponse:
       type: object
-      description: Kết quả tạo bản đồ xem trước
+      description: Kết quả tạo bản đồ xem trước (cấu trúc phẳng)
       required:
-        - map
-        - spots
-      properties:
-        map:
-          $ref: '#/components/schemas/MapInit'
-        spots:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpotInit'
-
-    GameInitRequest:
-      type: object
-      description: Yêu cầu khởi tạo trận đấu
-      required:
-        - game_id
-        - startsAt
-        - daySeconds
-        - daySteps
-        - map
-        - spots
-        - fuelLimits
-        - players
-        - busyThreshold
-        - jammedThreshold
-        - teams
-        - agent_selection_time_limit
-        - is_practice
-      properties:
-        game_id:
-          type: string
-          description: Mã định danh trận đấu
-        startsAt:
-          type: number
-          description: Thời điểm bắt đầu trận đấu (Unix timestamp)
-        daySeconds:
-          type: array
-          items:
-            type: number
-          minItems: 1
-          description: Thời gian (giây) tối đa dành cho mỗi ngày
-        daySteps:
-          type: array
-          items:
-            type: integer
-          minItems: 1
-          description: Số bước di chuyển tối đa trong mỗi ngày
-        map:
-          $ref: '#/components/schemas/MapInit'
-        spots:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpotInit'
-        fuelLimits:
-          type: integer
-          exclusiveMinimum: 0
-          description: Giới hạn dung lượng nhiên liệu của Agent
-        players:
-          type: integer
-          minimum: 1
-          description: Số lượng người chơi / agent mỗi đội
-        busyThreshold:
-          type: integer
-          description: Ngưỡng mật độ xe gây ùn tắc nhẹ
-        jammedThreshold:
-          type: integer
-          description: Ngưỡng mật độ xe gây tắc nghẽn nặng
-        teams:
-          type: array
-          items:
-            $ref: '#/components/schemas/TeamInit'
-          minItems: 1
-        agent_selection_time_limit:
-          type: number
-          description: Giới hạn thời gian chọn loại Agent (giây)
-        is_practice:
-          type: boolean
-          description: Cờ xác định trận đấu luyện tập
-
-    AddTeamRequest:
-      type: object
-      description: Yêu cầu thêm đội vào game đang chạy
-      required:
-        - game_id
-        - team_id
-        - agents
-      properties:
-        game_id:
-          type: string
-          description: Mã định danh trận đấu
-        team_id:
-          oneOf:
-            - type: string
-            - type: integer
-          description: Mã định danh đội
-        agents:
-          type: array
-          items:
-            type: integer
-          minItems: 3
-          maxItems: 8
-          description: Danh sách vị trí xuất phát ban đầu của Agent
-
-    GameRequest:
-      type: object
-      description: Yêu cầu chứa game_id đơn giản
-      required:
-        - game_id
-      properties:
-        game_id:
-          type: string
-          description: Mã định danh trận đấu
-
-    MapInit:
-      type: object
-      description: Thông tin khởi tạo bản đồ
-      required:
-        - height
         - width
+        - height
         - cells
+        - spots
       properties:
-        height:
-          type: integer
-          description: Chiều cao bản đồ (số hàng)
         width:
           type: integer
-          description: Chiều rộng bản đồ (số cột)
+        height:
+          type: integer
         cells:
           type: array
           items:
             type: array
             items:
               type: integer
-          description: Ma trận loại ô bàn chơi
+        spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpotResponse'
 
-    SpotInit:
+    GameInitRequest:
       type: object
-      description: Thông tin vị trí cửa hàng / thương hiệu
+      description: Yêu cầu khởi tạo trận đấu
+      required:
+        - gameId
+        - startsAt
+        - agentSelectionTimeLimit
+        - daySeconds
+        - daySteps
+        - map
+        - fuelLimits
+        - players
+        - busyThreshold
+        - jammedThreshold
+        - agents
+      properties:
+        gameId:
+          type: string
+          description: Mã định danh trận đấu (camelCase)
+        startsAt:
+          type: integer
+          format: int64
+          description: Thời điểm bắt đầu trận đấu (Unix timestamp)
+        agentSelectionTimeLimit:
+          type: number
+          format: double
+          description: Giới hạn thời gian chọn loại Agent (giây)
+        daySeconds:
+          type: array
+          items:
+            type: number
+            format: double
+          description: Thời gian (giây) tối đa dành cho mỗi ngày
+        daySteps:
+          type: array
+          items:
+            type: integer
+          description: Số bước di chuyển tối đa trong mỗi ngày
+        map:
+          $ref: '#/components/schemas/MapRequest'
+        fuelLimits:
+          type: integer
+          description: Giới hạn dung lượng nhiên liệu của Agent
+        players:
+          type: integer
+          description: Số lượng người chơi / agent mỗi đội
+        busyThreshold:
+          type: number
+          format: double
+          description: Ngưỡng mật độ xe gây ùn tắc nhẹ
+        jammedThreshold:
+          type: number
+          format: double
+          description: Ngưỡng mật độ xe gây tắc nghẽn nặng
+        agents:
+          type: array
+          items:
+            type: integer
+          description: Danh sách ô vị trí xuất phát ban đầu của Agent
+
+    MapRequest:
+      type: object
+      description: Thông tin bản đồ yêu cầu khởi tạo
+      required:
+        - width
+        - height
+        - cells
+        - spots
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
+        cells:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpotRequest'
+
+    SpotRequest:
+      type: object
       required:
         - brand
         - pos
@@ -567,34 +619,46 @@ components:
       properties:
         brand:
           type: integer
-          description: Mã thương hiệu
         pos:
           type: integer
-          description: Vị trí ô trên bản đồ
         stocks:
           type: integer
-          minimum: 1
-          description: Số lượng tồn kho cửa hàng
 
-    TeamInit:
+    SpotResponse:
       type: object
-      description: Cấu hình đội thi đấu ban đầu
       required:
-        - team_id
-        - agents
+        - brand
+        - pos
+        - stocks
       properties:
-        team_id:
-          oneOf:
-            - type: string
-            - type: integer
-          description: Mã đội thi đấu
-        agents:
-          type: array
-          items:
-            type: integer
-          minItems: 3
-          maxItems: 8
-          description: Danh sách ô vị trí ban đầu của Agent
+        brand:
+          type: integer
+        pos:
+          type: integer
+        stocks:
+          type: integer
+
+    AddTeamRequest:
+      type: object
+      description: Yêu cầu thêm đội
+      required:
+        - teamId
+      properties:
+        teamId:
+          type: string
+          description: Mã định danh của đội (camelCase)
+
+    AddTeamResponse:
+      type: object
+      description: Kết quả đăng ký đội (chứa token JWT)
+      required:
+        - teamId
+        - token
+      properties:
+        teamId:
+          type: string
+        token:
+          type: string
 
     MatchConfigResponse:
       type: object
@@ -612,49 +676,43 @@ components:
         - jammedThreshold
       properties:
         startsAt:
-          type: number
-          description: Timestamp bắt đầu game
+          type: integer
+          format: int64
         daySeconds:
           type: array
           items:
             type: number
-          description: Thời gian dành cho từng ngày
+            format: double
         daySteps:
           type: array
           items:
             type: integer
-          description: Số bước tối đa của từng ngày
         map:
-          $ref: '#/components/schemas/MapInit'
+          $ref: '#/components/schemas/MapResponse'
         spots:
           type: array
           items:
-            $ref: '#/components/schemas/SpotInit'
+            $ref: '#/components/schemas/SpotResponse'
         agents:
           type: array
           items:
             type: integer
-          description: Vị trí ban đầu của các Agent của đội
         fuelLimits:
           type: integer
-          description: Dung lượng bình nhiên liệu
         players:
           type: integer
-          description: Số lượng Agent của đội
         busyThreshold:
           type: number
-          description: Ngưỡng ùn tắc giao thông nhẹ
+          format: double
         jammedThreshold:
           type: number
-          description: Ngưỡng tắc nghẽn giao thông nặng
+          format: double
 
     BoardResponse:
       type: object
       description: Cấu hình bảng đấu toàn cục
       required:
-        - game_id
-        - is_practice
-        - no_reset
+        - gameId
         - startsAt
         - daySeconds
         - daySteps
@@ -664,44 +722,55 @@ components:
         - players
         - busyThreshold
         - jammedThreshold
-        - agent_selection_time_limit
       properties:
-        game_id:
+        gameId:
           type: string
-          description: Mã định danh trận đấu
-        is_practice:
-          type: boolean
-          description: Cờ trận đấu luyện tập
-        no_reset:
-          type: boolean
-          description: Cờ không cho phép reset
         startsAt:
-          type: number
-          description: Timestamp bắt đầu
+          type: integer
+          format: int64
         daySeconds:
           type: array
           items:
             type: number
+            format: double
         daySteps:
           type: array
           items:
             type: integer
         map:
-          $ref: '#/components/schemas/MapInit'
+          $ref: '#/components/schemas/MapResponse'
         spots:
           type: array
           items:
-            $ref: '#/components/schemas/SpotInit'
+            $ref: '#/components/schemas/SpotResponse'
         fuelLimits:
           type: integer
         players:
           type: integer
         busyThreshold:
           type: number
+          format: double
         jammedThreshold:
           type: number
-        agent_selection_time_limit:
-          type: number
+          format: double
+
+    MapResponse:
+      type: object
+      required:
+        - height
+        - width
+        - cells
+      properties:
+        height:
+          type: integer
+        width:
+          type: integer
+        cells:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
 
     SelectAgentTypesRequest:
       type: object
@@ -712,34 +781,11 @@ components:
       properties:
         game_id:
           type: string
-          description: Mã định danh trận đấu
         types:
           type: array
           items:
             type: integer
           description: Danh sách loại cho từng Agent (0=patrol, 1=refuel)
-
-    SubmitActionsRequest:
-      type: object
-      description: Yêu cầu nộp kế hoạch bước đi cho ngày
-      required:
-        - game_id
-        - day
-        - actions
-      properties:
-        game_id:
-          type: string
-          description: Mã định danh trận đấu
-        day:
-          type: integer
-          description: Chỉ số ngày nộp kế hoạch (bắt đầu từ 0)
-        actions:
-          type: array
-          items:
-            type: array
-            items:
-              type: integer
-          description: Danh sách chuỗi hành động di chuyển của các Agent
 
     GameDayResponse:
       type: object
@@ -753,164 +799,59 @@ components:
       properties:
         endsAt:
           type: number
-          description: Thời điểm kết thúc ngày
+          format: double
         day:
           type: integer
-          description: Chỉ số ngày hiện tại
         agents:
           type: array
           items:
-            type: object
-            required:
-              - kind
-              - pos
-              - fuel
-            properties:
-              kind:
-                type: integer
-                description: Loại Agent
-              pos:
-                type: integer
-                description: Vị trí hiện tại
-              fuel:
-                type: integer
-                description: Mức nhiên liệu còn lại
+            $ref: '#/components/schemas/AgentResponse'
         others:
           type: array
           items:
-            type: object
-            required:
-              - id
-              - agents
-            properties:
-              id:
-                oneOf:
-                  - type: string
-                  - type: integer
-                description: ID đối thủ
-              agents:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    kind:
-                      type: integer
-                    pos:
-                      type: integer
-                    fuel:
-                      type: integer
+            $ref: '#/components/schemas/OtherTeamResponse'
         traffics:
           type: array
           items:
-            type: object
-            required:
-              - pos
-              - status
-            properties:
-              pos:
-                type: integer
-                description: Vị trí ô giao thông
-              status:
-                type: integer
-                description: Trạng thái traffic (0=bình thường, 1=ùn tắc, 2=tắc nghẽn)
+            $ref: '#/components/schemas/TrafficResponse'
 
-    GetActionsResponse:
-      type: array
-      description: Danh sách lịch sử nộp hành động của các ngày
-      items:
-        type: object
-        properties:
-          actions:
-            type: array
-            items:
-              type: object
-              properties:
-                day:
-                  type: integer
-                team_id:
-                  type: string
-                plan:
-                  type: array
-                  items:
-                    type: array
-                    items:
-                      type: integer
-                submitted_at:
-                  type: number
-                submit_count:
-                  type: integer
-
-    ReplayResponse:
+    AgentResponse:
       type: object
-      description: Dữ liệu phát lại trận đấu
       required:
-        - days
+        - kind
+        - pos
+        - fuel
       properties:
-        days:
+        kind:
+          type: integer
+        pos:
+          type: integer
+        fuel:
+          type: integer
+
+    OtherTeamResponse:
+      type: object
+      required:
+        - id
+        - agents
+      properties:
+        id:
+          type: string
+        agents:
           type: array
           items:
-            type: object
-            properties:
-              day:
-                type: integer
-              total_steps:
-                type: integer
-              road_condition:
-                type: object
-                additionalProperties:
-                  type: integer
-              team:
-                type: object
-                properties:
-                  team_id:
-                    type: string
-                  kinds:
-                    type: array
-                    items:
-                      type: integer
-                  final_servings:
-                    type: integer
-                  final_types:
-                    type: integer
-                  submitted:
-                    type: boolean
-                  significant_frames:
-                    type: array
-                    items:
-                      type: object
+            $ref: '#/components/schemas/AgentResponse'
 
-    GameStateResponse:
+    TrafficResponse:
       type: object
-      description: Trạng thái toàn cục trận đấu
       required:
+        - pos
         - status
-        - day
-        - steps_today
-        - day_deadline_in
-        - road_condition
-        - teams
       properties:
+        pos:
+          type: integer
         status:
-          type: string
-          description: Trạng thái (in_progress, finished...)
-        day:
           type: integer
-          description: Ngày hiện tại
-        steps_today:
-          type: integer
-          description: Số bước đã thực hiện trong ngày
-        day_deadline_in:
-          type: number
-          description: Thời gian đếm ngược còn lại của ngày
-        road_condition:
-          type: object
-          additionalProperties:
-            type: integer
-          description: Tình trạng giao thông trên các ô
-        teams:
-          type: object
-          additionalProperties:
-            type: object
 
     GameResultResponse:
       type: object
@@ -923,24 +864,82 @@ components:
           type: array
           items:
             type: string
-          description: Danh sách team_id theo thứ hạng từ cao xuống thấp
         detail:
           type: object
           additionalProperties:
-            type: object
-            properties:
-              distinct_types:
-                type: integer
-              cumulative_daily_types:
-                type: integer
-              total_servings:
-                type: integer
-              cumulative_response_time:
-                type: number
+            $ref: '#/components/schemas/TeamDetailResponse'
 
-    PracticeSubmitRequest:
+    GameStateResponse:
       type: object
-      description: Yêu cầu nộp kế hoạch trong trận luyện tập
+      description: Toàn bộ trạng thái trực tiếp của game
+      required:
+        - status
+        - currentDay
+        - remainingTime
+        - mapStatus
+        - teams
+      properties:
+        status:
+          type: string
+          enum: [NOT_STARTED, REGISTERING, PLAYING, FINISHED]
+          description: Trạng thái hiện tại của trận đấu
+        currentDay:
+          type: integer
+          description: Ngày thi đấu hiện tại (bắt đầu từ 0)
+        remainingTime:
+          type: integer
+          format: int64
+          description: Thời gian còn lại của ngày hiện tại (giây)
+        mapStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrafficResponse'
+          description: Trạng thái mật độ giao thông trên toàn bản đồ
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamStateResponse'
+          description: Trạng thái chi tiết của từng đội tham gia
+
+    TeamStateResponse:
+      type: object
+      required:
+        - teamId
+        - score
+        - agents
+      properties:
+        teamId:
+          type: string
+          description: ID của đội thi đấu
+        score:
+          $ref: '#/components/schemas/TeamDetailResponse'
+          description: Chi tiết điểm số của đội
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentResponse'
+          description: Danh sách Agent của đội
+
+    TeamDetailResponse:
+      type: object
+      required:
+        - distinct_types
+        - cumulative_daily_types
+        - total_servings
+        - cumulative_response_time
+      properties:
+        distinct_types:
+          type: integer
+        cumulative_daily_types:
+          type: integer
+        total_servings:
+          type: integer
+        cumulative_response_time:
+          type: number
+          format: double
+
+    SubmitActionsRequest:
+      type: object
       required:
         - game_id
         - day
@@ -957,79 +956,95 @@ components:
             items:
               type: integer
 
-    PracticePeerResponse:
+    ValidationErrorDetail:
       type: object
-      description: Lịch sử thi đấu luyện tập của đối thủ
       required:
-        - game_id
-        - history
+        - field
+        - message
       properties:
-        game_id:
+        field:
           type: string
-        history:
-          type: array
-          items:
-            type: object
-            properties:
-              day:
-                type: integer
-              state:
-                type: object
-              actions:
-                type: object
-
-    PracticeCopyRequest:
-      type: object
-      description: Yêu cầu sao chép tiến trình luyện tập của đội khác
-      required:
-        - game_id
-        - from_game_id
-        - from_team_id
-        - upto_day
-      properties:
-        game_id:
+        rejectedValue:
           type: string
-          description: ID trận luyện tập hiện tại của bạn
-        from_game_id:
-          type: string
-          description: ID trận nguồn cần sao chép
-        from_team_id:
-          oneOf:
-            - type: string
-            - type: integer
-          description: ID đội nguồn cần sao chép
-        upto_day:
-          type: integer
-          description: Sao chép cho tới ngày chỉ định
-
-    ValidationError:
-      type: object
-      description: Chi tiết lỗi validation
-      required:
-        - loc
-        - msg
-        - type
-      properties:
-        loc:
-          type: array
-          items:
-            oneOf:
-              - type: string
-              - type: integer
-        msg:
-          type: string
-        type:
-          type: string
-        input:
           nullable: true
-        ctx:
-          type: object
+        message:
+          type: string
 
-    HTTPValidationError:
+    ErrorResponse:
       type: object
-      description: Danh sách các lỗi kiểm tra hợp lệ
+      required:
+        - errorCode
+        - message
+        - timestamp
       properties:
-        detail:
+        errorCode:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        errors:
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: '#/components/schemas/ValidationErrorDetail'
+
+    GameListResponse:
+      type: object
+      description: Danh sách các cấu hình trận đấu
+      required:
+        - total
+        - games
+      properties:
+        total:
+          type: integer
+          description: Tổng số lượng trận đấu
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameSummaryResponse'
+
+    GameSummaryResponse:
+      type: object
+      description: Thông tin tóm tắt cấu hình của một trận đấu
+      required:
+        - gameId
+        - startsAt
+        - players
+        - fuelLimits
+        - agentSelectionTimeLimit
+        - busyThreshold
+        - jammedThreshold
+        - map
+        - totalDays
+      properties:
+        gameId:
+          type: string
+          description: Mã định danh trận đấu
+        startsAt:
+          type: integer
+          format: int64
+          description: Thời điểm bắt đầu trận đấu (Unix timestamp)
+        players:
+          type: integer
+          description: Số lượng Agent mỗi đội
+        fuelLimits:
+          type: integer
+          description: Giới hạn dung lượng nhiên liệu của Agent
+        agentSelectionTimeLimit:
+          type: number
+          format: double
+          description: Giới hạn thời gian chọn loại Agent (giây)
+        busyThreshold:
+          type: number
+          format: double
+          description: Ngưỡng ô giao thông ùn tắc nhẹ
+        jammedThreshold:
+          type: number
+          format: double
+          description: Ngưỡng ô giao thông tắc nghẽn nặng
+        map:
+          $ref: '#/components/schemas/MapResponse'
+        totalDays:
+          type: integer
+          description: Tổng số ngày thi đấu

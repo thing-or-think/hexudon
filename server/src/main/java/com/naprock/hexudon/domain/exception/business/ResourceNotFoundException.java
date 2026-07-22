@@ -37,6 +37,8 @@ public class ResourceNotFoundException extends BusinessException {
         );
     }
 
+
+
     /**
      * Creates a resource not found exception with root cause.
      *

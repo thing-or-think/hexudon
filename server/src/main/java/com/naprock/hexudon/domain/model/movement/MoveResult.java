@@ -4,8 +4,6 @@ import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import com.naprock.hexudon.domain.model.geometry.Coordinate;
 
-import java.util.Objects;
-
 /**
  * Value Object representing the result of an Agent movement action.
  *

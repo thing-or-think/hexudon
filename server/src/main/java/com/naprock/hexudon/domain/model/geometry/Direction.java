@@ -3,6 +3,8 @@ package com.naprock.hexudon.domain.model.geometry;
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
 
+import static com.naprock.hexudon.domain.validation.DomainValidator.requirePositive;
+
 /**
  * Represents the six movement directions on an Odd-R horizontal hex grid.
  */
@@ -52,7 +54,7 @@ public enum Direction {
      * @return column offset
      */
     public int getDx(int row) {
-        validateRow(row);
+        requirePositive(row, "row");
 
         boolean oddRow = row % 2 != 0;
 
@@ -78,7 +80,7 @@ public enum Direction {
      * @return row offset
      */
     public int getDy(int row) {
-        validateRow(row);
+        requirePositive(row, "row");
 
         return switch (this) {
             case EAST, WEST -> 0;
@@ -98,7 +100,7 @@ public enum Direction {
      * @return matching direction
      */
     public static Direction fromOffsets(int dx, int dy, int row) {
-        validateRow(row);
+        requirePositive(row, "row");
 
         for (Direction direction : values()) {
             if (direction.getDx(row) == dx
@@ -116,14 +118,5 @@ public enum Direction {
                         row
                 )
         );
-    }
-
-    private static void validateRow(int row) {
-        if (row < 0) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Row must be greater than or equal to zero."
-            );
-        }
     }
 }

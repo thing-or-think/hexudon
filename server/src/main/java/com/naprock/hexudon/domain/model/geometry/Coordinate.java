@@ -1,8 +1,6 @@
 package com.naprock.hexudon.domain.model.geometry;
 
-import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNegative;
-import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNull;
-import static com.naprock.hexudon.domain.validation.DomainValidator.requirePositive;
+import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 public record Coordinate(
         int x,

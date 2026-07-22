@@ -2,90 +2,33 @@ package com.naprock.hexudon.domain.model.traffic;
 
 import com.naprock.hexudon.domain.exception.business.GameRuleViolationException;
 import com.naprock.hexudon.domain.exception.code.ErrorCode;
-import com.naprock.hexudon.domain.model.geometry.Coordinate;
-import com.naprock.hexudon.domain.model.map.Cell;
-import com.naprock.hexudon.domain.model.map.TerrainType;
-import com.naprock.hexudon.domain.model.movement.MoveResult;
+import com.naprock.hexudon.domain.model.board.Cell;
 
 import java.util.*;
 
-public class TrafficHistory {
+public final class TrafficHistory {
 
-    private final Map<Integer, TrafficTracker> snapshots;
+    private final Map<Integer, TrafficTracker> trackers = new LinkedHashMap<>();
 
-    public TrafficHistory() {
-        this.snapshots = new LinkedHashMap<>();
+    public TrafficHistory(List<Cell> cells) {
+        add(TrafficTracker.initial(cells));
     }
 
-    public void init(List<Cell> cells) {
-        if (!snapshots.isEmpty()) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Traffic history already initialized."
-            );
-        }
+    public void add(TrafficTracker tracker) {
+        Objects.requireNonNull(tracker);
 
-        Map<Coordinate, TrafficFlow> flows = new HashMap<>();
-
-        for (Cell cell : cells) {
-            if (cell.terrainType() == TerrainType.ROAD) {
-                Coordinate coordinate = cell.coordinate();
-                flows.put(
-                        coordinate,
-                        new TrafficFlow(coordinate)
-                );
-            }
-        }
-        add(new TrafficTracker(
-                0,
-                flows
-        ));
-    }
-    
-    public void updateTraffic (List<MoveResult> moves, int maxTeam) {
-        TrafficTracker previousTracker = getLatestTracker();
-        TrafficTracker currentTracker =
-                new TrafficTracker(previousTracker.turn() + 1,
-                        previousTracker.updateTraffic(moves, maxTeam)
-                );
-        add(currentTracker);
-    }
-
-    public void add(TrafficTracker snapshot) {
-        if (snapshot == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Traffic snapshot must not be null."
-            );
-        }
-
-        int turn = snapshot.turn();
-
-        if (snapshots.containsKey(turn)) {
+        if (trackers.containsKey(tracker.getDay())) {
             throw new GameRuleViolationException(
                     ErrorCode.DUPLICATE_RESOURCE,
-                    "Traffic snapshot already exists for turn " + turn
+                    "Traffic tracker already exists for day " + tracker.getDay()
             );
         }
 
-        snapshots.put(turn, snapshot);
+        trackers.put(tracker.getDay(), tracker);
     }
 
-    public TrafficTracker getByTurn(int turn) {
-        TrafficTracker snapshot = snapshots.get(turn);
-
-        if (snapshot == null) {
-            throw new GameRuleViolationException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "Traffic snapshot not found for turn " + turn
-            );
-        }
-
-        return snapshot;
-    }
-
-    public TrafficTracker getLatestTracker() {
-        if (snapshots.isEmpty()) {
+    public TrafficTracker latest() {
+        if (trackers.isEmpty()) {
             throw new GameRuleViolationException(
                     ErrorCode.VALIDATION_ERROR,
                     "Traffic history is empty."
@@ -93,31 +36,30 @@ public class TrafficHistory {
         }
 
         TrafficTracker latest = null;
-
-        for (TrafficTracker snapshot : snapshots.values()) {
-            latest = snapshot;
+        for (TrafficTracker tracker : trackers.values()) {
+            latest = tracker;
         }
-
         return latest;
     }
 
-    public Collection<TrafficFlow> getLatestTrafficFlows() {
-        return getLatestTracker().trafficFlows();
+    public TrafficTracker byDay(int day) {
+        TrafficTracker tracker = trackers.get(day);
+
+        if (tracker == null) {
+            throw new GameRuleViolationException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Traffic tracker not found for day " + day
+            );
+        }
+
+        return tracker;
     }
 
-    public boolean hasSnapshot(int turn) {
-        return snapshots.containsKey(turn);
+    public Collection<TrafficState> latestStates() {
+        return latest().trafficStates();
     }
 
-    public int size() {
-        return snapshots.size();
-    }
-
-    public boolean isEmpty() {
-        return snapshots.isEmpty();
-    }
-
-    public Map<Integer, TrafficTracker> getSnapshots() {
-        return Collections.unmodifiableMap(snapshots);
+    public Map<Integer, TrafficTracker> snapshots() {
+        return Collections.unmodifiableMap(trackers);
     }
 }

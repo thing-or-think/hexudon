@@ -6,31 +6,31 @@ import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 public record CollectResult(
         boolean success,
-        int teamId,
+        String teamId,
         Coordinate coordinate,
-        Integer type
+        Integer brand
 ) {
 
     public CollectResult {
 
-        requireNonNegative(teamId, "teamId");
+        requireNotBlank(teamId, "teamId");
         requireNonNull(coordinate, "coordinate");
 
         if (success) {
-            requireNonNull(type, "type");
+            requireNonNull(brand, "type");
             requireTrue(
-                    type >= 0 && type <= 3,
-                    "type must be between 0 and 3"
+                    brand >= 0 && brand <= 3,
+                    "brand must be between 0 and 3"
             );
-        } else if (type != null) {
+        } else if (brand != null) {
             throw new IllegalArgumentException(
-                    "type must be null when collect failed"
+                    "brand must be null when collect failed"
             );
         }
     }
 
     public static CollectResult success(
-            int teamId,
+            String teamId,
             Coordinate coordinate,
             int type
     ) {
@@ -43,7 +43,7 @@ public record CollectResult(
     }
 
     public static CollectResult failed(
-            int teamId,
+            String teamId,
             Coordinate coordinate
     ) {
         return new CollectResult(

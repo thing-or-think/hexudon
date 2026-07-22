@@ -1,8 +1,7 @@
 package com.naprock.hexudon.application.port.in;
 
-import com.naprock.hexudon.application.dto.match.SubmitActionRequest;
+import com.naprock.hexudon.application.dto.team.SubmitActionsRequest;
 
 public interface SubmitActionsUseCase {
-
-    void submitActions(String teamId, SubmitActionRequest submitActionRequest);
+    void submitActions(SubmitActionsRequest request, String teamId);
 }

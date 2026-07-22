@@ -2,21 +2,16 @@ package com.naprock.hexudon.domain.model.score;
 
 import com.naprock.hexudon.domain.model.team.CollectResult;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static com.naprock.hexudon.domain.validation.DomainValidator.requireNonNegative;
-import static com.naprock.hexudon.domain.validation.DomainValidator.requirePositive;
+import static com.naprock.hexudon.domain.validation.DomainValidator.*;
 
 /**
  * Maintains score information for all teams in a match.
  */
 public class ScoreBoard {
 
-    private final Map<Integer, TeamScore> teamScores;
+    private final Map<String, TeamScore> teamScores;
 
     public ScoreBoard() {
         this.teamScores = new HashMap<>();
@@ -25,22 +20,22 @@ public class ScoreBoard {
     /**
      * Registers a team in the scoreboard.
      */
-    public void registerTeam(int teamId) {
+    public void registerTeam(String teamId) {
 
-        requireNonNegative(teamId, "teamId");
+        requireNotBlank(teamId, "teamId");
 
         teamScores.putIfAbsent(teamId, new TeamScore(teamId));
     }
 
     /**
-     * Applies successful collection results for the specified turn.
+     * Applies successful collection results for the specified day.
      */
     public void apply(
             List<CollectResult> collectResults,
-            int turn
+            int day
     ) {
 
-        requirePositive(turn, "turn");
+        requirePositive(day, "day");
 
         if (collectResults == null || collectResults.isEmpty()) {
             return;
@@ -58,8 +53,8 @@ public class ScoreBoard {
                             TeamScore::new
                     )
                     .addUdonCollection(
-                            turn,
-                            collectResult.type()
+                            day,
+                            collectResult.brand()
                     );
         }
     }
@@ -67,8 +62,8 @@ public class ScoreBoard {
     /**
      * Returns the score for the specified team.
      */
-    public TeamScore getTeamScore(int teamId) {
-        requireNonNegative(teamId, "teamId");
+    public TeamScore getTeamScore(String teamId) {
+        requireNotBlank(teamId, "teamId");
         return teamScores.get(teamId);
     }
 

@@ -28,6 +28,50 @@ public enum ErrorCode {
     ),
 
     // =========================
+    // Authentication
+    // =========================
+    UNAUTH_001(
+            "UNAUTH_001",
+            "Authorization header is missing."
+    ),
+    UNAUTH_002(
+            "UNAUTH_002",
+            "Authorization header must use Bearer scheme."
+    ),
+    UNAUTH_003(
+            "UNAUTH_003",
+            "Access token is missing."
+    ),
+    UNAUTH_004(
+            "UNAUTH_004",
+            "Access token is invalid."
+    ),
+    UNAUTH_005(
+            "UNAUTH_005",
+            "Access token has expired."
+    ),
+    UNAUTH_006(
+            "UNAUTH_006",
+            "Access token signature is invalid."
+    ),
+    UNAUTH_007(
+            "UNAUTH_007",
+            "Access token issuer is invalid."
+    ),
+    UNAUTH_008(
+            "UNAUTH_008",
+            "Access token audience is invalid."
+    ),
+    UNAUTH_009(
+            "UNAUTH_009",
+            "Required claim is missing."
+    ),
+    UNAUTH_010(
+            "UNAUTH_010",
+            "Authenticated team is not allowed."
+    ),
+
+    // =========================
     // Registration
     // =========================
     TEAM_NAME_BLANK(
@@ -50,16 +94,16 @@ public enum ErrorCode {
             "MATCH_NOT_READY",
             "Match is not ready to start."
     ),
-    MATCH_NOT_WAITING(
-            "MATCH_NOT_WAITING",
-            "Match is not in waiting state."
+    MATCH_NOT_REGISTERING(
+            "MATCH_NOT_REGISTERING",
+            "Match is not in the registering state."
     ),
     MATCH_NOT_PLAYING(
             "MATCH_NOT_PLAYING",
-            "Match is not currently playing."
+            "Match is not in the playing state."
     ),
-    MATCH_FINISHED(
-            "MATCH_FINISHED",
+    MATCH_ALREADY_FINISHED(
+            "MATCH_ALREADY_FINISHED",
             "Match has already finished."
     ),
     MATCH_ALREADY_STARTED(
@@ -142,7 +186,14 @@ public enum ErrorCode {
             "DUPLICATE_RESOURCE",
             "Resource already exists."
     ),
-
+    RESOURCE_NOT_FOUND(
+            "RESOURCE_NOT_FOUND",
+            "Resource not found."
+    ),
+    RESOURCE_ALREADY_EXISTS(
+            "RESOURCE_ALREADY_EXISTS",
+            "Resource already exists."
+    ),
     // =========================
     // System
     // =========================

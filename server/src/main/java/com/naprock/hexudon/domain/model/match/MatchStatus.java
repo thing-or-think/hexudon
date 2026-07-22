@@ -1,7 +1,8 @@
 package com.naprock.hexudon.domain.model.match;
 
 public enum MatchStatus {
-    WAITING,
+    NOT_STARTED,
+    REGISTERING,
     PLAYING,
     FINISHED
 }

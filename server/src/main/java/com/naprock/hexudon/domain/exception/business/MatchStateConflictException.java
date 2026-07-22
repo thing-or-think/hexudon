@@ -20,6 +20,14 @@ public class MatchStateConflictException extends BusinessException {
 
     private static final int BAD_REQUEST_STATUS = 400;
 
+    public MatchStateConflictException(ErrorCode errorCode) {
+        super(
+                errorCode,
+                BAD_REQUEST_STATUS,
+                errorCode.getDefaultMessage()
+        );
+    }
+
     /**
      * Creates a match state conflict exception.
      *

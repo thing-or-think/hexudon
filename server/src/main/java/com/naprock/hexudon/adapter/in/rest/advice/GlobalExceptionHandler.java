@@ -1,7 +1,8 @@
 package com.naprock.hexudon.adapter.in.rest.advice;
 
-
+import com.naprock.hexudon.adapter.in.rest.interceptor.RequestAttributes;
 import com.naprock.hexudon.domain.exception.base.BusinessException;
+import com.naprock.hexudon.domain.exception.code.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -164,6 +166,33 @@ public class GlobalExceptionHandler {
                         System.currentTimeMillis()
                 );
 
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
+    @ExceptionHandler(ServletRequestBindingException.class)
+    public ResponseEntity<ErrorResponse> handleServletRequestBindingException(
+            ServletRequestBindingException ex
+    ) {
+        log.warn("Missing or invalid request binding attribute: {}", ex.getMessage());
+
+        if (ex.getMessage() != null && ex.getMessage().contains(RequestAttributes.REQUEST_CONTEXT)) {
+            ErrorResponse response = new ErrorResponse(
+                    ErrorCode.UNAUTH_001.getCode(),
+                    ErrorCode.UNAUTH_001.getDefaultMessage(),
+                    System.currentTimeMillis()
+            );
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(response);
+        }
+
+        ErrorResponse response = new ErrorResponse(
+                "MISSING_REQUEST_ATTRIBUTE",
+                ex.getMessage(),
+                System.currentTimeMillis()
+        );
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(response);
