@@ -335,7 +335,7 @@ Tất cả các API yêu cầu định danh của đội chơi sẽ sử dụng 
     *   **Query Params**: `game_id` (Yêu cầu).
     *   **Response**: `200 OK` (Trả về `width`, `height`, lưới địa hình `cells` và danh sách `spots` Udon).
 
-*   **GET** `/api/game/state`
+*   **GET** `/api/game/competitive/state`
     *   **Mục đích**: Tra cứu thông tin trạng thái vòng đời toàn cục của trận đấu.
     *   **Query Params**: `game_id` (Yêu cầu).
     *   **Response**: `200 OK`

@@ -77,7 +77,7 @@ sequenceDiagram
         Team->>Server: GET /api/game/result?game_id={id}
         Server-->>Team: Bảng xếp hạng & Điểm chi tiết
         opt Tra cứu trạng thái & Replay
-            Team->>Server: GET /api/game/state?game_id={id}
+            Team->>Server: GET /api/game/competitive/state?game_id={id}
             Server-->>Team: Trạng thái toàn cục trận đấu
             Team->>Server: GET /api/game/replay?game_id={id}
             Server-->>Team: Chi tiết diễn biến từng bước các ngày

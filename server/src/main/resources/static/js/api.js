@@ -57,12 +57,12 @@ export const GameApi = {
     },
 
     /**
-     * GET /api/game/state?game_id={gameId}
+     * GET /api/game/competitive/state?game_id={gameId}
      * Fetches live state details
      */
     async getState(gameId) {
         try {
-            const response = await fetch(`${BASE_URL}/state?game_id=${encodeURIComponent(gameId)}`);
+            const response = await fetch(`${BASE_URL}/competitive/state?game_id=${encodeURIComponent(gameId)}`);
             return await handleResponse(response);
         } catch (error) {
             console.error(`getState (${gameId}) error:`, error);

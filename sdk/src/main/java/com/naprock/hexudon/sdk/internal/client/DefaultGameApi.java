@@ -113,7 +113,7 @@ final class DefaultGameApi implements GameApi {
 
         HttpRequest request = HttpRequest.builder()
                 .method(HttpMethod.GET)
-                .path("/api/game/state")
+                .path("/api/game/competitive/state")
                 .headers(defaultHeaders())
                 .queryParam("game_id", gameId)
                 .build();
@@ -136,7 +136,7 @@ final class DefaultGameApi implements GameApi {
 
         HttpRequest request = HttpRequest.builder()
                 .method(HttpMethod.POST)
-                .path("/api/game/actions")
+                .path("/api/competitive/game/actions")
                 .headers(defaultHeaders())
                 .body(body)
                 .build();

@@ -709,7 +709,7 @@ Tải dữ liệu phát lại trận đấu theo từng bước (frame).
 
 ---
 
-# GET /api/game/state
+# GET /api/game/competitive/state
 
 ## Mục đích
 
@@ -719,7 +719,7 @@ Tải dữ liệu phát lại trận đấu theo từng bước (frame).
 
 ### URL
 
-`/api/game/state`
+`/api/game/competitive/state`
 
 ### Query Parameters
 

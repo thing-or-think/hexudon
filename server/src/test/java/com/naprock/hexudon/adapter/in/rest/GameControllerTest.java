@@ -330,7 +330,7 @@ class GameControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/game/state: Request hợp lệ -> Trả về 200 OK và mapping đúng các trường dữ liệu")
+    @DisplayName("GET /api/game/competitive/state: Request hợp lệ -> Trả về 200 OK và mapping đúng các trường dữ liệu")
     void getGameState_validRequest_success() throws Exception {
         String gameId = "game-1";
 
@@ -353,7 +353,7 @@ class GameControllerTest {
 
         when(getGameStateUseCase.getGameState(eq(gameId))).thenReturn(mockResponse);
 
-        mockMvc.perform(get("/api/game/state")
+        mockMvc.perform(get("/api/game/competitive/state")
                         .param("game_id", gameId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PLAYING"))
@@ -372,22 +372,22 @@ class GameControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/game/state: Thiếu tham số game_id -> Trả về 400 Bad Request (MISSING_REQUEST_ATTRIBUTE)")
+    @DisplayName("GET /api/game/competitive/state: Thiếu tham số game_id -> Trả về 400 Bad Request (MISSING_REQUEST_ATTRIBUTE)")
     void getGameState_missingGameId_returns400() throws Exception {
-        mockMvc.perform(get("/api/game/state"))
+        mockMvc.perform(get("/api/game/competitive/state"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("MISSING_REQUEST_ATTRIBUTE"));
     }
 
     @Test
-    @DisplayName("GET /api/game/state: Game không tồn tại -> Trả về 404 Not Found (RESOURCE_NOT_FOUND)")
+    @DisplayName("GET /api/game/competitive/state: Game không tồn tại -> Trả về 404 Not Found (RESOURCE_NOT_FOUND)")
     void getGameState_gameNotFound_returns404() throws Exception {
         String nonExistentGameId = "non-existent-game";
 
         when(getGameStateUseCase.getGameState(eq(nonExistentGameId)))
                 .thenThrow(new com.naprock.hexudon.domain.exception.repository.ResourceNotFoundException("Match", nonExistentGameId));
 
-        mockMvc.perform(get("/api/game/state")
+        mockMvc.perform(get("/api/game/competitive/state")
                         .param("game_id", nonExistentGameId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));

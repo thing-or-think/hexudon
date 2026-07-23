@@ -57,7 +57,7 @@ public class GameController {
         return getGameListUseCase.getGameList();
     }
 
-    @GetMapping("/state")
+    @GetMapping("/competitive/state")
     public GameStateResponse getGameState(
             @RequestParam("game_id") String gameId
     ) {

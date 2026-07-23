@@ -71,7 +71,7 @@ flowchart TD
     FetchResult --> End([Kết thúc Trận đấu])
 
     subgraph ModifyingAndInspection [Tính năng phụ trợ & Luyện tập]
-        FetchState[GET /api/game/state]
+        FetchState[GET /api/game/competitive/state]
         FetchReplay[GET /api/game/replay]
         PracticePeer[GET /api/game/practice/peer]
         PracticeCopy[POST /api/game/practice/copy]

@@ -71,7 +71,7 @@ public class TurnActionService {
 
         List<CollectResult> collectResults = new ArrayList<>();
 
-        for (int step = availableSteps; step >= 0; step--) {
+        for (int step = availableSteps; step > 0; step--) {
             executeStep(
                     board,
                     team,

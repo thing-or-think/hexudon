@@ -360,7 +360,7 @@ paths:
         '501':
           description: Chưa được hiện thực
 
-  /api/game/state:
+  /api/game/competitive/state:
     get:
       tags:
         - State & History
