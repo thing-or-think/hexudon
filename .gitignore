@@ -15,6 +15,19 @@ bin/
 CLASS SPECIFICATIONS/
 graph/
 
+# ========================================
+# AI / DQN Training Outputs
+# ========================================
+
+# Trained DQN model checkpoints
+ai/models/
+
+# Training metrics
+ai/metrics.txt
+
+# Evolved epsilon profiles
+ai/epsilon_profiles.json
+
 # Environment variables & Secrets
 .env
 .env.local
