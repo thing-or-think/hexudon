@@ -1,33 +1,34 @@
 # Hexudon
 
-Hexudon là một hệ thống mô phỏng game chiến thuật theo lượt (turn-based), đa tác tử (multi-agent) hoạt động trên lưới ô lục giác nằm ngang dạng **Odd-R offset**. Trong trò chơi này, các đội tham gia sẽ lập trình các Bot tự động để đăng ký, theo dõi trạng thái trận đấu và gửi danh sách hành động hàng ngày. Mục tiêu chính của trò chơi là tối ưu hóa việc thu thập các loại mì Udon tại các địa điểm cung cấp (`Spot`), phối hợp nhiên liệu di chuyển thông qua cơ chế sạc xăng của xe tiếp tế (`RefuelAgent`) cho xe tuần tra (`PatrolAgent`), và cạnh tranh điểm số trong điều kiện chi phí di chuyển thay đổi động theo mức độ ùn tắc giao thông (`TrafficLevel`).
+Hexudon là một hệ thống mô phỏng game chiến thuật theo lượt (turn-based), đa tác tử (multi-agent) hoạt động trên lưới ô lục giác nằm ngang dạng **Odd-R offset**. Trong trò chơi này, các đội tham gia sẽ lập trình các Bot tự động để đăng ký, theo dõi trạng thái trận đấu và gửi danh sách hành động hàng ngày. Mục tiêu chính của trò chơi là tối ưu hóa việc thu thập mì Udon tại các địa điểm cung cấp (`Spot`), phối hợp nhiên liệu di chuyển thông qua cơ chế sạc xăng của xe tiếp tế (`RefuelAgent`) cho xe tuần tra (`PatrolAgent`), và cạnh tranh điểm số trong điều kiện chi phí di chuyển thay đổi động theo mức độ ùn tắc giao thông (`TrafficLevel`).
 
-Dự án được xây dựng và tổ chức theo phương pháp **Thiết kế hướng tên miền (DDD - Domain-Driven Design)** và **Kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters)**, giúp tách biệt hoàn toàn lõi nghiệp vụ mô phỏng với các thành phần công nghệ bên ngoài như Web Framework và Cơ sở dữ liệu.
-
----
-
-## Overview
-
-Dự án Hexudon cung cấp một nền tảng chạy game cục bộ (Game Server Engine), một bộ công cụ phát triển phần mềm (Java SDK) hỗ trợ lập trình viên xây dựng bot thông minh, và một ứng dụng bot mẫu (Bot Application) hoàn chỉnh:
-
-*   **Game Server**: Bộ lõi động cơ game chịu trách nhiệm duy trì luật chơi, tự động cập nhật ngày đấu (turn) bằng Scheduler, tính toán điểm số và mật độ giao thông trên đường bộ.
-*   **Java SDK**: Thư viện kết nối đóng gói sẵn HTTP Client, JSON Mapper, cơ chế tự động gửi lại (Retry) với thuật toán Exponential Backoff và các mô hình dữ liệu lưới lục giác giúp các bot dễ dàng giao tiếp với server mà không cần tự xây dựng các kết nối HTTP thô.
-*   **Bot Application**: Ứng dụng bot mẫu hoàn chỉnh được phát triển dựa trên Java SDK, tích hợp sẵn các chiến thuật AI (như Greedy BFS và Wait) giúp người chơi dễ dàng chạy thử và phát triển thuật toán riêng.
-*   **Đối tượng sử dụng**: Các lập trình viên hoặc đội chơi lập trình bot trí tuệ nhân tạo (AI) / chiến thuật tham gia đấu giải hoặc chạy thử thuật toán tìm đường trên lưới hex.
+Dự án được xây dựng và tổ chức theo phương pháp **Thiết kế hướng tên miền (DDD - Domain-Driven Design)** và **Kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters)** trên nền tảng **Java 21** và **Maven Multi-Module**, giúp tách biệt hoàn toàn lõi nghiệp vụ mô phỏng với các thành phần công nghệ bên ngoài như Web Framework, cơ chế lưu trữ hay thuật toán AI.
 
 ---
 
-## Architecture
+## Overview (Tổng quan dự án)
 
-Hệ thống được thiết kế để tách biệt rõ ràng các thành phần thông qua các cổng giao tiếp (Ports) và bộ điều hợp (Adapters):
+Hệ thống Hexudon được chia thành 4 module thành phần hợp nhất trong cùng một Maven Reactor Project:
+
+* **Game Server (`hexudon-server`)**: Bộ lõi động cơ game (Game Engine) chạy trên Spring Boot 3.5.4 chịu trách nhiệm duy trì luật chơi, tự động cập nhật lượt đấu (turn) bằng Scheduler, tính toán điểm số và mật độ ùn tắc giao thông trên đường bộ (`ROAD`).
+* **Java SDK (`hexudon-sdk`)**: Thư viện client Java chính thức đóng gói sẵn HTTP Client (OkHttp), Jackson Databind, cơ chế tự động gửi lại (Retry) với thuật toán Exponential Backoff và các mô hình dữ liệu lưới lục giác giúp bot dễ dàng giao tiếp với máy chủ.
+* **Bot Application (`hexudon-bot`)**: Ứng dụng bot mẫu hoàn chỉnh phát triển dựa trên Java SDK, tích hợp bộ não AI (`BotBrain`) với các chiến thuật tìm đường thu hoạch Udon và nạp xăng bằng thuật toán BFS (`GreedyStrategy` và `WaitStrategy`).
+* **AI Framework (`hexudon-ai`)**: Framework học sâu củng cố (Reinforcement Learning - Deep Q-Network) tích hợp thư viện Deep Java Library (DJL) và PyTorch Engine, hỗ trợ huấn luyện học máy đa tác tử (MARL) trên môi trường lưới lục giác.
+
+---
+
+## Architecture (Kiến trúc hệ thống)
+
+Hệ thống tuân thủ nghiêm ngặt mô hình Kiến trúc Lục giác (Ports & Adapters), đảm bảo sự độc lập giữa lõi nghiệp vụ và các công nghệ hạ tầng:
 
 ```mermaid
 graph TD
     subgraph Client / Bot System
-        Bot[Client Bot Application] --> |uses| SDK[Hexudon Java SDK]
+        BotApp[Bot Application - hexudon-bot] --> |sử dụng| SDK[Java SDK - hexudon-sdk]
+        AIApp[AI Framework - hexudon-ai] --> |sử dụng DJL/PyTorch| MARL[DQN Agent & Policy]
     end
 
-    subgraph Hexudon Server
+    subgraph Hexudon Game Server - hexudon-server
         subgraph Inbound Adapters
             REST[Admin, Game, Team Controllers]
             Sched[GameScheduler Cron]
@@ -56,7 +57,7 @@ graph TD
     end
 
     %% Giao tiếp SDK -> Server
-    SDK --> |HTTP Requests với Header Authorization: Bearer| REST
+    SDK --> |HTTP Requests / Header Authorization: Bearer| REST
 
     %% Luồng chạy Server
     REST --> |calls| UseCases
@@ -77,260 +78,257 @@ graph TD
     Team --> Agent
 ```
 
-### Chi tiết các luồng tương tác:
-1.  **Tương tác Client-Server**: Client Bot sử dụng thư viện `Hexudon Java SDK` gửi các gói tin HTTP (chứa Header xác thực định danh `Authorization: Bearer <token>`) tới endpoint REST của `Hexudon Server`.
-2.  **Đăng ký và Thiết lập**: Bot thực hiện đăng ký và chọn loại Agent (`POST /api/game/agent-types`) trong giai đoạn trận đấu mở đăng ký (`REGISTERING`).
-3.  **Tự động thúc lượt (Game Loop)**: Một bộ lập lịch nền (`GameScheduler`) trên Server sẽ liên tục theo dõi thời gian. Khi đến hạn kết thúc lượt, Scheduler sẽ kích hoạt tiến trình chạy mô phỏng chính thức: tính toán di chuyển, trừ xăng, thực hiện sạc xăng chéo, thu hoạch mì Udon, chấm điểm và tính toán lưu lượng giao thông ROAD để áp dụng chi phí xăng mới cho lượt sau.
+### Luồng tương tác chính:
+1. **Giao tiếp HTTP REST**: Client Bot sử dụng `Hexudon Java SDK` gửi các request HTTP (chứa Header xác thực `Authorization: Bearer <token>`) tới endpoint REST của `Hexudon Game Server`.
+2. **Đăng ký và Khởi tạo**: Bot thực hiện đăng ký danh sách Agent (`POST /api/game/agent-types`) trong giai đoạn trận đấu mở đăng ký (`REGISTERING`).
+3. **Mô phỏng lượt đấu (Game Loop)**: Bộ lập lịch nền (`GameScheduler`) trên Server liên tục kiểm tra thời gian lượt đấu. Khi đến hạn, Scheduler kích hoạt tiến trình mô phỏng: di chuyển Agent, trừ nhiên liệu, nạp xăng tự động (`RefuelAgent`), thu hoạch mì Udon tại `Spot`, cập nhật điểm số và tính toán mật độ giao thông `ROAD` cho lượt tiếp theo.
 
 ---
 
-## Project Structure
+## Maven Multi-Module Architecture
 
-Thư mục gốc của repository được tổ chức thành ba module chính chạy trên nền cấu hình Maven đa module (Multi-module):
+Hệ thống Hexudon được tổ chức theo mô hình **Maven Multi-Module Project**. File `pom.xml` tại thư mục gốc đóng vai trò là **Root POM** và **Reactor POM**, quản lý thống nhất tất cả các module con.
 
 ```text
-hexudon (Root)
-├── server              # Module chứa mã nguồn Game Simulation Engine (Spring Boot)
-│   ├── src
-│   │   ├── main/java   # Phân chia package theo layer: adapter, application, domain, infrastructure
-│   │   └── resources   # Cấu hình application.yml, match_config.json mặc định
+hexudon/ (Root POM: com.naprock:hexudon:1.0.0)
+├── pom.xml
+├── server/      (Artifact: com.naprock:hexudon-server)
 │   └── pom.xml
-├── sdk                 # Module thư viện phát triển bot dành cho lập trình viên Java
-│   ├── src
-│   │   └── main/java   # Giao tiếp HTTP, Retry Backoff, cấu hình kết nối, mô hình map
+├── sdk/         (Artifact: com.naprock:hexudon-sdk)
 │   └── pom.xml
-├── bot                 # Module chứa mã nguồn Bot mẫu và các chiến thuật AI (Greedy, Wait)
-│   ├── src
-│   │   ├── main/java   # GameRunner, BotBrain, BotConfig và các thuật toán tìm đường (PathFinder)
-│   │   └── resources   # Cấu hình logging và tệp thuộc tính config bot.properties
+├── bot/         (Artifact: com.naprock:hexudon-bot)
 │   └── pom.xml
-├── docs                # Thư mục chứa tài liệu thiết kế hệ thống
-├── pom.xml             # File Maven parent cấu hình dependency và Java 21 toàn dự án
-└── README.md           # Tài liệu giới thiệu tổng quan hệ thống (tệp tin này)
+└── ai/          (Artifact: com.naprock:hexudon-ai)
+    └── pom.xml
+```
+
+### Đặc điểm cấu trúc Maven Multi-Module:
+* **Root POM / Reactor POM**: File `pom.xml` ở gốc khai báo `<packaging>pom</packaging>` và danh sách các sub-module (`server`, `sdk`, `bot`, `ai`).
+* **Kế thừa cấu hình (Inheritance)**: Tất cả module con đều kế thừa từ Parent POM `com.naprock:hexudon:1.0.0`, tự động kế thừa `groupId`, `version`, phiên bản Java 21 và cấu hình plugin chung.
+* **Quản lý Dependency tập trung (`<dependencyManagement>`)**: Quản lý tập trung phiên bản các thư viện bên thứ ba (OkHttp 4.12.0, Okio 3.6.0, JJWT 0.12.7, DJL 0.28.0, Logback 1.5.19) và sự phụ thuộc giữa các module nội bộ (`hexudon-sdk`, `hexudon-ai`).
+* **Quản lý Plugin tập trung (`<pluginManagement>`)**: Thống nhất phiên bản các Maven Plugin (`maven-compiler-plugin` 3.14.1, `maven-surefire-plugin` 3.5.3, `exec-maven-plugin` 3.5.0, `jacoco-maven-plugin` 0.8.12).
+* **Module `ai` là một phần của Hexudon Reactor**: Module `ai` đã được chuẩn hóa với Maven coordinates `com.naprock:hexudon-ai:1.0.0` thuộc dự án Hexudon, không còn là một dự án độc lập riêng biệt (`dqn-framework`).
+
+---
+
+## Modules Matrix
+
+Dưới đây là bảng tổng hợp chi tiết các module trong hệ thống Maven Reactor Hexudon:
+
+| Module | Group ID | Artifact ID | Version | Vai trò & Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| **`server`** | `com.naprock` | `hexudon-server` | `1.0.0` | **Game Server Engine**: Máy chủ mô phỏng trò chơi Spring Boot, quản lý luật chơi, REST API và Scheduler lượt đấu. |
+| **`sdk`** | `com.naprock` | `hexudon-sdk` | `1.0.0` | **Client SDK**: Thư viện Java đóng gói HTTP Client, cơ chế Retry Exponential Backoff và mô hình hình học lưới hex. |
+| **`bot`** | `com.naprock` | `hexudon-bot` | `1.0.0` | **Bot Application**: Ứng dụng bot mẫu kết nối qua SDK, tích hợp thuật toán tìm đường BFS và chiến thuật thu hoạch mì Udon. |
+| **`ai`** | `com.naprock` | `hexudon-ai` | `1.0.0` | **AI Framework**: Framework học máy củng cố (Cooperative Multi-Agent DQN) trên nền DJL và PyTorch Engine. |
+
+---
+
+## Technology Stack
+
+Các công nghệ thực tế đang được sử dụng trong codebase của dự án:
+
+| Thành phần | Công nghệ / Thư viện | Chi tiết triển khai |
+| :--- | :--- | :--- |
+| **Ngôn ngữ** | **Java 21** | Tận dụng Record, Pattern Matching, Sealed Interfaces |
+| **Build Tool** | **Apache Maven 3.9+** | Quản lý dự án dạng Multi-Module / Reactor Build |
+| **Server Framework** | **Spring Boot 3.5.4** | Triển khai REST Controller, Service Layer, Scheduler (`server`) |
+| **Deep Learning Engine** | **DJL (Deep Java Library) 0.28.0** | Tích hợp **PyTorch Engine** phục vụ mô hình Neural Network DQN (`ai`) |
+| **HTTP Client** | **OkHttp 4.12.0 & Okio 3.6.0** | Thực thi HTTP Request với cơ chế Retry & Backoff (`sdk`) |
+| **JSON Serialization** | **Jackson Databind** | Mapping JSON dữ liệu trận đấu và tọa độ hex |
+| **Xác thực & Bảo mật** | **JJWT 0.12.7** | Xác thực JWT Bearer Token giữa Client và Server |
+| **Logging** | **SLF4J / Logback 1.5.19 / JUL** | Ghi log hệ thống và bot execution |
+| **Testing & Coverage** | **JUnit 5 (Jupiter), Mockito, AssertJ, JaCoCo** | Kiểm thử đơn vị, kiểm thử tích hợp và đo độ bao phủ mã nguồn |
+| **Lưu trữ dữ liệu** | **In-Memory & File JSON** | Lưu trữ RAM cho trận đấu (`InMemoryMatchRepository`) & File cấu hình |
+
+---
+
+## Hướng dẫn Build và Chạy dự án
+
+### Yêu cầu môi trường
+* **JDK**: Java 21 hoặc mới hơn.
+* **Build Tool**: Apache Maven 3.9+ hoặc mới hơn.
+
+### 1. Kiểm thử toàn bộ dự án (Compile & Test)
+Biên dịch tất cả 4 module trong Reactor và chạy toàn bộ bộ kiểm thử tự động:
+```bash
+mvn clean test
+```
+
+### 2. Đóng gói dự án (Package)
+Xóa các artifacts cũ và đóng gói JAR cho toàn bộ các module:
+```bash
+mvn clean package
+```
+
+### 3. Kiểm tra Dependency Tree
+Kiểm tra cây phụ thuộc dependency của toàn bộ dự án để phát hiện xung đột phiên bản:
+```bash
+mvn dependency:tree
 ```
 
 ---
 
-## Modules
+## Hướng dẫn chi tiết cho từng Module
 
-### 1. [Server](file:///d:/Documents/GitHub/hexudon/server)
-*   **Vai trò**: Game Engine trung tâm quản lý toàn bộ vòng đời trận đấu, bản đồ lưới lục giác, chấm điểm và mô phỏng các hành động của Agent.
-*   **Tech Stack**: Java 21, Spring Boot 3.5.4, Maven.
-*   **Chức năng chính**: 
-    *   Quản lý cấu hình bản đồ nạp từ file JSON.
-    *   Cung cấp REST API cho các bot đăng ký và tra cứu trạng thái.
-    *   Bộ Scheduler tự động mô phỏng bước đi và chuyển ngày chơi khi đến hạn.
-    *   Tính toán ùn tắc giao thông trên đường bộ (`ROAD`) để thay đổi chi phí xăng di chuyển động.
-*   **Tài liệu chi tiết**: Xem thêm tại [server/README.md](file:///d:/Documents/GitHub/hexudon/server/README.md).
+### 1. Module `server` (`hexudon-server`)
 
-### 2. [SDK](file:///d:/Documents/GitHub/hexudon/sdk)
-*   **Vai trò**: Thư viện Java Client chính thức giúp viết mã nguồn Bot nhanh chóng, che giấu các kết nối HTTP thô.
-*   **Tech Stack**: Java 21, OkHttp 4.12.0, Jackson Databind (được quản lý bởi Spring Boot).
-*   **Chức năng chính**:
-    *   Cung cấp giao diện `HexudonClient` làm entry point chính.
-    *   Triển khai `GameApi` để gọi các hàm đăng ký, lấy config và nộp hành động.
-    *   Tích hợp sẵn bộ Retry tự động với thuật toán Exponential Backoff khi gặp sự cố mạng hoặc lỗi tạm thời từ server (5xx).
-    *   Định nghĩa sẵn các lớp hình học lưới như tọa độ ô và hướng di chuyển để hỗ trợ bot tính toán tìm đường.
-*   **Tài liệu chi tiết**: Xem thêm tại [sdk/README.md](file:///d:/Documents/GitHub/hexudon/sdk/README.md).
+* **Mục đích**: Máy chủ trung tâm điều hành trò chơi Hexudon, quản lý bàn cờ, theo dõi lượt chơi, chấm điểm và tính toán mật độ ùn tắc đường bộ.
+* **Main Application Class**: `com.naprock.hexudon.HexudonApplication`
+* **Cách khởi chạy Server**:
+  ```bash
+  mvn spring-boot:run -pl server
+  ```
+  Mặc định Server sẽ lắng nghe tại cổng HTTP `http://localhost:8080`.
 
-### 3. [Bot](file:///d:/Documents/GitHub/hexudon/bot)
-*   **Vai trò**: Bot mẫu tự động tham gia trận đấu, kết nối và đồng bộ trạng thái với Game Server thông qua Java SDK để gửi các hành động chiến thuật.
-*   **Tech Stack**: Java 21, Maven.
-*   **Chức năng chính**:
-    *   Đăng ký tự động số lượng Agent loại Patrol/Refuel phù hợp với cấu hình của Game Server.
-    *   Vòng lặp thăm dò (polling) tự động theo dõi và cập nhật trạng thái trận đấu theo lượt.
-    *   Tích hợp sẵn bộ não AI (`BotBrain`) có thể cấu hình được.
-    *   Triển khai thuật toán BFS để tìm đường đi ngắn nhất trên lưới ô lục giác Odd-R offset.
-
----
-
-## Tech Stack
-
-Dưới đây là bảng tổng hợp công nghệ được sử dụng trên toàn bộ repository:
-
-| Component | Technology |
-| :--- | :--- |
-| **Backend Language** | Java 21 (Sử dụng các cấu trúc hiện đại như Record, Pattern Matching) |
-| **Backend Framework** | Spring Boot 3.5.4 |
-| **Build Tool** | Apache Maven 3.9+ |
-| **Database / Storage** | In-Memory (Bộ nhớ RAM JVM thông qua InMemoryMatchRepository) |
-| **JSON Serialization** | FasterXML Jackson Databind (Tự động đồng bộ theo Spring Boot) |
-| **Client SDK HTTP** | OkHttp 4.12.0 |
-| **Logging (Bot)** | Java Util Logging (JUL) |
-| **Testing Framework** | JUnit 5, Mockito, AssertJ |
-| **Monitor / Dashboard** | *Chưa được implement hoặc chưa có tài liệu* |
-| **Frontend / Web UI** | *Chưa được implement hoặc chưa có tài liệu* |
-
----
-
-## Getting Started
-
-### Yêu cầu cài đặt (Requirements)
-*   **Java**: JDK 21 hoặc cao hơn.
-*   **Build Tool**: Maven 3.9 hoặc cao hơn.
-
-### 1. Biên dịch toàn bộ dự án
-Chạy lệnh sau tại thư mục gốc để biên dịch cả `server`, `sdk` và `bot`:
-```bash
-mvn clean install
-```
-
-### 2. Khởi chạy Game Server
-Để khởi chạy máy chủ mô phỏng cục bộ:
-```bash
-mvn spring-boot:run -pl server
-```
-Mặc định server sẽ chạy tại địa chỉ `http://localhost:8080`.
-
-### 3. Khởi chạy Bot
-Để khởi chạy bot mẫu kết nối tới server:
-```bash
-mvn exec:java -pl bot
-```
-
-### 4. Tích hợp SDK vào Bot tự phát triển
-Thêm dependency của SDK vào file `pom.xml` của ứng dụng bot riêng của bạn:
-```xml
-<dependency>
-    <groupId>com.naprock</groupId>
-    <artifactId>hexudon-sdk</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
+* **Danh sách REST API chính (`/api/game`)**:
+  * `GET /api/game/config`: Lấy cấu hình tham số bản đồ và thời gian các lượt chơi.
+  * `POST /api/game/agent-types`: Đăng ký loại Agent cho đội chơi trong giai đoạn `REGISTERING` (Yêu cầu Header `Authorization: Bearer <token>`).
+  * `GET /api/game/competitive/state`: Tra cứu thông tin trạng thái trận đấu hiện tại.
+  * `GET /api/game/day`: Lấy trạng thái ngày chơi dưới góc nhìn của đội (Yêu cầu Header `Authorization: Bearer <token>`).
+  * `GET /api/game/result`: Tra cứu bảng xếp hạng kết quả và điểm số trận đấu.
 
 > [!NOTE]
-> **Ứng dụng Bot Mẫu**:
-> *   Dự án đã tích hợp sẵn module `bot` làm mẫu. Bạn có thể sử dụng trực tiếp module này làm điểm bắt đầu để phát triển hoặc kiểm thử thuật toán AI của mình mà không cần tạo mới project từ đầu.
+> **Lưu ý về Endpoint nộp Action**:
+> Endpoint `POST /api/game/actions` hiện chưa có REST Controller trực tiếp trong module Server. Việc kiểm thử tính toán lượt và hành động hiện được thực hiện thông qua các Integration Tests nội bộ của Server.
 
 ---
 
-## Configuration
+### 2. Module `sdk` (`hexudon-sdk`)
 
-### Cấu hình phía Server
-Cấu hình Spring Boot và Scheduler được đặt tại [server/src/main/resources/application.yml](file:///d:/Documents/GitHub/hexudon/server/src/main/resources/application.yml):
-*   `server.port`: Cổng lắng nghe mặc định (`8080`).
-*   `game.scheduler.rate-ms`: Chu kỳ quét thời gian của scheduler tính bằng mili-giây (Mặc định `1000`).
-*   `game.config.file-path`: Đường dẫn lưu trữ cấu hình game JSON.
-
-Tham số trò chơi và bản đồ được nạp từ file JSON cấu hình trận đấu:
-*   `daySeconds`: Mảng quy định thời gian tối đa mỗi lượt chơi (ví dụ: `[5, 5, 5, 10]` giây).
-*   `daySteps`: Mảng giới hạn số bước đi của Agent trong lượt tương ứng.
-*   `fuelLimits`: Dung tích bình xăng của PatrolAgent (ví dụ: `20`).
-*   `players`: Số lượng đội tối đa tham gia.
-
-### Cấu hình phía Bot (Client)
-Bot hỗ trợ nạp cấu hình động thông qua hệ thống phân cấp: **Thuộc tính hệ thống JVM** (System Property) -> **Biến môi trường** (Env Var) -> **Tệp bot.properties** -> **Giá trị mặc định**.
-
-Để chỉnh sửa cấu hình tĩnh, hãy sao chép tệp `bot/src/main/resources/bot.properties.example` thành `bot/src/main/resources/bot.properties` và điều chỉnh các giá trị:
-
-*   `HEXUDON_BASE_URL`: URL của Hexudon Server (Mặc định: `http://localhost:8080`).
-*   `HEXUDON_TOKEN`: Token xác thực Bearer được cấp cho đội chơi (Bắt buộc).
-*   `HEXUDON_TEAM_ID`: ID định danh của đội chơi (Bắt buộc).
-*   `HEXUDON_GAME_ID`: ID của trận đấu cần tham gia (Bắt buộc).
-*   `HEXUDON_PRACTICE`: Thiết lập chế độ luyện tập `true`/`false` (Mặc định: `false`).
-*   `BOT_POLL_DELAY_MS`: Thời gian chờ giữa các lần polling trạng thái game tính bằng mili-giây (Mặc định: `1000`).
-*   `BOT_DEBUG`: Kích hoạt log chi tiết của bot ở mức FINE nếu đặt là `true`.
-
-### Cấu hình phía SDK Client
-Khi khởi tạo `HexudonClient` thủ công trong code Java, các tham số chính bao gồm:
-*   `baseUrl`: URL của Hexudon Server (Mặc định `http://localhost:8080`).
-*   `teamId`: Định danh bắt buộc của đội chơi.
-*   `token`: Bearer Token xác thực bắt buộc.
+* **Mục đích**: Thư viện Java Client SDK chính thức giúp lập trình viên nhanh chóng xây dựng bot mà không cần tự viết mã giao tiếp HTTP thô.
+* **Public APIs chính**:
+  * `HexudonClient`: Interface làm điểm truy cập trung tâm (Entry point).
+  * `HexudonClientBuilder`: Builder hỗ trợ tạo và cấu hình instance `HexudonClient`.
+  * `GameApi`: Giao diện gọi các chức năng như đăng ký agent, lấy config, tra cứu trạng thái.
+  * `PracticeApi`: Giao diện phác thảo cho chế độ luyện tập.
+* **Tính năng chính**:
+  * Tích hợp tự động Retry với thuật toán Exponential Backoff khi gặp sự cố mạng hoặc lỗi phía Server (5xx).
+  * Đóng gói mô hình hình học lưới ô lục giác (`Coordinate`, `Direction`, `Cell`, `Board`).
+  * Tùy chỉnh Jackson Custom Serializer/Deserializer cho tọa độ Hex.
+* **Cách tích hợp vào dự án Bot riêng**:
+  ```xml
+  <dependency>
+      <groupId>com.naprock</groupId>
+      <artifactId>hexudon-sdk</artifactId>
+      <version>1.0.0</version>
+  </dependency>
+  ```
 
 ---
 
-## API Overview
+### 3. Module `bot` (`hexudon-bot`)
 
-Ứng dụng Hexudon Server cung cấp các API thông qua HTTP REST. Toàn bộ các API chính thức nằm dưới tiền tố đường dẫn `/api/game`:
+* **Mục đích**: Ứng dụng Bot mẫu hoàn chỉnh kết nối tới Game Server thông qua `hexudon-sdk` để tham gia thi đấu tự động.
+* **Main Application Class**: `com.naprock.hexudon.bot.BotApplication`
+* **Cách khởi chạy Bot**:
+  ```bash
+  mvn exec:java -pl bot
+  ```
 
-1.  **Cấu hình**:
-    *   `GET /api/game/config`: Lấy cấu hình tham số bản đồ và ngày đấu.
-2.  **Đăng ký**:
-    *   `POST /api/game/agent-types`: Đăng ký lựa chọn danh sách loại Agent ban đầu trong giai đoạn `REGISTERING`. (Yêu cầu Header `Authorization: Bearer <token>`).
-3.  **Trạng thái**:
-    *   `GET /api/game/competitive/state`: Lấy thông tin trạng thái trận đấu hiện tại.
-    *   `GET /api/game/day`: Lấy trạng thái của lượt chơi hiện tại dưới góc nhìn của đội chơi (Yêu cầu Header `Authorization: Bearer <token>`).
-    *   `GET /api/game/result`: Tra cứu bảng xếp hạng và điểm số của trận đấu.
+* **Cơ chế cấu hình linh hoạt**:
+  Bot nạp tham số cấu hình theo thứ tự ưu tiên: **JVM System Properties** -> **Environment Variables** -> **File `bot.properties`** -> **Giá trị mặc định**.
+  Các biến chính:
+  * `HEXUDON_BASE_URL`: URL Game Server (Mặc định: `http://localhost:8080`).
+  * `HEXUDON_TOKEN`: Bearer token xác thực của đội (Bắt buộc).
+  * `HEXUDON_TEAM_ID`: ID định danh đội chơi (Bắt buộc).
+  * `HEXUDON_GAME_ID`: ID trận đấu (Bắt buộc).
+  * `BOT_POLL_DELAY_MS`: Chu kỳ polling theo dõi trạng thái trận đấu (Mặc định: `1000` ms).
 
-> [!IMPORTANT]
-> **Lưu ý về Xác thực và Endpoint nộp Action**:
-> *   Các request yêu cầu xác thực từ client lên server bắt buộc phải truyền mã JWT qua HTTP Header **`Authorization: Bearer <token>`** (Không sử dụng header `X-Team-Id` như các bản phác thảo cũ).
-> *   **REST API nộp Action (`POST /api/game/actions`) hiện chưa có endpoint REST tương ứng trong Controller của Server**. Trong mã nguồn hiện tại, hành động di chuyển của các đội chỉ có thể được kiểm thử thông qua các bộ unit test/integration test nội bộ của Game Server.
-
-*Tài liệu OpenAPI chi tiết mô tả cấu trúc JSON yêu cầu và phản hồi được lưu tại tệp tin:* [server/docs/api/API.md](file:///d:/Documents/GitHub/hexudon/server/docs/api/API.md).
-
----
-
-## Domain Overview
-
-Nghiệp vụ của trò chơi xoay quanh các khái niệm và quy tắc lõi sau:
-
-1.  **Lưới lục giác (Map)**: Sử dụng hệ lưới lục giác ngang Odd-R offset. Địa hình ô bản đồ có 4 loại: PLAIN (đồng bằng), ROAD (đường bộ), MOUNTAIN (núi cao), và POND (ao hồ). Ô địa hình POND là ô bị cấm không thể di chuyển qua.
-2.  **Agent (Tác tử)**: Mỗi đội sở hữu một nhóm Agent tự hành ban đầu được sinh ra tại vị trí cố định. Có hai loại Agent:
-    *   `PatrolAgent` (Tuần tra): Di chuyển qua các ô sẽ tiêu tốn nhiên liệu và bước hành động. Nhiệm vụ duy nhất là đứng tại các ô có Spot để thu hoạch mì Udon.
-    *   `RefuelAgent` (Tiếp tế): Di chuyển chỉ tốn bước đi, không tốn nhiên liệu. Khi đứng cùng hoặc kề cạnh ô tọa độ với PatrolAgent cùng đội ở bất kỳ bước mô phỏng nào, nó sẽ tự động nạp đầy nhiên liệu cho PatrolAgent.
-3.  **Ùn tắc giao thông (Traffic)**: Khi nhiều Agent của các đội cùng di chuyển qua hoặc đứng lại ở các ô đường bộ (`ROAD`), mức độ ùn tắc của ô đó tăng lên. Cuối lượt chơi, hệ thống tính toán tỷ lệ ùn tắc và quy đổi thành mức độ `NORMAL` (xăng tiêu thụ = 1), `BUSY` (xăng tiêu thụ = 2), hoặc `CONGESTED` (xăng tiêu thụ = 4) áp dụng cho lượt chơi tiếp theo.
-4.  **Điểm Spot và Điểm số**: Mỗi ô Spot chứa một lượng mì Udon hữu hạn cho từng đội chơi (kho hàng độc lập giữa các đội). Agent tuần tra đứng tại Spot thu hoạch sẽ nhận được Udon và ghi điểm vào bảng xếp hạng. Tồn kho của các Spot sẽ được làm đầy lại vào đầu mỗi lượt chơi mới.
+* **Chiến thuật AI tích hợp (`BotBrain`)**:
+  * `GreedyStrategy` (Mặc định): Sử dụng giải thuật BFS tìm đường ngắn nhất trên lưới Hex Odd-R offset.
+    * **PatrolAgent**: Tìm ô `Spot` còn mì Udon gần nhất để di chuyển đến và thu hoạch.
+    * **RefuelAgent**: Tìm `PatrolAgent` có lượng xăng thấp nhất để tiếp cận và kích hoạt nạp xăng tự động.
+  * `WaitStrategy` (Fallback): Cho tất cả tác tử đứng yên khi xảy ra sự cố ngoại lệ.
 
 ---
 
-## Bot Strategies
+### 4. Module `ai` (`hexudon-ai`)
 
-Module `bot` triển khai các chiến thuật thông minh thông qua giao diện `BotBrain`:
-
-### 1. Greedy Strategy (`GreedyStrategy` - Mặc định)
-Chiến thuật di chuyển tham lam sử dụng thuật toán tìm kiếm theo chiều rộng (BFS) trên lưới lục giác:
-*   **Đối với tác tử tuần tra (PATROL)**:
-    *   Nếu đang đứng trên một ô `Spot` còn mì Udon: thực hiện hành động chờ (`WaitAction`) để thu hoạch.
-    *   Ngược lại: tìm kiếm ô `Spot` gần nhất còn mì bằng thuật toán BFS để tạo đường đi di chuyển (`MoveAction`). Nếu tất cả các spot đều hết mì, nó vẫn sẽ di chuyển về spot gần nhất để chờ phục hồi kho mì.
-*   **Đối với tác tử tiếp tế (REFUEL)**:
-    *   Tìm kiếm tác tử `PATROL` cùng đội có lượng xăng thấp nhất.
-    *   Tính toán đường đi ngắn nhất đến vị trí của tác tử đó bằng BFS.
-    *   Khi đứng chung hoặc kề cạnh tác tử tuần tra, nó sẽ đứng chờ để kích hoạt cơ chế nạp xăng tự động của Server.
-*   *Lưu ý*: Chuỗi hành động di chuyển của mỗi tác tử trong ngày được cắt ngắn tương ứng với giới hạn bước đi tối đa của lượt đó (`daySteps`).
-
-### 2. Wait Strategy (`WaitStrategy` - Fallback)
-*   Chiến thuật an toàn yêu cầu tất cả tác tử đứng yên (Wait 1 step). Được kích hoạt tự động làm cơ chế phòng ngừa khi chiến thuật chính xảy ra lỗi ngoại lệ không mong muốn trong quá trình tính toán.
-
----
-
-## Documentation
-
-Dưới đây là danh sách các tài liệu tham khảo chính trong kho mã nguồn:
-
-*   [server/docs/api/API.md](file:///d:/Documents/GitHub/hexudon/server/docs/api/API.md): Tài liệu đặc tả OpenAPI đầy đủ của hệ thống bao gồm cả các endpoint quản trị (Admin).
-*   [server/README.md](file:///d:/Documents/GitHub/hexudon/server/README.md): Hướng dẫn chi tiết mã nguồn, kiến trúc lục giác, luồng xử lý và cách chạy module Server.
-*   [sdk/README.md](file:///d:/Documents/GitHub/hexudon/sdk/README.md): Hướng dẫn cài đặt, cấu hình retry và cách lập trình tích hợp SDK vào mã nguồn bot của bạn.
+* **Mục đích**: Framework học máy củng cố (Multi-Agent Deep Q-Network - MARL) được thiết kế riêng cho việc nghiên cứu và huấn luyện mô hình Trí tuệ Nhân tạo trong môi trường lưới lục giác.
+* **Artifact Maven**: `com.naprock:hexudon-ai:1.0.0`
+* **Main Application Class / Entry Point**: `com.example.dqn.DqnApplication` (sử dụng giao diện dòng lệnh `DqnCli`).
+* **Tính năng chính**:
+  * Sử dụng **Deep Java Library (DJL)** và **PyTorch Engine** để xây dựng và huấn luyện mạng Neural Network Q-Network (`DjlQNetwork`).
+  * Triển khai thuật toán Cooperative Multi-Agent DQN quản lý đồng thời nhiều loại tác tử (`PatrolAgent`, `RefuelAgent`).
+  * Tích hợp bộ nhớ phát lại kinh nghiệm `InMemoryReplayBuffer`.
+  * Hỗ trợ cơ chế tiến hóa chiến lược và phần thưởng thông qua `RewardEvolutionEngine` và `EpsilonEvolutionEngine`.
+* **Cách khởi chạy ứng dụng AI Demo**:
+  ```bash
+  mvn exec:java -pl ai -Dexec.mainClass="com.example.dqn.DqnApplication"
+  ```
+  Hoặc chạy các bài kiểm thử tích hợp huấn luyện AI:
+  ```bash
+  mvn clean test -pl ai
+  ```
 
 ---
 
-## Testing
+## Project Structure (Cấu trúc dự án)
 
-Hệ thống cung cấp các bộ kiểm thử tự động phong phú ở các module:
+Cấu trúc cây thư mục thực tế của repository Hexudon:
 
-*   **Server Tests**: Kiểm thử luật chơi của Agent, nạp xăng tự động, tính toán ùn tắc, kiểm tra ánh xạ dữ liệu.
-*   **SDK Tests**: Kiểm thử tuần tự hóa JSON coordinate, cơ chế tự động gửi lại (Retry) khi gặp lỗi mạng, và xác thực cấu hình kết nối.
-*   *Lưu ý*: Module `bot` không đi kèm các kiểm thử đơn vị độc lập.
-
-Cách chạy toàn bộ kiểm thử trên repository:
-```bash
-mvn test
+```text
+hexudon/
+├── pom.xml                                 # Root POM & Reactor POM (Java 21, Dependency & Plugin Management)
+├── README.md                               # Tài liệu tổng quan dự án (tệp tin này)
+├── server/                                 # Module Game Server Engine (Spring Boot)
+│   ├── pom.xml
+│   ├── docs/
+│   │   └── api/API.md                      # Tài liệu đặc tả OpenAPI
+│   └── src/
+│       ├── main/java/com/naprock/hexudon/ # Nguồn mã Java Server (Hexagonal / DDD)
+│       └── resources/                      # File application.yml và match_config.json
+├── sdk/                                    # Module Hexudon Java SDK
+│   ├── pom.xml
+│   └── src/
+│       └── main/java/com/naprock/hexudon/sdk/ # Client API, Models, DTOs, HTTP Executor
+├── bot/                                    # Module Bot Application mẫu
+│   ├── pom.xml
+│   └── src/
+│       ├── main/java/com/naprock/hexudon/bot/ # BotRunner, BotBrain, BFS Strategies
+│       └── resources/                      # File bot.properties.example
+└── ai/                                     # Module Hexudon AI Framework (DQN / DJL)
+    ├── pom.xml
+    └── src/
+        ├── main/java/com/example/dqn/      # Clean Architecture: core, algorithm, application, adapter
+        └── test/java/com/example/dqn/      # Các unit test & integration test huấn luyện AI
 ```
 
 ---
 
-## Roadmap
+## Maven Inheritance (Cơ chế kế thừa Maven)
 
-### Các tính năng đã hoàn thành
-*   Xây dựng hoàn chỉnh lõi tính toán hình học lưới lục giác ngang Odd-R và khoảng cách hex.
-*   Cơ chế mô phỏng di chuyển bước, auto-refuel, và thu hoạch tài nguyên theo luật chơi.
-*   Tự động cập nhật ùn tắc giao thông ROAD động theo lượt.
-*   Thiết lập REST API cho cấu hình, trạng thái trận đấu, bản đồ, kết quả và danh sách game.
-*   Bộ Java SDK kết nối ổn định.
-*   Xây dựng module `bot` chạy mẫu tích hợp sẵn giải thuật BFS tìm đường tối ưu sạc và ăn udon.
+Dự án Hexudon tận dụng triệt để cơ chế kế thừa POM của Maven để đảm bảo tính nhất quán và dễ bảo trì:
 
-### Các tính năng chưa hoàn thành / Đang lên kế hoạch (Có cấu trúc khung nhưng chưa triển khai)
-*   **REST API nộp Action (`POST /api/game/actions`)**: Chưa được đưa vào REST Controller của Server ở phiên bản hiện tại.
-*   **WebSocket Protocol**: Các package liên quan trên server hiện tại mới chỉ là thư mục trống hoặc bản phác thảo cấu trúc.
-*   **Chế độ luyện tập (Practice Mode)**: Bộ Java SDK đã xây dựng xong cấu trúc gọi API luyện tập (`PracticeApi` gọi các đường dẫn `/api/game/practice/*`), tuy nhiên trên Server **chưa triển khai** bất kỳ endpoint hay nghiệp vụ nào tương ứng cho tính năng này.
-*   **Cơ sở dữ liệu lưu trữ (Database Persistence)**: Chưa có adapter kết nối tới các cơ sở dữ liệu vật lý (như PostgreSQL, MySQL). Trạng thái game hiện tại được lưu trữ hoàn toàn tạm thời trên bộ nhớ RAM.
+```text
+Root POM (com.naprock:hexudon:1.0.0)
+│
+├── Cấu hình Java 21 Compiler (release = 21)
+├── Dependency Management (Spring Boot, OkHttp, JJWT, DJL, internal modules)
+├── Plugin Management (compiler, surefire, exec, jacoco)
+│
+├── server (com.naprock:hexudon-server)
+├── sdk    (com.naprock:hexudon-sdk)
+├── bot    (com.naprock:hexudon-bot)
+└── ai     (com.naprock:hexudon-ai)
+```
+
+### Lợi ích của cơ chế kế thừa:
+1. **Tránh trùng lặp cấu hình**: Các module con không cần khai báo lại `<groupId>`, `<version>`, hoặc cấu hình Java 21 compiler.
+2. **Đồng nhất phiên bản Dependency**: Tất cả các thư viện thứ ba (OkHttp, Jackson, JJWT, DJL) được định nghĩa phiên bản duy nhất tại Root POM.
+3. **Quản lý plugin tập trung**: Các plugin như `maven-surefire-plugin` hay `jacoco-maven-plugin` được cấu hình chung cho toàn bộ dự án.
+4. **Xây dựng hệ thống dễ dàng**: Chỉ cần một lệnh `mvn clean package` tại thư mục gốc để biên dịch và xây dựng toàn bộ dự án theo đúng thứ tự phụ thuộc (Reactor Build Order).
+
+---
+
+## Domain Overview (Quy tắc và Nghiệp vụ Trò chơi)
+
+Nghiệp vụ cốt lõi của Hexudon xoay quanh các khái niệm sau:
+
+1. **Lưới ô lục giác Odd-R offset**: Bản đồ trò chơi được biểu diễn trên lưới ô lục giác nằm ngang. Các ô gồm 4 loại địa hình: `PLAIN` (đồng bằng), `ROAD` (đường bộ), `MOUNTAIN` (núi) và `POND` (ao hồ - ô cấm di chuyển).
+2. **Loại Agent (Tác tử)**:
+   * **`PatrolAgent` (Tuần tra)**: Di chuyển tiêu tốn bước đi và nhiên liệu. Nhiệm vụ chính là di chuyển tới ô `Spot` để thu hoạch mì Udon.
+   * **`RefuelAgent` (Tiếp tế)**: Di chuyển chỉ tốn bước đi, không tốn nhiên liệu. Tự động sạc đầy xăng cho `PatrolAgent` cùng đội khi đứng kề cạnh hoặc cùng tọa độ.
+3. **Ùn tắc giao thông (`TrafficLevel`)**: Mật độ Agent của các đội di chuyển trên ô đường bộ (`ROAD`) sẽ làm tăng mức ùn tắc. Cuối mỗi lượt, máy chủ tính toán tỷ lệ ùn tắc và quy đổi thành các mức tiêu thụ xăng cho lượt kế tiếp: `NORMAL` (1 xăng), `BUSY` (2 xăng), hoặc `CONGESTED` (4 xăng).
+4. **Điểm Spot & Tài nguyên Udon**: Mỗi `Spot` chứa lượng mì Udon hữu hạn dành riêng cho từng đội. Tồn kho của các `Spot` được phục hồi lại ở đầu mỗi lượt chơi mới.
